@@ -82,8 +82,14 @@ object Regelwerk {
 
         val text = if (meldungen.isEmpty()) modul.name + ": nichts zu tun"
         else meldungen.joinToString("; ")
-        verlauf.merkeMeldung(text)
         Log.i(PebbleEmpfaenger.TAG, text)
+
+        // Nur ECHTE Ergebnisse in die Statusanzeige. Sonst ueberschreibt die
+        // naechste abgewiesene Wiederholung das, was wirklich geschehen ist -
+        // und im Kasten steht "nichts zu tun", Sekunden nachdem etwas getan
+        // wurde. Bei einer Quelle, die im Sekundentakt dasselbe schickt, waere
+        // der Zustand damit dauerhaft nichtssagend.
+        if (meldungen.isNotEmpty()) verlauf.merkeMeldung(text)
         return text
     }
 
