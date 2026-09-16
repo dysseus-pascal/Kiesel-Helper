@@ -1,33 +1,78 @@
 {
   "format": 2,
   "name": "Google Maps → Kieselweg",
-  "beschreibung": "Schickt die Navigationsanweisung von Google Maps an die Uhr-App Kieselweg. Nachgemessen an Android 16: Maps benutzt das Live-Updates-Format, kennt KEINE Entfernung zur nächsten Abzweigung und legt Anweisung und Strasse zusammen in den Titel.",
-
-  "quelle": { "art": "benachrichtigung", "paket": "com.google.android.apps.maps" },
-
+  "beschreibung": "Schickt die Navigationsanweisung von Google Maps an die Uhr-App Kieselweg — und sagt der Uhr auch, wenn die Navigation zu Ende ist. Nachgemessen an Android 16: Maps benutzt das Live-Updates-Format, kennt KEINE Entfernung zur nächsten Abzweigung und legt Anweisung und Strasse zusammen in den Titel.",
+  "quelle": {
+    "art": "benachrichtigung",
+    "paket": "com.google.android.apps.maps"
+  },
   "schluessel": {
     "ANWEISUNG": 10000,
     "ZUSATZ": 10002,
     "FORTSCHRITT": 10004,
     "FORTSCHRITT_MAX": 10005
   },
-
   "regeln": [
     {
-      "wenn": ["titel", "extra:android.progressMax"],
-      "nur_wenn": { "extra:android.template": "ProgressStyle" },
+      "wenn": [
+        "titel",
+        "extra:android.progressMax"
+      ],
+      "nur_wenn": {
+        "extra:android.template": "ProgressStyle"
+      },
       "senden": {
         "an": "888e2bc3-f95a-40ce-ac86-01eeeded7d36",
         "starten": true,
         "hoechstens_alle_s": 10,
         "felder": {
-          "ANWEISUNG":       { "aus": "titel", "art": "text" },
-          "ZUSATZ":          { "aus": "untertext", "art": "text" },
-          "FORTSCHRITT":     { "aus": "extra:android.progress", "art": "zahl" },
-          "FORTSCHRITT_MAX": { "aus": "extra:android.progressMax", "art": "zahl" }
+          "ANWEISUNG": {
+            "aus": "titel",
+            "art": "text"
+          },
+          "ZUSATZ": {
+            "aus": "untertext",
+            "art": "text"
+          },
+          "FORTSCHRITT": {
+            "aus": "extra:android.progress",
+            "art": "zahl"
+          },
+          "FORTSCHRITT_MAX": {
+            "aus": "extra:android.progressMax",
+            "art": "zahl"
+          }
         }
       },
       "meldung": "{titel}"
+    },
+    {
+      "ausloeser": "verschwindet",
+      "wenn": [
+        "paket"
+      ],
+      "senden": {
+        "an": "888e2bc3-f95a-40ce-ac86-01eeeded7d36",
+        "felder": {
+          "ANWEISUNG": {
+            "wert": "Navigation beendet",
+            "art": "text"
+          },
+          "ZUSATZ": {
+            "wert": "",
+            "art": "text"
+          },
+          "FORTSCHRITT": {
+            "wert": 0,
+            "art": "zahl"
+          },
+          "FORTSCHRITT_MAX": {
+            "wert": 0,
+            "art": "zahl"
+          }
+        }
+      },
+      "meldung": "Navigation beendet"
     }
   ]
 }

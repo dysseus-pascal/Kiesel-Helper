@@ -31,6 +31,7 @@ object Regelwerk {
         context: Context,
         modul: Modul,
         felder: Map<String, Wert>,
+        ausloeser: Ausloeser = Ausloeser.ERSCHEINT,
     ): String {
         val verlauf = Verlauf(context)
         val akte = Akte(context)
@@ -41,6 +42,12 @@ object Regelwerk {
         val alle = felder + (JETZT to Wert.Zahl(System.currentTimeMillis() / 1000))
 
         modul.regeln.forEachIndexed { nr, regel ->
+            // Meint diese Regel ueberhaupt diesen Anlass? Das Erscheinen einer
+            // Benachrichtigung und ihr Verschwinden sind zwei verschiedene
+            // Nachrichten, und die zweite ist bei einer Navigation die
+            // wichtigere Haelfte.
+            if (regel.ausloeser != ausloeser) return@forEachIndexed
+
             // Greift die Regel? Alle unter `wenn` genannten Felder muessen da
             // sein. Ohne diese Bedingung truege eine blosse Standmeldung - die
             // kommt bei jedem Start und jedem Wecker - jedes Mal einen weiteren
@@ -142,6 +149,10 @@ object Regelwerk {
             val belegt = mutableMapOf<Int, Wert>()
             var fehlt = false
             for (f in senke.felder) {
+                if (f.fest != null) {
+                    belegt[f.nummer] = f.fest
+                    continue
+                }
                 val roh = felder[f.aus]
                 if (roh == null) { fehlt = true; break }
                 val w = if (f.alsText) Wert.Text(roh.alsText())

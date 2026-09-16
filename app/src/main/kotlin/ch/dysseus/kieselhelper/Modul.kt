@@ -86,18 +86,39 @@ data class Bezug(
     val faktor: Double,
 )
 
-/** Ein Feld einer ausgehenden Nachricht an die Uhr. */
+/**
+ * Ein Feld einer ausgehenden Nachricht an die Uhr.
+ *
+ * Entweder aus einem Feld der Quelle ([aus]) oder fest ([fest]). Fest braucht
+ * man fuer das Ende: wenn eine Navigation vorbei ist, gibt es keine Quelle
+ * mehr, aus der "Navigation beendet" kommen koennte - und ohne eine Null fuer
+ * die Strecke zeigte die Uhr den letzten Wert weiter.
+ */
 data class Feldbelegung(
     val name: String,
     val nummer: Int,
-    val aus: String,
+    val aus: String?,
+    val fest: Wert?,
     val alsText: Boolean,
     val muster: Regex?,
     val faktor: Double,
 )
 
+/**
+ * Wann eine Regel ueberhaupt gepruefte wird.
+ *
+ * Bis hierher gab es nur das Erscheinen: eine Nachricht kommt an, eine
+ * Benachrichtigung wird gezeigt. Das Verschwinden ist aber genauso eine
+ * Nachricht - und bei einer Navigation die wichtigere zweite Haelfte. Ohne sie
+ * zeigt die Uhr die letzte Anweisung weiter, obwohl auf dem Telefon laengst
+ * niemand mehr navigiert.
+ */
+enum class Ausloeser { ERSCHEINT, VERSCHWINDET }
+
 /** Eine Anweisung: unter dieser Bedingung das hier tun. */
 data class Regel(
+    /** Erscheinen oder Verschwinden der Quelle. */
+    val ausloeser: Ausloeser,
     /** Diese Felder muessen vorhanden sein, damit die Regel greift. */
     val wenn: List<String>,
     /** Diese Felder muessen ausserdem zum Muster passen. */
@@ -300,6 +321,29 @@ data class Modul(
             val vorher = fehler.size
             val benutzt = mutableSetOf<String>()
 
+            val ausloeser = when (val a = ro.optString("ausloeser", "erscheint")) {
+                "erscheint" -> Ausloeser.ERSCHEINT
+                "verschwindet" -> {
+                    // Eine AppMessage kann nicht verschwinden - sie kommt an
+                    // oder nicht. Wer das hier schreibt, hat eine Regel, die
+                    // nie greift, und merkt es nie.
+                    if (quelle is Quelle.Uhr) {
+                        fehler.add(
+                            "Regel $nr: \"verschwindet\" gibt es nur bei Benachrichtigungen. " +
+                                "Eine AppMessage kommt an oder nicht."
+                        )
+                    }
+                    Ausloeser.VERSCHWINDET
+                }
+                else -> {
+                    fehler.add(
+                        "Regel $nr: \"ausloeser\": \"$a\" - möglich sind \"erscheint\" " +
+                            "und \"verschwindet\"."
+                    )
+                    Ausloeser.ERSCHEINT
+                }
+            }
+
             val wenn = mutableListOf<String>()
             val wa = ro.optJSONArray("wenn")
             if (wa == null || wa.length() == 0) {
@@ -350,6 +394,7 @@ data class Modul(
 
             if (fehler.size != vorher || senke == null) return null
             return Regel(
+                ausloeser = ausloeser,
                 wenn = wenn,
                 nurWenn = nurWenn,
                 nichtZweimalFuer = nichtZweimal,
@@ -483,7 +528,6 @@ data class Modul(
                     fehler.add("Regel $nr: \"senden.felder.$name\" ist kein Objekt.")
                     continue
                 }
-                val bezug = liesBezug(eo, "Regel $nr: Feld \"$name\"", fehler) ?: continue
                 val art = eo.optString("art", "text")
                 if (art != "text" && art != "zahl") {
                     fehler.add(
@@ -492,12 +536,32 @@ data class Modul(
                     )
                     continue
                 }
+
+                // Fester Wert statt Feldbezug.
+                if (eo.has("wert")) {
+                    if (eo.has("aus")) {
+                        fehler.add(
+                            "Regel $nr: Feld \"$name\" hat \"aus\" UND \"wert\" - " +
+                                "entweder aus der Quelle oder fest, nicht beides."
+                        )
+                        continue
+                    }
+                    val fest = if (art == "text") Wert.Text(eo.optString("wert", ""))
+                    else Wert.Zahl(eo.optLong("wert", 0L))
+                    felder.add(
+                        Feldbelegung(name, nummer, null, fest, art == "text", null, 1.0)
+                    )
+                    continue
+                }
+
+                val bezug = liesBezug(eo, "Regel $nr: Feld \"$name\"", fehler) ?: continue
                 benutzt.add(bezug.aus)
                 felder.add(
                     Feldbelegung(
                         name = name,
                         nummer = nummer,
                         aus = bezug.aus,
+                        fest = null,
                         alsText = (art == "text"),
                         muster = bezug.muster,
                         faktor = bezug.faktor,

@@ -43,6 +43,22 @@ class BenachrichtigungsHorcher : NotificationListenerService() {
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
+        verarbeite(sbn, Ausloeser.ERSCHEINT)
+    }
+
+    /**
+     * Die Benachrichtigung ist weg.
+     *
+     * Bei einer Navigation heisst das: sie ist zu Ende. Ohne diese Haelfte
+     * zeigt die Uhr die letzte Anweisung weiter, obwohl auf dem Telefon
+     * laengst niemand mehr navigiert - und merkt es erst nach zwei Minuten am
+     * Zeitstempel.
+     */
+    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
+        verarbeite(sbn, Ausloeser.VERSCHWINDET)
+    }
+
+    private fun verarbeite(sbn: StatusBarNotification?, ausloeser: Ausloeser) {
         val n = sbn ?: return
 
         // Zuerst und ohne irgendetwas zu lesen: gibt es ueberhaupt einen
@@ -57,7 +73,7 @@ class BenachrichtigungsHorcher : NotificationListenerService() {
         CoroutineScope(Dispatchers.IO).launch {
             for (m in module) {
                 try {
-                    Regelwerk.wendeAn(applicationContext, m, felder)
+                    Regelwerk.wendeAn(applicationContext, m, felder, ausloeser)
                 } catch (e: Exception) {
                     Log.e(PebbleEmpfaenger.TAG, "Zettel " + m.name + " fehlgeschlagen", e)
                 }
