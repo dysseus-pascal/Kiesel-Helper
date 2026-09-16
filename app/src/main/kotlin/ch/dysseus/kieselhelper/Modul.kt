@@ -154,9 +154,16 @@ data class Modul(
     /** Braucht dieser Zettel Zugriff auf die Benachrichtigungen? */
     fun brauchtBenachrichtigungen(): Boolean = quelle is Quelle.Benachrichtigung
 
-    /** Kurzfassung dessen, was der Zettel tut - fuer die Karte. */
+    /**
+     * Kurzfassung dessen, was der Zettel tut - fuer die Karte.
+     *
+     * Der Anlass gehoert davor. Ohne ihn lesen sich zwei Regeln desselben
+     * Zettels gleich - "schickt ... an die Uhr" und noch einmal "schickt ...
+     * an die Uhr" -, und niemand sieht, welche fuers Ende gilt.
+     */
     fun taetigkeiten(): List<String> = regeln.map { r ->
-        when (val s = r.senke) {
+        val anlass = if (r.ausloeser == Ausloeser.VERSCHWINDET) "am Ende: " else ""
+        anlass + when (val s = r.senke) {
             is Senke.Akteneintrag ->
                 "trägt " + s.art.klartext + " ein, aus " + (s.wert?.aus ?: s.zeit.aus)
             is Senke.AnDieUhr ->
