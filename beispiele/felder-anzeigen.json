@@ -1,0 +1,19 @@
+{
+  "format": 2,
+  "name": "Felder anzeigen",
+  "beschreibung": "Zeigt als Telefon-Meldung, was in den Benachrichtigungen einer App wirklich steht. Der erste Zettel, den man für eine neue App schreibt - ohne ihn rät man, wo die Angabe steckt.",
+
+  "quelle": { "art": "benachrichtigung", "paket": "net.osmand.plus" },
+
+  "regeln": [
+    {
+      "wenn": ["titel"],
+      "nicht_zweimal_fuer": "titel",
+      "melden": {
+        "titel": "{paket}",
+        "text": "titel: {titel}\ntext: {text}\nuntertext: {untertext}\nzusatz: {zusatz}"
+      },
+      "meldung": "Felder gezeigt: {titel}"
+    }
+  ]
+}

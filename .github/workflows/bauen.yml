@@ -33,6 +33,9 @@ jobs:
           # Fehler nennt 9.5 selbst als die Fassung, die geht.
           gradle-version: '9.5.1'
 
+      - name: Zettelleser pruefen
+        run: gradle --no-daemon test
+
       - name: Uebersetzen
         run: gradle --no-daemon assembleDebug
 

@@ -40,7 +40,11 @@
     <string name="zuletzt">Zuletzt %1$s</string>
     <string name="geholt_am">Geholt am %1$s</string>
 
-    <string name="kanal_name">Empfang</string>
+   <string name="kanal_name">Empfang</string>
+    <string name="kanal_meldung">Zettel-Meldungen</string>
+    <string name="benachrichtigungen_fehlt">Zugriff auf Benachrichtigungen fehlt</string>
+    <string name="benachrichtigungen_da">Benachrichtigungen freigegeben</string>
+    <string name="freigeben">Freigeben</string>
     <string name="dienst_laeuft">Wartet auf Meldungen der Uhr</string>
     <string name="dienst_hinweis">Der Empfang läuft im Hintergrund weiter; die Meldung in der Leiste gehört dazu. Die App muss dafür nicht offen sein.</string>
 

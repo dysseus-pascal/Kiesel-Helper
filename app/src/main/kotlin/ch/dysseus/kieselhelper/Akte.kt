@@ -21,15 +21,20 @@ class Akte(private val context: Context) {
      * besteht im Kern aus einem Empfaenger, und ohne diese Zeile saehe man ihr
      * von aussen nie an, ob sie ueberhaupt etwas tut.
      */
-    suspend fun schreibe(regel: Regel, wert: Double, beginn: Instant, meldung: String): String {
+    suspend fun schreibe(
+        art: Satzart,
+        dauerSekunden: Long,
+        wert: Double,
+        beginn: Instant,
+        meldung: String,
+    ): String {
         val klient = bereit() ?: return nichtVerfuegbar()
 
-        val noetig = regel.art.berechtigung
-        if (!erteilt(klient, noetig)) {
-            return "Erlaubnis für ${regel.art.klartext} fehlt — App öffnen und erteilen"
+        if (!erteilt(klient, art.berechtigung)) {
+            return "Erlaubnis für ${art.klartext} fehlt — App öffnen und erteilen"
         }
 
-        val satz = regel.art.baue(wert, beginn, regel.dauerSekunden, uhrenHerkunft())
+        val satz = art.baue(wert, beginn, dauerSekunden, uhrenHerkunft())
         klient.insertRecords(listOf(satz))
         return meldung
     }

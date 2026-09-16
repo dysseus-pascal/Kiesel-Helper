@@ -1,0 +1,29 @@
+{
+  "format": 2,
+  "name": "OsmAnd-Navigation",
+  "beschreibung": "Schickt die Navigationsanweisung von OsmAnd an eine Uhr-App. UNGEPRÜFT: die Feldaufteilung von OsmAnd ist nicht nachgemessen - erst mit felder-anzeigen.json nachsehen und die Felder hier anpassen. Auch die UUID ist ein Platzhalter für die eigene Uhr-App.",
+
+  "quelle": { "art": "benachrichtigung", "paket": "net.osmand.plus" },
+
+  "schluessel": {
+    "ANWEISUNG": 10000,
+    "ENTFERNUNG": 10001
+  },
+
+  "regeln": [
+    {
+      "wenn": ["titel", "text"],
+      "nur_wenn": { "titel": "[0-9]" },
+      "nicht_zweimal_fuer": "text",
+      "senden": {
+        "an": "00000000-0000-0000-0000-000000000000",
+        "starten": true,
+        "felder": {
+          "ANWEISUNG":  { "aus": "text",  "art": "text" },
+          "ENTFERNUNG": { "aus": "titel", "art": "zahl", "muster": "([0-9.,]+)" }
+        }
+      },
+      "meldung": "{text} in {titel}"
+    }
+  ]
+}

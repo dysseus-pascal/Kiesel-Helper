@@ -25,10 +25,26 @@
          waere eine ungleich groessere Offenlegung und wird von nichts
          gebraucht, was diese App tut. -->
     <uses-permission android:name="android.permission.health.WRITE_HEART_RATE_VARIABILITY" />
-    <uses-permission android:name="android.permission.health.WRITE_HYDRATION" />
     <uses-permission android:name="android.permission.health.WRITE_HEART_RATE" />
-    <uses-permission android:name="android.permission.health.WRITE_NUTRITION" />
+    <uses-permission android:name="android.permission.health.WRITE_RESTING_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.WRITE_OXYGEN_SATURATION" />
+    <uses-permission android:name="android.permission.health.WRITE_RESPIRATORY_RATE" />
+    <uses-permission android:name="android.permission.health.WRITE_WEIGHT" />
+    <uses-permission android:name="android.permission.health.WRITE_BODY_FAT" />
+    <uses-permission android:name="android.permission.health.WRITE_HEIGHT" />
+    <uses-permission android:name="android.permission.health.WRITE_BODY_TEMPERATURE" />
+    <uses-permission android:name="android.permission.health.WRITE_BLOOD_GLUCOSE" />
+    <uses-permission android:name="android.permission.health.WRITE_BASAL_METABOLIC_RATE" />
+    <uses-permission android:name="android.permission.health.WRITE_VO2_MAX" />
     <uses-permission android:name="android.permission.health.WRITE_STEPS" />
+    <uses-permission android:name="android.permission.health.WRITE_DISTANCE" />
+    <uses-permission android:name="android.permission.health.WRITE_ELEVATION_GAINED" />
+    <uses-permission android:name="android.permission.health.WRITE_FLOORS_CLIMBED" />
+    <uses-permission android:name="android.permission.health.WRITE_WHEELCHAIR_PUSHES" />
+    <uses-permission android:name="android.permission.health.WRITE_ACTIVE_CALORIES_BURNED" />
+    <uses-permission android:name="android.permission.health.WRITE_TOTAL_CALORIES_BURNED" />
+    <uses-permission android:name="android.permission.health.WRITE_HYDRATION" />
+    <uses-permission android:name="android.permission.health.WRITE_NUTRITION" />
     <uses-permission android:name="android.permission.health.WRITE_SLEEP" />
 
     <!-- Neu gegenueber der Vorgaenger-App: die Beschreibungen kommen aus dem
@@ -51,6 +67,8 @@
          verlangt keine Vorbedingung - nur eine Begruendung im Manifest. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- Ab Android 11 muss ausdruecklich stehen, welche fremden Pakete man
@@ -110,6 +128,29 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Nimmt Messungen entgegen, die die Pebble-App als impliziten Broadcast verschickt. Ein solcher Broadcast erreicht nur einen zur Laufzeit angemeldeten Empfaenger, und der braucht einen laufenden Prozess." />
+        </service>
+
+        <!-- ZWEITE QUELLE: die Benachrichtigungen des Telefons.
+
+             Das ist die Komponente, die ein Zettel NICHT nachreichen koennte -
+             und der Grund, warum sie schon jetzt hier steht, obwohl noch kein
+             Zettel sie benutzt. Ein NotificationListenerService ist ausserdem
+             die staerkste Hintergrund-Primitive, die Android hergibt: das
+             System bindet ihn selbst, bindet nach Neustart und nach Abstuerzen
+             neu, ohne Vordergrunddienst und ohne Zeitgrenze.
+
+             BIND_NOTIFICATION_LISTENER_SERVICE steht hier als android:permission
+             und NICHT als <uses-permission>: sie schuetzt den Dienst davor, von
+             irgendwem gebunden zu werden, sie wird nicht von uns erbeten. Die
+             Freigabe erteilt der Benutzer in den Systemeinstellungen. -->
+        <service
+            android:name=".BenachrichtigungsHorcher"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
         </service>
 
         <!-- Nach einem Neustart den Dienst wieder hochfahren, sonst verpasst

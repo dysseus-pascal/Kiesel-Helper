@@ -38,6 +38,9 @@ android {
         getByName("main") {
             java.srcDirs("src/main/kotlin")
         }
+        getByName("test") {
+            java.srcDirs("src/test/kotlin")
+        }
     }
 }
 
@@ -59,4 +62,10 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+
+    // Der Zettelleser ist reine Logik und laesst sich ohne Telefon pruefen.
+    // org.json steckt zwar in android.jar, dort aber nur als Attrappe, die
+    // null zurueckgibt - die echte Fassung muss sie im Test verdecken.
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
 }

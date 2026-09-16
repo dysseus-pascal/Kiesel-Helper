@@ -55,9 +55,6 @@ class ModulSpeicher(context: Context) {
     /** Die eingelesenen Module — fehlerhafte fallen still heraus. */
     fun alle(): List<Modul> = alleEintraege().mapNotNull { Modul.lies(it.text).modul }
 
-    /** Das Modul zu einer UUID, oder null. */
-    fun fuer(uuid: java.util.UUID): Modul? = alle().firstOrNull { it.uuid == uuid }
-
     /**
      * Ablegen - und beim Erneuern an derselben Stelle.
      *

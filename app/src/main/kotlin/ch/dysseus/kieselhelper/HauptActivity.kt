@@ -139,9 +139,9 @@ class HauptActivity : ComponentActivity() {
         }
 
         k.addView(strich())
-        for (r in m.regeln) {
-            k.addView(zart("→ " + r.art.klartext + getString(R.string.aus_feld, r.wertAus ?: r.zeitAus)))
-        }
+        k.addView(zart(m.quelle.klartext()))
+        k.luft(4f)
+        for (t in m.taetigkeiten()) k.addView(zart("→ " + t))
         k.luft(8f)
         k.addView(zart(kurzeQuelle(e.quelle) + "\n" + getString(R.string.geholt_am, stempel(e.geholtAm))))
 
@@ -151,10 +151,31 @@ class HauptActivity : ComponentActivity() {
         val erlaubnis = reihe().apply { gravity = Gravity.CENTER_VERTICAL }
         k.addView(erlaubnis)
         lifecycleScope.launch {
-            val fehlt = Akte(this@HauptActivity).fehlendeBerechtigungen(m.berechtigungen())
             erlaubnis.removeAllViews()
+            // Zwei ganz verschiedene Freigaben, und beide gehoeren an die Karte
+            // des Zettels, der sie braucht. Die eine erteilt Health Connect in
+            // einem Dialog, die andere nur die Systemeinstellung - dafuer gibt
+            // es keine Abfrage zur Laufzeit, eine App kann nur hinfuehren.
+            if (m.brauchtBenachrichtigungen() &&
+                !BenachrichtigungsHorcher.freigegeben(this@HauptActivity)
+            ) {
+                erlaubnis.addView(schild(false, getString(R.string.benachrichtigungen_fehlt)))
+                erlaubnis.addView(
+                    knopfHaupt(getString(R.string.freigeben)) {
+                        startActivity(BenachrichtigungsHorcher.einstellungen())
+                    }.apply { (layoutParams as LinearLayout.LayoutParams).marginStart = dp(10f) }
+                )
+                return@launch
+            }
+            val fehlt = Akte(this@HauptActivity).fehlendeBerechtigungen(m.berechtigungen())
             if (fehlt.isEmpty()) {
-                erlaubnis.addView(schild(true, getString(R.string.erlaubnis_da)))
+                erlaubnis.addView(
+                    schild(
+                        true,
+                        if (m.brauchtBenachrichtigungen()) getString(R.string.benachrichtigungen_da)
+                        else getString(R.string.erlaubnis_da)
+                    )
+                )
             } else {
                 erlaubnis.addView(schild(false, getString(R.string.erlaubnis_fehlt)))
                 erlaubnis.addView(

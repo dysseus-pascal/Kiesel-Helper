@@ -21,19 +21,24 @@ class Verlauf(context: Context) {
     /**
      * Schon eingetragen?
      *
-     * Der Riegel haengt an UUID, Regel und dem Wert des Feldes, das die
-     * Beschreibung unter `nicht_zweimal_fuer` nennt — meist ein Zeitstempel.
-     * Zweimal derselbe Zeitstempel heisst: dieselbe Messung, nicht eine neue.
+     * Der Riegel haengt am Zettel, an der Regel und am Wert des Feldes, das
+     * unter `nicht_zweimal_fuer` steht — meist ein Zeitstempel. Zweimal
+     * derselbe heisst: dieselbe Sache, nicht eine neue.
+     *
+     * Seit die Benachrichtigungen dazugekommen sind, ist der Riegel ein TEXT
+     * und keine Zahl mehr. Bei einer Navigationsanweisung ist das Merkmal der
+     * Strassenname — der wiederholt sich im Sekundentakt, und ohne Riegel
+     * ginge jede Sekunde eine Nachricht an die Uhr.
      */
-    fun schonGetan(uuid: String, regelNr: Int, merkmal: Long): Boolean {
-        return prefs.getLong(riegel(uuid, regelNr), Long.MIN_VALUE) == merkmal
+    fun schonGetan(modul: String, regelNr: Int, merkmal: String): Boolean {
+        return prefs.getString(riegel(modul, regelNr), null) == merkmal
     }
 
-    fun merkeGetan(uuid: String, regelNr: Int, merkmal: Long) {
-        prefs.edit().putLong(riegel(uuid, regelNr), merkmal).apply()
+    fun merkeGetan(modul: String, regelNr: Int, merkmal: String) {
+        prefs.edit().putString(riegel(modul, regelNr), merkmal).apply()
     }
 
-    private fun riegel(uuid: String, regelNr: Int) = "riegel_${uuid}_$regelNr"
+    private fun riegel(modul: String, regelNr: Int) = "riegel_${modul}_$regelNr"
 
     // --- Statusanzeige ---
 
