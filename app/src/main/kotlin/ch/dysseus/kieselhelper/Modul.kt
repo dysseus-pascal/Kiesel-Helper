@@ -52,6 +52,16 @@ sealed class Senke {
     data class AnDieUhr(
         val uuid: UUID,
         val starten: Boolean,
+        /**
+         * Hoechstens alle n Sekunden senden; 0 = ohne Grenze.
+         *
+         * Google Maps frischt seine Navigationsmeldung im Sekundentakt auf.
+         * Ohne Riegel ginge jedes Mal eine Nachricht ueber Bluetooth an die
+         * Uhr - fuer eine Anzeige, die sich dabei um wenige Meter aendert.
+         * Der Riegel "nicht_zweimal_fuer" hilft hier nicht: er wuerde die
+         * Anweisung einfrieren, und genau die Entfernung soll ja laufen.
+         */
+        val hoechstensAlleS: Long,
         val felder: List<Feldbelegung>,
     ) : Senke()
 
@@ -495,9 +505,15 @@ data class Modul(
                 )
             }
             if (felder.isEmpty()) return null
+            val takt = so.optLong("hoechstens_alle_s", 0L)
+            if (takt < 0L) {
+                fehler.add("Regel $nr: \"hoechstens_alle_s\" darf nicht negativ sein.")
+                return null
+            }
             return Senke.AnDieUhr(
                 uuid = uuid,
                 starten = so.optBoolean("starten", false),
+                hoechstensAlleS = takt,
                 felder = felder,
             )
         }

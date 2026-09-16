@@ -1,25 +1,27 @@
 {
   "format": 2,
-  "name": "OsmAnd-Navigation",
-  "beschreibung": "Schickt die Navigationsanweisung von OsmAnd an eine Uhr-App. UNGEPRÜFT: die Feldaufteilung von OsmAnd ist nicht nachgemessen - erst mit felder-anzeigen.json nachsehen und die Felder hier anpassen. Auch die UUID ist ein Platzhalter für die eigene Uhr-App.",
+  "name": "OsmAnd → Kieselweg",
+  "beschreibung": "Schickt die Navigationsanweisung von OsmAnd an die Uhr-App Kieselweg. UNGEPRÜFT: die Feldaufteilung von OsmAnd ist noch nicht nachgemessen — mit tools/felder_messen.ps1 nachsehen und hier anpassen.",
 
   "quelle": { "art": "benachrichtigung", "paket": "net.osmand.plus" },
 
   "schluessel": {
     "ANWEISUNG": 10000,
-    "ENTFERNUNG": 10001
+    "ENTFERNUNG": 10001,
+    "ZUSATZ": 10002
   },
 
   "regeln": [
     {
       "wenn": ["titel", "text"],
       "nur_wenn": { "titel": "[0-9]" },
-      "nicht_zweimal_fuer": "text",
       "senden": {
         "an": "888e2bc3-f95a-40ce-ac86-01eeeded7d36",
         "starten": true,
+        "hoechstens_alle_s": 5,
         "felder": {
-          "ANWEISUNG":  { "aus": "text",  "art": "text" },
+          "ANWEISUNG":  { "aus": "text", "art": "text" },
+          "ZUSATZ":     { "aus": "untertext", "art": "text" },
           "ENTFERNUNG": { "aus": "titel", "art": "zahl", "muster": "([0-9.,]+)" }
         }
       },

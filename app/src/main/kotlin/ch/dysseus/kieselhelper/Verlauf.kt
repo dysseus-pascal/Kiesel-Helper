@@ -40,6 +40,25 @@ class Verlauf(context: Context) {
 
     private fun riegel(modul: String, regelNr: Int) = "riegel_${modul}_$regelNr"
 
+    // --- Takt ---
+
+    /**
+     * Wann diese Regel zuletzt gesendet hat, in Sekunden.
+     *
+     * Getrennt vom Riegel oben: der fragt "dasselbe schon einmal?", dieser
+     * fragt "schon wieder so bald?". Eine Navigationsanweisung braucht beides —
+     * ihre Entfernung ändert sich ständig, soll aber nicht jede Sekunde über
+     * Bluetooth gehen.
+     */
+    fun zuletztGesendet(modul: String, regelNr: Int): Long =
+        prefs.getLong(takt(modul, regelNr), 0L)
+
+    fun merkeGesendet(modul: String, regelNr: Int) {
+        prefs.edit().putLong(takt(modul, regelNr), System.currentTimeMillis() / 1000).apply()
+    }
+
+    private fun takt(modul: String, regelNr: Int) = "takt_${modul}_$regelNr"
+
     // --- Statusanzeige ---
 
     fun merkeMeldung(text: String) {

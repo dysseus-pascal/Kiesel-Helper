@@ -63,6 +63,15 @@ object Regelwerk {
                 return@forEachIndexed
             }
 
+            // Schon wieder so bald? Eine Quelle, die im Sekundentakt
+            // auffrischt, soll nicht im Sekundentakt über Bluetooth gehen.
+            val senke = regel.senke
+            if (senke is Senke.AnDieUhr && senke.hoechstensAlleS > 0) {
+                val her = System.currentTimeMillis() / 1000 -
+                    verlauf.zuletztGesendet(modul.name, nr)
+                if (her < senke.hoechstensAlleS) return@forEachIndexed
+            }
+
             val ergebnis = try {
                 fuehreAus(context, akte, modul, regel, alle)
             } catch (e: Exception) {
@@ -71,6 +80,7 @@ object Regelwerk {
             }
             if (ergebnis == null) return@forEachIndexed
             meldungen.add(ergebnis)
+            if (senke is Senke.AnDieUhr) verlauf.merkeGesendet(modul.name, nr)
 
             // Erst merken, wenn es geklappt hat. Wer den Riegel vorher setzte,
             // verloere die Messung endgueltig, sobald ein Versuch einmal

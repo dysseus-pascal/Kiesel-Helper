@@ -1,31 +1,33 @@
 {
   "format": 2,
   "name": "Google Maps → Kieselweg",
-  "beschreibung": "Schickt die Navigationsanweisung von Google Maps an die Uhr-App Kieselweg. UNGEPRÜFT: die Feldaufteilung von Maps ist noch nicht nachgemessen — mit tools/felder_messen.ps1 nachsehen und hier anpassen.",
+  "beschreibung": "Schickt die Navigationsanweisung von Google Maps an die Uhr-App Kieselweg. Nachgemessen an Android 16: Maps benutzt das Live-Updates-Format, kennt KEINE Entfernung zur nächsten Abzweigung und legt Anweisung und Strasse zusammen in den Titel.",
 
   "quelle": { "art": "benachrichtigung", "paket": "com.google.android.apps.maps" },
 
   "schluessel": {
     "ANWEISUNG": 10000,
-    "ENTFERNUNG": 10001,
-    "STRASSE": 10002
+    "ZUSATZ": 10002,
+    "FORTSCHRITT": 10004,
+    "FORTSCHRITT_MAX": 10005
   },
 
   "regeln": [
     {
-      "wenn": ["titel", "text"],
-      "nur_wenn": { "titel": "[0-9]" },
-      "nicht_zweimal_fuer": "text",
+      "wenn": ["titel", "extra:android.progressMax"],
+      "nur_wenn": { "extra:android.template": "ProgressStyle" },
       "senden": {
         "an": "888e2bc3-f95a-40ce-ac86-01eeeded7d36",
         "starten": true,
+        "hoechstens_alle_s": 10,
         "felder": {
-          "ANWEISUNG":  { "aus": "text",  "art": "text" },
-          "STRASSE":    { "aus": "untertext", "art": "text" },
-          "ENTFERNUNG": { "aus": "titel", "art": "zahl", "muster": "([0-9.,]+)" }
+          "ANWEISUNG":       { "aus": "titel", "art": "text" },
+          "ZUSATZ":          { "aus": "untertext", "art": "text" },
+          "FORTSCHRITT":     { "aus": "extra:android.progress", "art": "zahl" },
+          "FORTSCHRITT_MAX": { "aus": "extra:android.progressMax", "art": "zahl" }
         }
       },
-      "meldung": "{text} in {titel}"
+      "meldung": "{titel}"
     }
   ]
 }
