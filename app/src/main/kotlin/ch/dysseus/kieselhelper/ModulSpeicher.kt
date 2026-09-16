@@ -58,10 +58,22 @@ class ModulSpeicher(context: Context) {
     /** Das Modul zu einer UUID, oder null. */
     fun fuer(uuid: java.util.UUID): Modul? = alle().firstOrNull { it.uuid == uuid }
 
+    /**
+     * Ablegen - und beim Erneuern an derselben Stelle.
+     *
+     * Die erste Fassung warf den alten Eintrag weg und haengte den neuen ans
+     * Ende; auf dem Bildschirm sprang die Karte dadurch bei jedem Erneuern nach
+     * unten. Eine Liste, die sich beim Auffrischen umsortiert, verwirrt mehr,
+     * als die Reihenfolge wert ist.
+     */
     fun lege(quelle: String, text: String) {
-        val bleibt = alleEintraege().filter { it.quelle != quelle }
-        val neu = bleibt + Eintrag(quelle, text, System.currentTimeMillis() / 1000)
-        schreibe(neu)
+        val neu = Eintrag(quelle, text, System.currentTimeMillis() / 1000)
+        val bisher = alleEintraege()
+        val stelle = bisher.indexOfFirst { it.quelle == quelle }
+        schreibe(
+            if (stelle < 0) bisher + neu
+            else bisher.toMutableList().also { it[stelle] = neu }
+        )
     }
 
     fun entferne(quelle: String) {

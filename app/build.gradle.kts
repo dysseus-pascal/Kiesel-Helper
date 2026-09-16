@@ -53,6 +53,10 @@ kotlin {
 dependencies {
     implementation("androidx.health.connect:connect-client:1.1.0")
     implementation("androidx.activity:activity-ktx:1.9.3")
+    // Fuer die Fensterraender: seit targetSdk 35 zeichnet Android von Kante zu
+    // Kante, und ViewCompat liefert die Masse der Systemleisten einheitlich
+    // ueber alle Fassungen.
+    implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 }

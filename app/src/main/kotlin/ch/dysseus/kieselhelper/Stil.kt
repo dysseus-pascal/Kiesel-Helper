@@ -9,6 +9,8 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -209,4 +211,33 @@ fun Context.eingabefeld(hinweis: String): EditText = EditText(this).apply {
 /** Abstand zwischen zwei Dingen im selben Kasten. */
 fun LinearLayout.luft(hoehe: Float) {
     addView(View(context), LinearLayout.LayoutParams(1, context.dp(hoehe)))
+}
+
+/**
+ * Platz fuer Statusleiste und Systemtasten lassen.
+ *
+ * Seit targetSdk 35 zeichnet Android jede App von Kante zu Kante - man kann
+ * das nicht mehr abwaehlen. Ohne diese Zeilen stuende der Titel unter der Uhr
+ * und die unterste Karte unter den Systemtasten; genau so sah es in der ersten
+ * Fassung aus.
+ *
+ * Gemerkt wird der Rand, den die Ansicht selbst mitbringt: der Aufruf kann
+ * mehrfach kommen (Drehen, Tastatur), und wer jedes Mal aufaddiert, schiebt
+ * den Inhalt Stueck fuer Stueck nach unten.
+ */
+fun View.randUmSystemleisten() {
+    val links = paddingLeft
+    val rechts = paddingRight
+    val oben = paddingTop
+    val unten = paddingBottom
+    ViewCompat.setOnApplyWindowInsetsListener(this) { ansicht, fenster ->
+        val leisten = fenster.getInsets(WindowInsetsCompat.Type.systemBars())
+        ansicht.setPadding(
+            links + leisten.left,
+            oben + leisten.top,
+            rechts + leisten.right,
+            unten + leisten.bottom,
+        )
+        fenster
+    }
 }

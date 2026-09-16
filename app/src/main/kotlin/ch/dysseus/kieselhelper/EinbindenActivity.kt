@@ -72,7 +72,11 @@ class EinbindenActivity : ComponentActivity() {
         for (art in Satzart.entries) {
             katalog.addView(strich())
             katalog.addView(fliesstext(art.klartext))
-            val einheit = if (art.einheit.isEmpty()) "" else "  ·  " + art.einheit
+            // Die Einheit nur, wenn sie etwas hinzufuegt: bei den Schritten
+            // hiesse es sonst "schritte · Schritte".
+            val einheit =
+                if (art.einheit.isEmpty() || art.einheit == art.klartext) ""
+                else "  ·  " + art.einheit
             katalog.addView(zart(art.id + einheit))
         }
         katalog.luft(14f)
@@ -82,6 +86,7 @@ class EinbindenActivity : ComponentActivity() {
         return ScrollView(this).apply {
             isFillViewport = true
             addView(wurzel)
+            randUmSystemleisten()
         }
     }
 

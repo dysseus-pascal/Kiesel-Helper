@@ -90,6 +90,7 @@ class HauptActivity : ComponentActivity() {
         return ScrollView(this).apply {
             isFillViewport = true
             addView(wurzel)
+            randUmSystemleisten()
         }
     }
 
