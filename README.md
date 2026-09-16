@@ -95,28 +95,33 @@ Hintergrund wäre ausserdem ein Fernsteuerungskanal, den niemand bestellt hat.
 
 ## Das Format
 
+Das hier ist die vollständige, echte Beschreibung für Drinktervall — mehr
+braucht es nicht:
+
 ```json
 {
   "format": 1,
   "name": "Drinktervall",
   "uuid": "5b0f7a3e-2c8d-4b61-9e4f-7d2a1c9b8e50",
   "quelle": "https://github.com/dysseus-pascal/Drinktervall",
-  "beschreibung": "Trägt jedes getrunkene Glas als Wasseraufnahme ein.",
+  "beschreibung": "Traegt jedes getrunkene Glas als Wassermenge in die Gesundheitsakte ein.",
+
   "schluessel": {
     "GLASS_ML": 10008,
     "DRANK_AT": 10009
   },
+
   "regeln": [
     {
-      "wenn": ["GLASS_ML", "DRANK_AT"],
+      "wenn": ["DRANK_AT", "GLASS_ML"],
       "nicht_zweimal_fuer": "DRANK_AT",
-      "meldung": "{GLASS_ML} ml eingetragen",
       "eintrag": {
         "art": "hydration",
-        "menge":  { "aus": "GLASS_ML", "einheit": "ml" },
+        "menge": { "aus": "GLASS_ML", "einheit": "ml" },
         "beginn": { "aus": "DRANK_AT", "einheit": "s" },
         "dauer_s": 60
-      }
+      },
+      "meldung": "{GLASS_ML} ml eingetragen"
     }
   ]
 }
