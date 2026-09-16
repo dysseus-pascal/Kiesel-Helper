@@ -1,13 +1,14 @@
 {
   "format": 2,
-  "name": "OsmAnd-Navigation",
-  "beschreibung": "Schickt die Navigationsanweisung von OsmAnd an eine Uhr-App. UNGEPRÜFT: die Feldaufteilung von OsmAnd ist nicht nachgemessen - erst mit felder-anzeigen.json nachsehen und die Felder hier anpassen. Auch die UUID ist ein Platzhalter für die eigene Uhr-App.",
+  "name": "Google Maps → Kieselweg",
+  "beschreibung": "Schickt die Navigationsanweisung von Google Maps an die Uhr-App Kieselweg. UNGEPRÜFT: die Feldaufteilung von Maps ist noch nicht nachgemessen — mit tools/felder_messen.ps1 nachsehen und hier anpassen.",
 
-  "quelle": { "art": "benachrichtigung", "paket": "net.osmand.plus" },
+  "quelle": { "art": "benachrichtigung", "paket": "com.google.android.apps.maps" },
 
   "schluessel": {
     "ANWEISUNG": 10000,
-    "ENTFERNUNG": 10001
+    "ENTFERNUNG": 10001,
+    "STRASSE": 10002
   },
 
   "regeln": [
@@ -20,6 +21,7 @@
         "starten": true,
         "felder": {
           "ANWEISUNG":  { "aus": "text",  "art": "text" },
+          "STRASSE":    { "aus": "untertext", "art": "text" },
           "ENTFERNUNG": { "aus": "titel", "art": "zahl", "muster": "([0-9.,]+)" }
         }
       },

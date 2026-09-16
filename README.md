@@ -138,6 +138,23 @@ sofort wieder verworfen, ohne gelesen zu werden.
 * [Kiesel-Helper-Herzintervall](https://github.com/dysseus-pascal/Kiesel-Helper-Herzintervall)
   — Herzratenvariabilität
 
+**Beispiele im Ordner [beispiele/](beispiele/)** — keine eigenen Repos, weil sie
+zum Anpassen gedacht sind:
+
+*  — hört auf die Shell des Telefons und meldet zurück. Damit lässt
+  sich die Benachrichtigungs-Quelle in zwei Zeilen nachweisen.
+*  — zeigt, was in den Benachrichtigungen einer App
+  wirklich steht.
+* ,  — Navigation an
+  [Kieselweg](https://github.com/dysseus-pascal/Kieselweg). Beide **ungeprüft**,
+  bis die Felder nachgemessen sind.
+
+Zum Messen gibt es [tools/felder_messen.ps1](tools/felder_messen.ps1):
+
+```powershell
+toolselder_messen.ps1 com.google.android.apps.maps
+```
+
 ## Beschreibung laden
 
 1. App öffnen.
