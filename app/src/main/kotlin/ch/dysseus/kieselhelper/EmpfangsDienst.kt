@@ -63,16 +63,15 @@ class EmpfangsDienst : Service() {
     /**
      * Die Zeitgrenze fuer Vordergrunddienste.
      *
-     * Seit Android 15 darf ein Dienst vom Typ dataSync nur noch sechs Stunden
-     * je vierundzwanzig laufen. Danach ruft das System onTimeout(), und WER
-     * DARAUF NICHT REAGIERT, dessen Dienst wird hart beendet - mit einer
-     * ANR-Meldung obendrein. In der Vorgaenger-App fehlte diese Behandlung; der
-     * Fehler faellt erst nach einem halben Tag Laufzeit auf, also genau dann,
-     * wenn die naechtliche Messung ankommen soll.
+     * Seit Android 15 bekommen manche Dienstarten eine Uhr gestellt - dataSync
+     * etwa nur sechs Stunden je vierundzwanzig. Genau deshalb ist dieser Dienst
+     * inzwischen specialUse und NICHT mehr dataSync; fuer specialUse laeuft
+     * keine solche Uhr.
      *
-     * Die Antwort darauf ist, sich selbst ordentlich zu beenden und gleich
-     * wieder zu starten: der Empfaenger ist danach neu angemeldet, und die
-     * Uhr zeit laeuft von vorn.
+     * Die Behandlung bleibt trotzdem stehen. Sie kostet nichts, und wer darauf
+     * nicht reagiert, dessen Dienst wird hart beendet - mit einer ANR-Meldung
+     * obendrein. Der Fehler faellt erst nach einem halben Tag Laufzeit auf, also
+     * genau dann, wenn die naechtliche Messung ankommen soll.
      */
     override fun onTimeout(startId: Int, fgsType: Int) {
         Log.i(PebbleEmpfaenger.TAG, "Zeitgrenze erreicht - Dienst startet neu")

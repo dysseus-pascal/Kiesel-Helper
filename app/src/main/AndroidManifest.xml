@@ -41,7 +41,15 @@
     <!-- Der Empfaenger muss zur LAUFZEIT angemeldet sein (impliziter Broadcast,
          siehe EmpfangsDienst), und das braucht einen laufenden Prozess. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- specialUse und NICHT dataSync. Zwei Regeln von Android 15 machen
+         dataSync hier unbrauchbar: ein dataSync-Dienst darf aus einem
+         BOOT_COMPLETED-Empfaenger gar nicht erst gestartet werden
+         (ForegroundServiceStartNotAllowedException), und er darf nur sechs
+         Stunden je vierundzwanzig laufen. Beides zusammen heisst: nach einem
+         Neustart kaeme der Empfang nie wieder hoch, und im Betrieb waere er
+         nach einem Vierteltag weg. specialUse hat keine der beiden Grenzen und
+         verlangt keine Vorbedingung - nur eine Begruendung im Manifest. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
@@ -98,7 +106,11 @@
         <service
             android:name=".EmpfangsDienst"
             android:exported="false"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Nimmt Messungen entgegen, die die Pebble-App als impliziten Broadcast verschickt. Ein solcher Broadcast erreicht nur einen zur Laufzeit angemeldeten Empfaenger, und der braucht einen laufenden Prozess." />
+        </service>
 
         <!-- Nach einem Neustart den Dienst wieder hochfahren, sonst verpasst
              man die naechste Messung, ohne es zu merken. -->
