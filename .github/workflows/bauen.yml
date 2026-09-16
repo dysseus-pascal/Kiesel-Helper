@@ -1,0 +1,44 @@
+# Baut die App und haengt das APK an den Lauf.
+#
+# WARUM HIER UND NICHT LOKAL: auf dem Entwicklungsrechner steht kein
+# Android-SDK - dort laesst sich die App weder uebersetzen noch ausprobieren.
+# Dieser Lauf ist damit die einzige Pruefung, die es fuer sie gibt: er belegt,
+# dass sie uebersetzt und ein Paket ergibt. Dass sie am Telefon das Richtige
+# TUT, belegt er nicht.
+name: Bauen
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  bauen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JDK 17 bereitstellen
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle bereitstellen
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          # Festgenagelt, nicht dem Neuesten ueberlassen: Gradle 9.6 hat eine
+          # interne Schnittstelle entfernt, auf die das Android-Plugin 8.x noch
+          # baut ("relies on InternalProblems, removed in Gradle 9.6.0"). Der
+          # Fehler nennt 9.5 selbst als die Fassung, die geht.
+          gradle-version: '9.5.1'
+
+      - name: Uebersetzen
+        run: gradle --no-daemon assembleDebug
+
+      - name: APK anhaengen
+        uses: actions/upload-artifact@v4
+        with:
+          name: kiesel-helper-debug
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kiesel-Helper</string>
+    <string name="intro">Nimmt entgegen, was die Uhr meldet, und trägt es in die Gesundheitsakte des Telefons ein. Was eingetragen wird, sagen die geladenen Beschreibungen — die App muss dafür nicht offen sein.</string>
+
+    <string name="module">Beschreibungen</string>
+    <string name="keine_module">Noch keine Beschreibung geladen. Unten die Adresse eines Beschreibungs-Repos einsetzen.</string>
+    <string name="adresse_hinweis">https://github.com/dysseus-pascal/Kiesel-Helper-Drinktervall</string>
+    <string name="laden">Laden</string>
+    <string name="erneuern">Erneuern</string>
+    <string name="entfernen">Entfernen</string>
+    <string name="kein_selbstlauf">Beschreibungen werden nur geholt, wenn Sie es hier auslösen — nie von selbst im Hintergrund.</string>
+
+    <string name="erlaubnis">Erlaubnis erteilen</string>
+    <string name="erlaubnis_fehlt">Erlaubnis fehlt</string>
+    <string name="erlaubnis_da">Erlaubnis erteilt</string>
+
+    <string name="hc_fehlt">Die Gesundheitsakte (Health Connect) ist auf diesem Gerät nicht verfügbar. Ab Android 14 steckt sie im System, davor braucht es die App aus dem Play Store.</string>
+    <string name="hc_update">Health Connect muss aktualisiert werden.</string>
+
+    <string name="nichts_bisher">Noch nichts empfangen.</string>
+    <string name="zuletzt">Zuletzt %1$s</string>
+    <string name="geholt_am">Geholt am %1$s</string>
+
+    <string name="kanal_name">Empfang</string>
+    <string name="dienst_laeuft">Wartet auf Meldungen der Uhr</string>
+    <string name="dienst_hinweis">Der Empfang läuft im Hintergrund weiter; die Meldung in der Leiste gehört dazu.</string>
+
+    <string name="katalog">Was diese Fassung eintragen kann</string>
+    <string name="katalog_hinweis">Eine Beschreibung kann nur aus dieser Liste wählen. Eine neue Art braucht eine neue Fassung der App — Berechtigungen lassen sich nicht nachreichen.</string>
+</resources>

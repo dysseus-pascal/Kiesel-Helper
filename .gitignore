@@ -1,0 +1,11 @@
+# Bauwerk
+build/
+.gradle/
+local.properties
+*.apk
+*.aab
+
+# Werkzeuge
+.idea/
+*.iml
+.DS_Store

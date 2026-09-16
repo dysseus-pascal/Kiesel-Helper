@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- DER KATALOG.
+         ============
+         Dies ist der einzige Teil von Kiesel-Helper, den eine Beschreibung
+         NICHT erweitern kann. Berechtigungen stehen im Manifest und werden
+         beim Installieren festgeschrieben; eine nachgeladene Beschreibung
+         kann keine hinzufuegen. Was hier fehlt, kostet eine neue Fassung der
+         App - alles andere kostet nur einen Zettel.
+
+         Deshalb steht hier ein VORRAT und nicht nur das heute Gebrauchte.
+         Aufgenommen ist, was eine Pebble-Uhr wirklich hergibt; nicht
+         aufgenommen ist, wofuer eine Uhr ein schlechtes Eingabegeraet waere
+         (Gewicht, Blutdruck, Koerpertemperatur - das tippt man am Telefon).
+
+           HERZRATENVARIABILITAET  Herzintervall, in Gebrauch
+           WASSER                  Drinktervall, in Gebrauch
+           HERZFREQUENZ            der Sensor liegt ohnehin am Handgelenk
+           ERNAEHRUNG              fuer Koffein und Praeparate (SupCycle)
+           SCHRITTE                zaehlt die Uhr von Haus aus
+           SCHLAF                  Herzintervall misst ohnehin nachts
+
+         GELESEN WIRD NICHTS. Kiesel-Helper traegt nur ein. Eine Leseerlaubnis
+         waere eine ungleich groessere Offenlegung und wird von nichts
+         gebraucht, was diese App tut. -->
+    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE_VARIABILITY" />
+    <uses-permission android:name="android.permission.health.WRITE_HYDRATION" />
+    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.WRITE_NUTRITION" />
+    <uses-permission android:name="android.permission.health.WRITE_STEPS" />
+    <uses-permission android:name="android.permission.health.WRITE_SLEEP" />
+
+    <!-- Neu gegenueber der Vorgaenger-App: die Beschreibungen kommen aus dem
+         Netz. Geholt wird nur, wenn jemand den Knopf drueckt - nie von selbst
+         im Hintergrund. Eine stille Aenderung an dem, was in eine
+         Gesundheitsakte schreibt, waere genau das, was man nicht will. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Der Empfaenger muss zur LAUFZEIT angemeldet sein (impliziter Broadcast,
+         siehe EmpfangsDienst), und das braucht einen laufenden Prozess. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Ab Android 11 muss ausdruecklich stehen, welche fremden Pakete man
+         ansprechen will - sonst sind sie unsichtbar. Health Connect ist bis
+         Android 13 eine eigene App, ab 14 Teil des Systems. -->
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+        <intent>
+            <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:icon="@android:drawable/ic_menu_myplaces"
+        android:label="@string/app_name"
+        android:theme="@android:style/Theme.DeviceDefault.Light">
+
+        <activity
+            android:name=".HauptActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- Health Connect verlangt, dass die App erklaeren kann, wozu sie
+                 die Erlaubnis braucht (bis Android 13). -->
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+        </activity>
+
+        <!-- Dasselbe ab Android 14, wo Health Connect im System steckt. -->
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:targetActivity=".HauptActivity"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- Meldet den Empfaenger zur Laufzeit an und haelt ihn am Leben. -->
+        <service
+            android:name=".EmpfangsDienst"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- Nach einem Neustart den Dienst wieder hochfahren, sonst verpasst
+             man die naechste Messung, ohne es zu merken. -->
+        <receiver
+            android:name=".StartEmpfaenger"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Der Eintrag im Manifest bleibt, schadet nicht und greift auf
+             Android 7 und aelter. Ab Android 8 erreicht ihn der implizite
+             Broadcast der Pebble-App NICHT - dafuer ist der Dienst da. -->
+        <receiver
+            android:name=".PebbleEmpfaenger"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.getpebble.action.app.RECEIVE" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+</manifest>
