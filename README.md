@@ -104,7 +104,7 @@ braucht es nicht:
   "name": "Drinktervall",
   "uuid": "5b0f7a3e-2c8d-4b61-9e4f-7d2a1c9b8e50",
   "quelle": "https://github.com/dysseus-pascal/Drinktervall",
-  "beschreibung": "Traegt jedes getrunkene Glas als Wassermenge in die Gesundheitsakte ein.",
+  "beschreibung": "Trägt jedes getrunkene Glas als Wassermenge in die Gesundheitsakte ein.",
 
   "schluessel": {
     "GLASS_ML": 10008,

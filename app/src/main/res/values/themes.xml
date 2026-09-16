@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Material.Light und NICHT DeviceDefault: DeviceDefault ist das, was der
+         Hersteller daraus gemacht hat - auf diesem Telefon Material You, also
+         die Systemfarbe ueber alles. Material.Light ist der Android-Grundstand
+         und laesst die Farben hier unten gelten. -->
+    <style name="KieselTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/grund</item>
+        <item name="android:colorBackground">@color/grund</item>
+        <item name="android:textColorPrimary">@color/schrift</item>
+        <item name="android:textColorSecondary">@color/schrift_zart</item>
+        <item name="android:textColorHint">@color/schrift_zart</item>
+        <item name="android:colorAccent">@color/akzent</item>
+        <item name="android:statusBarColor">@color/grund</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">@color/grund</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+</resources>

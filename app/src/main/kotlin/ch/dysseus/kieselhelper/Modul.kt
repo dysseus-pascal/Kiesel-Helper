@@ -37,7 +37,7 @@ data class Modul(
             val o = try {
                 JSONObject(text)
             } catch (e: Exception) {
-                return Ergebnis(null, listOf("Die Datei ist kein gueltiges JSON: " + e.message))
+                return Ergebnis(null, listOf("Die Datei ist kein gültiges JSON: " + e.message))
             }
 
             val format = o.optInt("format", 0)
@@ -66,7 +66,7 @@ data class Modul(
             } else {
                 for (k in so.keys()) {
                     val n = so.optInt(k, -1)
-                    if (n < 0) fehler.add("Schluessel \"$k\" hat keine gueltige Nummer.")
+                    if (n < 0) fehler.add("Schlüssel \"$k\" hat keine gültige Nummer.")
                     else schluessel[k] = n
                 }
             }
@@ -133,7 +133,7 @@ data class Modul(
                 // nach einem Tippfehler, wo in Wahrheit die App nicht mitspielt.
                 fehler.add(
                     "Regel $nr: Satzart \"$artId\" kennt diese Fassung nicht. " +
-                        "Moeglich sind: " + Satzart.entries.joinToString(", ") { it.id } +
+                        "Möglich sind: " + Satzart.entries.joinToString(", ") { it.id } +
                         ". Eine neue Art braucht eine neue Fassung der App — " +
                         "Berechtigungen lassen sich nicht nachreichen."
                 )
@@ -149,14 +149,14 @@ data class Modul(
             when (art.form) {
                 Form.WERT_ZEITPUNKT -> {
                     val w = eo.optJSONObject("wert")
-                    if (w == null) fehler.add("Regel $nr: \"wert\" fehlt (noetig fuer ${art.id}).")
+                    if (w == null) fehler.add("Regel $nr: \"wert\" fehlt (nötig für ${art.id}).")
                     wertAus = w?.optString("aus", "")
                     wertEinheit = w?.optString("einheit", "") ?: ""
                     zeitFeld = "zeitpunkt"
                 }
                 Form.MENGE_SPANNE -> {
                     val m = eo.optJSONObject("menge")
-                    if (m == null) fehler.add("Regel $nr: \"menge\" fehlt (noetig fuer ${art.id}).")
+                    if (m == null) fehler.add("Regel $nr: \"menge\" fehlt (nötig für ${art.id}).")
                     wertAus = m?.optString("aus", "")
                     wertEinheit = m?.optString("einheit", "") ?: ""
                     zeitFeld = "beginn"
@@ -164,7 +164,7 @@ data class Modul(
                     if (dauer <= 0L) {
                         fehler.add(
                             "Regel $nr: \"dauer_s\" fehlt oder ist null. Die Akte lehnt eine " +
-                                "Spanne der Laenge null ab."
+                                "Spanne der Länge null ab."
                         )
                     }
                 }
@@ -191,7 +191,7 @@ data class Modul(
             val zeitAus = zo?.optString("aus", "") ?: ""
             val zeitEinheit = zo?.optString("einheit", "s") ?: "s"
             if (zeitEinheit != "s" && zeitEinheit != "ms") {
-                fehler.add("Regel $nr: Zeiteinheit \"$zeitEinheit\" — moeglich sind \"s\" und \"ms\".")
+                fehler.add("Regel $nr: Zeiteinheit \"$zeitEinheit\" — möglich sind \"s\" und \"ms\".")
             }
 
             val nichtZweimal = ro.optString("nicht_zweimal_fuer", "").ifEmpty { null }
@@ -204,9 +204,9 @@ data class Modul(
             if (zeitAus.isNotEmpty()) benutzt.add(zeitAus)
             nichtZweimal?.let { benutzt.add(it) }
             for (k in benutzt) {
-                if (k.isEmpty()) fehler.add("Regel $nr: leerer Schluesselname.")
+                if (k.isEmpty()) fehler.add("Regel $nr: leerer Schlüsselname.")
                 else if (!schluessel.containsKey(k)) {
-                    fehler.add("Regel $nr: Schluessel \"$k\" ist nicht deklariert.")
+                    fehler.add("Regel $nr: Schlüssel \"$k\" ist nicht deklariert.")
                 }
             }
 

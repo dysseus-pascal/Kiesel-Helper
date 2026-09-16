@@ -26,7 +26,7 @@ class Akte(private val context: Context) {
 
         val noetig = regel.art.berechtigung
         if (!erteilt(klient, noetig)) {
-            return "Erlaubnis fuer ${regel.art.klartext} fehlt — App oeffnen und erteilen"
+            return "Erlaubnis für ${regel.art.klartext} fehlt — App öffnen und erteilen"
         }
 
         val satz = regel.art.baue(wert, beginn, regel.dauerSekunden, uhrenHerkunft())
@@ -58,7 +58,7 @@ class Akte(private val context: Context) {
         return when (HealthConnectClient.getSdkStatus(context)) {
             HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED ->
                 "Health Connect muss aktualisiert werden"
-            else -> "Health Connect ist auf diesem Geraet nicht verfuegbar"
+            else -> "Health Connect ist auf diesem Gerät nicht verfügbar"
         }
     }
 

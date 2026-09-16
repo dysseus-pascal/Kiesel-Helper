@@ -41,7 +41,7 @@ enum class Satzart(
     /** Klartext fuer die Oberflaeche. */
     val klartext: String,
 ) {
-    HRV_RMSSD("hrv_rmssd", Form.WERT_ZEITPUNKT, "ms", "Herzratenvariabilitaet"),
+    HRV_RMSSD("hrv_rmssd", Form.WERT_ZEITPUNKT, "ms", "Herzratenvariabilität"),
     HERZFREQUENZ("herzfrequenz", Form.WERT_ZEITPUNKT, "bpm", "Herzfrequenz"),
     WASSER("hydration", Form.MENGE_SPANNE, "ml", "Getrunkenes Wasser"),
     KOFFEIN("koffein", Form.MENGE_SPANNE, "mg", "Koffein"),

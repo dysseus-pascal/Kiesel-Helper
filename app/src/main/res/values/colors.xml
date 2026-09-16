@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Kiesel: heller Stein, ein Wasserton als Akzent.
+     Eigene Farben statt der Systemfarben, weil DeviceDefault auf neueren
+     Telefonen Material You aufgreift - dort wurde die ganze App rosa, mit
+     Schrift, die kaum vom Grund abstand. -->
+<resources>
+    <color name="grund">#F3F4F1</color>
+    <color name="karte">#FFFFFF</color>
+    <color name="linie">#E3E5E0</color>
+
+    <color name="schrift">#1C2226</color>
+    <color name="schrift_zart">#5D666C</color>
+
+    <color name="akzent">#3A6B79</color>
+    <color name="akzent_gedrueckt">#2C5361</color>
+    <color name="akzent_schrift">#FFFFFF</color>
+
+    <color name="gut_grund">#E2EFE8</color>
+    <color name="gut_schrift">#1F6244</color>
+    <color name="warn_grund">#FAE7DC</color>
+    <color name="warn_schrift">#8E3D12</color>
+</resources>
