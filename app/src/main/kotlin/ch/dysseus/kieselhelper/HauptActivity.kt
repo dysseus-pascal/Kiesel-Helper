@@ -4,7 +4,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.view.Gravity
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -145,10 +144,15 @@ class HauptActivity : ComponentActivity() {
         k.luft(8f)
         k.addView(zart(kurzeQuelle(e.quelle) + "\n" + getString(R.string.geholt_am, stempel(e.geholtAm))))
 
-        // Das Schildchen und der Knopf daneben haengen an einer Abfrage, die
-        // dauern kann. Also erst den Kasten, dann fuellen.
+        // Das Schildchen und der Knopf haengen an einer Abfrage, die dauern
+        // kann. Also erst den Kasten, dann fuellen.
+        //
+        // UNTEREINANDER und nicht nebeneinander: "Zugriff auf
+        // Benachrichtigungen fehlt" ist so lang, dass daneben nichts mehr
+        // hinpasst - der Knopf wurde zu einem Balken ohne Aufschrift
+        // gequetscht. Eine Reihe haelt nur, solange alles kurz bleibt.
         k.luft(12f)
-        val erlaubnis = reihe().apply { gravity = Gravity.CENTER_VERTICAL }
+        val erlaubnis = spalte()
         k.addView(erlaubnis)
         lifecycleScope.launch {
             erlaubnis.removeAllViews()
@@ -163,7 +167,7 @@ class HauptActivity : ComponentActivity() {
                 erlaubnis.addView(
                     knopfHaupt(getString(R.string.freigeben)) {
                         startActivity(BenachrichtigungsHorcher.einstellungen())
-                    }.apply { (layoutParams as LinearLayout.LayoutParams).marginStart = dp(10f) }
+                    }.apply { (layoutParams as LinearLayout.LayoutParams).topMargin = dp(10f) }
                 )
                 return@launch
             }
@@ -181,7 +185,7 @@ class HauptActivity : ComponentActivity() {
                 erlaubnis.addView(
                     knopfHaupt(getString(R.string.erlaubnis)) { erlaubnisStarter.launch(fehlt) }
                         .apply {
-                            (layoutParams as LinearLayout.LayoutParams).marginStart = dp(10f)
+                            (layoutParams as LinearLayout.LayoutParams).topMargin = dp(10f)
                         }
                 )
             }
@@ -211,6 +215,8 @@ class HauptActivity : ComponentActivity() {
             knopfLeise(getString(R.string.entfernen), warnend = true) {
                 ModulSpeicher(this).entferne(e.quelle)
                 auffrischen()
+                // Diese beiden stehen NEBENeinander - hier ist der linke
+                // Abstand der richtige, nicht der obere.
             }.apply { (layoutParams as LinearLayout.LayoutParams).marginStart = dp(10f) }
         )
         return r
