@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dasselbe Bild bei Nacht: nasser Stein statt hellem.
+     Der Akzent muss hier HELLER sein als der Grund, nicht dunkler - sonst
+     verschwindet er. Und weil er hell ist, wird die Schrift auf dem gefuellten
+     Knopf dunkel; akzent_schrift dreht sich also mit um. -->
+<resources>
+    <color name="grund">#14181A</color>
+    <color name="karte">#1E2427</color>
+    <color name="linie">#313A3E</color>
+
+    <color name="schrift">#E9ECEA</color>
+    <color name="schrift_zart">#9BA5A9</color>
+
+    <color name="akzent">#6FB3C4</color>
+    <color name="akzent_gedrueckt">#8FC9D8</color>
+    <color name="akzent_schrift">#0D1214</color>
+
+    <color name="gut_grund">#1A3129</color>
+    <color name="gut_schrift">#86D6AC</color>
+    <color name="warn_grund">#372219</color>
+    <color name="warn_schrift">#EDA87E</color>
+</resources>

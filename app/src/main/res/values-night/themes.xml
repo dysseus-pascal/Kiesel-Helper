@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Das Gegenstueck zu values/themes.xml. Ein Thema laesst sich nicht
+         teilweise ueberschreiben - es steht hier ganz, mit dunklem Elternteil
+         und umgedrehten Leistensymbolen. Die Farben darin sind dieselben
+         Namen; welche Datei gilt, entscheidet Android am Nachtschalter. -->
+    <style name="KieselTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/grund</item>
+        <item name="android:colorBackground">@color/grund</item>
+        <item name="android:textColorPrimary">@color/schrift</item>
+        <item name="android:textColorSecondary">@color/schrift_zart</item>
+        <item name="android:textColorHint">@color/schrift_zart</item>
+        <item name="android:colorAccent">@color/akzent</item>
+        <item name="android:statusBarColor">@color/grund</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">@color/grund</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+</resources>
