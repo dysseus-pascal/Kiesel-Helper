@@ -1,0 +1,19 @@
+{
+  "format": 2,
+  "name": "Probe",
+  "beschreibung": "Beweist, dass die Benachrichtigungs-Quelle greift, ohne dass eine fremde App im Spiel ist. Hört auf die Shell des Telefons und meldet zurück, was sie gehört hat.",
+
+  "quelle": { "art": "benachrichtigung", "paket": "com.android.shell" },
+
+  "regeln": [
+    {
+      "wenn": ["titel", "text"],
+      "nicht_zweimal_fuer": "text",
+      "melden": {
+        "titel": "Probe: gehört",
+        "text": "titel={titel}  text={text}  wann={wann}"
+      },
+      "meldung": "Probe gehört: {titel} / {text}"
+    }
+  ]
+}
