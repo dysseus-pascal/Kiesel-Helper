@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -32,14 +34,19 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     sourceSets {
         getByName("main") {
             java.srcDirs("src/main/kotlin")
         }
+    }
+}
+
+// Frueher stand das als kotlinOptions IM android-Block. Diese Form ist
+// abgeloest; ab Gradle 10 faellt sie weg. Der Block gehoert jetzt nach
+// aussen und nimmt einen JvmTarget statt einer Zeichenkette.
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 
