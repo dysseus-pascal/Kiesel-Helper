@@ -120,6 +120,12 @@
             android:exported="false"
             android:parentActivityName=".HauptActivity" />
 
+        <!-- Was die App getan hat, als niemand hinsah. -->
+        <activity
+            android:name=".VerlaufActivity"
+            android:exported="false"
+            android:parentActivityName=".HauptActivity" />
+
         <!-- Meldet den Empfaenger zur Laufzeit an und haelt ihn am Leben. -->
         <service
             android:name=".EmpfangsDienst"

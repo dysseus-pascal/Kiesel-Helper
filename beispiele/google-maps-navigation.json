@@ -44,7 +44,7 @@
           }
         }
       },
-      "meldung": "{titel}"
+      "meldung": "{titel} | unter: {untertext} | {extra:android.progress}/{extra:android.progressMax} m"
     },
     {
       "ausloeser": "verschwindet",

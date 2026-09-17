@@ -1,6 +1,8 @@
 package ch.dysseus.kieselhelper
 
 import android.content.Context
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * Merkt sich, was zuletzt ankam und was damit geschah.
@@ -59,16 +61,71 @@ class Verlauf(context: Context) {
 
     private fun takt(modul: String, regelNr: Int) = "takt_${modul}_$regelNr"
 
-    // --- Statusanzeige ---
+    // --- Statusanzeige und Verlauf ---
 
+    /**
+     * Was geschehen ist - und zwar nicht nur das Letzte.
+     *
+     * WARUM DAS SEIN MUSS: was diese App tut, tut sie, wenn niemand hinsieht.
+     * Bis hierher merkte sie sich genau eine Zeile, und alles davor war nur im
+     * Logbuch des Systems zu finden. Das reicht nicht: der Logcat-Puffer haelt
+     * Stunden, nicht Tage, und eine Deinstallation nimmt den Prozess mit.
+     * Genau daran ist die Auswertung einer Autofahrt gescheitert - die Fahrt
+     * war vorbei, die Spur weg.
+     *
+     * Der Verlauf steht deshalb IN der App. Er ueberlebt Neustarts, braucht
+     * kein Kabel und keinen Rechner, und man kann ihn lesen, wo man gerade
+     * steht.
+     */
     fun merkeMeldung(text: String) {
+        val jetzt = System.currentTimeMillis() / 1000
+        val liste = JSONArray(prefs.getString(VERLAUF, "[]") ?: "[]")
+        liste.put(JSONObject().put("t", jetzt).put("m", text))
+        // Vorne abschneiden: die aeltesten fliegen raus, nicht die neuesten.
+        while (liste.length() > VERLAUF_MAX) liste.remove(0)
         prefs.edit()
             .putString("meldung", text)
-            .putLong("meldung_am", System.currentTimeMillis() / 1000)
+            .putLong("meldung_am", jetzt)
+            .putString(VERLAUF, liste.toString())
             .apply()
     }
 
     fun letzteMeldung(): String = prefs.getString("meldung", "") ?: ""
 
     fun letzteMeldungAm(): Long = prefs.getLong("meldung_am", 0L)
+
+    data class Zeile(val am: Long, val text: String)
+
+    /** Der Verlauf, das Neueste zuerst. */
+    fun verlauf(): List<Zeile> {
+        val aus = mutableListOf<Zeile>()
+        try {
+            val a = JSONArray(prefs.getString(VERLAUF, "[]") ?: "[]")
+            for (i in a.length() - 1 downTo 0) {
+                val o = a.optJSONObject(i) ?: continue
+                aus.add(Zeile(o.optLong("t", 0L), o.optString("m", "")))
+            }
+        } catch (e: Exception) {
+            // Ein verdorbener Verlauf darf die Anzeige nicht aufhalten.
+            return emptyList()
+        }
+        return aus
+    }
+
+    fun leereVerlauf() {
+        prefs.edit().remove(VERLAUF).apply()
+    }
+
+    private companion object {
+        const val VERLAUF = "verlauf"
+
+        /**
+         * Wie viele Zeilen aufgehoben werden.
+         *
+         * Bei einer Navigation kommt hoechstens alle zehn Sekunden eine - das
+         * sind rund siebzehn Minuten Fahrt. Genug, um ein Muster zu sehen, und
+         * wenig genug, dass die Ablage eine Kleinigkeit bleibt.
+         */
+        const val VERLAUF_MAX = 100
+    }
 }

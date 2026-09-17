@@ -75,6 +75,13 @@ class HauptActivity : ComponentActivity() {
         val zustandskarte = karte()
         zustand = fliesstext("")
         zustandskarte.addView(zustand)
+        // Der Weg zum Verlauf gehört in die Zustandskarte und nicht ans Ende
+        // des Bildschirms: wer wissen will, was zuletzt geschah, fragt an
+        // derselben Stelle auch, was davor geschah.
+        zustandskarte.luft(12f)
+        zustandskarte.addView(knopfLeise(getString(R.string.verlauf_kurz)) {
+            startActivity(Intent(this, VerlaufActivity::class.java))
+        })
         wurzel.addView(zustandskarte)
 
         wurzel.addView(abschnitt(getString(R.string.abschnitt_eingebunden)))

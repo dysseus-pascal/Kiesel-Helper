@@ -11,7 +11,12 @@
 
     <string name="einbinden">Beschreibung einbinden</string>
     <string name="einbinden_titel">Beschreibung einbinden</string>
-    <string name="zurueck">‹ Zurück</string>
+   <string name="zurueck">‹ Zurück</string>
+    <string name="verlauf">Verlauf</string>
+    <string name="verlauf_kurz">Verlauf ansehen</string>
+    <string name="verlauf_hinweis">Was Kiesel-Helper getan hat, als niemand hinsah. Die letzten hundert Meldungen — sie überstehen einen Neustart und brauchen kein Kabel.</string>
+    <string name="verlauf_anzahl">%1$d MELDUNGEN</string>
+    <string name="leeren">Verlauf leeren</string>
 
     <string name="keine_module_titel">Noch nichts eingebunden</string>
     <string name="keine_module">Solange keine Beschreibung geladen ist, nimmt Kiesel-Helper zwar Meldungen entgegen, trägt aber nichts ein.</string>
