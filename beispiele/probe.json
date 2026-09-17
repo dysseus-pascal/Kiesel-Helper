@@ -1,19 +1,48 @@
 {
   "format": 2,
   "name": "Probe",
-  "beschreibung": "Beweist, dass die Benachrichtigungs-Quelle greift, ohne dass eine fremde App im Spiel ist. Hört auf die Shell des Telefons und meldet zurück, was sie gehört hat.",
-
-  "quelle": { "art": "benachrichtigung", "paket": "com.android.shell" },
-
+  "beschreibung": "Beweist, dass die Benachrichtigungs-Quelle greift, ohne dass eine fremde App im Spiel ist. Hört auf die Shell des Telefons, meldet zurück — und schickt dasselbe an Kieselweg, damit auch der Weg zur Uhr geprüft ist.",
+  "quelle": {
+    "art": "benachrichtigung",
+    "paket": "com.android.shell"
+  },
   "regeln": [
     {
-      "wenn": ["titel", "text"],
+      "wenn": [
+        "titel",
+        "text"
+      ],
       "nicht_zweimal_fuer": "text",
       "melden": {
         "titel": "Probe: gehört",
         "text": "titel={titel}  text={text}  wann={wann}"
       },
       "meldung": "Probe gehört: {titel} / {text}"
+    },
+    {
+      "wenn": [
+        "titel",
+        "text"
+      ],
+      "senden": {
+        "an": "888e2bc3-f95a-40ce-ac86-01eeeded7d36",
+        "starten": false,
+        "felder": {
+          "ANWEISUNG": {
+            "aus": "text",
+            "art": "text"
+          },
+          "ZUSATZ": {
+            "aus": "titel",
+            "art": "text"
+          }
+        }
+      },
+      "meldung": "an die Uhr: {text} | {titel}"
     }
-  ]
+  ],
+  "schluessel": {
+    "ANWEISUNG": 10000,
+    "ZUSATZ": 10002
+  }
 }

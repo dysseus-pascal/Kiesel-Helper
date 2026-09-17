@@ -160,7 +160,15 @@ object Regelwerk {
                 if (w == null) { fehlt = true; break }
                 belegt[f.nummer] = w
             }
-            if (fehlt) null else UhrSender.sende(context, senke.uuid, senke.starten, belegt)
+            if (fehlt) null else {
+                val getan = UhrSender.sende(context, senke.uuid, senke.starten, belegt)
+                // MELDUNG GILT AUCH HIER. Bis eben schrieb diese Senke immer
+                // ihren eigenen Text ("4 Felder an die Uhr") und uebergab die
+                // Vorlage des Zettels stillschweigend dem Papierkorb - bei den
+                // anderen beiden Senken wurde sie benutzt. Aufgefallen ist es
+                // nach einer Autofahrt: der Verlauf war voll und sagte nichts.
+                fuelle(regel.meldung, felder).ifEmpty { getan }
+            }
         }
 
         is Senke.Meldung -> {
