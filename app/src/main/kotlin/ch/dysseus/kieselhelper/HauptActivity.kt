@@ -254,6 +254,27 @@ class HauptActivity : ComponentActivity() {
                 }
             }
             zustand.addView(kk)
+
+            // WAS IN DER AKTE STEHT. Ohne diese Liste raet man bei einem
+            // leeren Feld: fehlt die Erlaubnis, fehlt die Satzart, oder
+            // schreibt schlicht niemand?
+            val befunde = Gesundheit(this@HauptActivity).pruefe()
+            if (befunde.isNotEmpty()) {
+                val kb = karte()
+                kb.addView(kartentitel("Was in der Akte steht (48 h)"))
+                befunde.forEach { b ->
+                    kb.addView(zart(
+                        b.name + ": " +
+                            (if (b.anzahl == 0) "nichts" else b.anzahl.toString() + " Sätze") +
+                            (if (b.quellen.isEmpty()) "" else " — " + b.quellen.joinToString(", "))
+                    ))
+                }
+                kb.addView(zart(
+                    "Ein leeres Feld auf dem Gesundheits-Schirm hat hier seine " +
+                        "Antwort: steht nichts in der Akte, schreibt es niemand."
+                ))
+                zustand.addView(kb)
+            }
         }
     }
 

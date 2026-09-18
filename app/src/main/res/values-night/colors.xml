@@ -19,4 +19,10 @@
     <color name="gut_schrift">#86D6AC</color>
     <color name="warn_grund">#372219</color>
     <color name="warn_schrift">#EDA87E</color>
+
+    <!-- Bei Nacht heller: auf dunklem Grund verschwindet ein tiefes Blau. -->
+    <color name="phase_tief">#3E7D91</color>
+    <color name="phase_rem">#9B8ED0</color>
+    <color name="phase_leicht">#A7D2DD</color>
+    <color name="phase_wach">#DDA06F</color>
 </resources>

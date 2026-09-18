@@ -19,4 +19,12 @@
     <color name="gut_schrift">#1F6244</color>
     <color name="warn_grund">#FAE7DC</color>
     <color name="warn_schrift">#8E3D12</color>
+
+    <!-- Die Schlafphasen. Drei Toene desselben Wassers von tief nach flach,
+         und ein warmer fuer WACH - das Wachliegen gehoert nicht dazu und soll
+         auch nicht so aussehen. -->
+    <color name="phase_tief">#24505F</color>
+    <color name="phase_rem">#7A6FA8</color>
+    <color name="phase_leicht">#8FBECB</color>
+    <color name="phase_wach">#C98A5E</color>
 </resources>

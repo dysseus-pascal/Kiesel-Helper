@@ -29,13 +29,46 @@ Zweite gilt.
 Zwei Reiter. **Gesundheit** steht vorne, weil man deswegen die App öffnet;
 **Technik** ist der alte Schirm mit Zustand, Aufgaben und Verlauf.
 
-| Gruppe | Werte |
+| Karte | Werte |
 |---|---|
 | Bewegung | Schritte, Aktiv, Distanz, Kalorien |
-| Herz und Schlaf | Schlaf, Wasser, Ruhepuls, HRV |
+| Schlaf | Schlaf, Tiefschlaf |
+| Herz | Ruhepuls, HRV |
+| Wasser | Wasser |
 
 Einen Balken bekommt nur, was ein Ziel hat. Für einen Ruhepuls gibt es keins,
 und ein Balken ohne Ziel wäre eine Behauptung darüber, was gut ist.
+
+### Die Bilder
+
+Zu jeder Karte ein Bild - eine Zahl allein sagt nicht, ob sie hoch ist.
+
+| Karte | Bild |
+|---|---|
+| Bewegung | Schritte der letzten sieben Tage, mit Ziellinie |
+| Schlaf | die Nacht in Phasen (tief, REM, leicht, wach) + sieben Nächte |
+| Herz | Pulsverlauf des Tages, gestrichelt der Ruhepuls |
+| Wasser | sieben Tage |
+
+Selbst gezeichnet, ohne Diagramm-Bibliothek: die drei Bilder zusammen sind
+kürzer als die Einrichtung einer Bibliothek, und jede Bibliothek brächte ihre
+eigenen Farben mit — genau das, was diese App bei Material You schon einmal
+rosa gemacht hat.
+
+**Ein Bild behauptet schnell mehr, als es weiss.** Ein Tag ohne Eintrag
+bekommt darum keinen Balken der Höhe null, sondern gar keinen, und eine Nacht
+ohne Phasen keinen geviertelten Balken.
+
+### Der Ruhepuls kommt in drei Anläufen
+
+Die Uhr zeigt ihn, die Akte hatte ihn trotzdem nicht: nicht jede App schreibt
+einen `RestingHeartRateRecord`, manche rechnen ihn nur für die eigene
+Anzeige aus. Deshalb der Weg von hinten:
+
+1. der eingetragene Ruhepuls von heute oder gestern;
+2. sonst der jüngste eingetragene aus einer Woche;
+3. sonst der **tiefste gemessene Puls der Nacht** — und der steht dann mit
+   einem **≈** da. Das ist nicht dasselbe, und es wird auch nicht so getan.
 
 ### Das Widget
 
