@@ -127,6 +127,22 @@ class HauptActivity : ComponentActivity() {
         ))
         zustand.addView(k)
 
+        // OSMAND STEHT HIER, weil man es sonst nirgends sieht. Der erste
+        // Anlauf scheiterte daran, dass OsmAnd im Manifest nicht unter
+        // <queries> stand und damit unsichtbar war - nichts stuerzte ab,
+        // nichts warnte, und auf der Uhr kam einfach nichts an.
+        val ko = karte()
+        val lage = OsmandNavigation.lage
+        ko.addView(schild(lage.startsWith("verbunden"), "OsmAnd: $lage"))
+        if (!lage.startsWith("verbunden")) {
+            ko.addView(zart(
+                "Ohne Verbindung zu OsmAnd bleibt Kieselstrasse auf der Uhr " +
+                    "leer. OsmAnd muss installiert sein; die Verbindung " +
+                    "entsteht, sobald dieser Dienst läuft."
+            ))
+        }
+        zustand.addView(ko)
+
         lifecycleScope.launch {
             val kk = karte()
             when (HealthConnectClient.getSdkStatus(this@HauptActivity)) {

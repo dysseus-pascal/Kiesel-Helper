@@ -84,6 +84,18 @@ object OsmandNavigation {
     var navigiert: Boolean = false
         private set
 
+    /**
+     * Wie es um die Verbindung steht - im Klartext, fuer den Schirm der App.
+     *
+     * DAS IST NICHT SCHMUCK. Der erste Anlauf scheiterte daran, dass OsmAnd im
+     * Manifest nicht unter <queries> stand und damit unsichtbar war. Nichts
+     * stuerzte ab, nichts warnte; die einzige Spur stand im Logcat, das man
+     * ohne Kabel nicht liest. Also sagt die App es jetzt selbst.
+     */
+    @Volatile
+    var lage: String = "noch nicht versucht"
+        private set
+
     // --- Anbinden ---
 
     /**
@@ -105,7 +117,9 @@ object OsmandNavigation {
                 override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
                     api = IOsmAndAidlInterface.Stub.asInterface(binder)
                     Log.i(TAG, "OsmAnd angebunden: $paket")
-                    abonniere()
+                    lage = "verbunden mit $paket"
+                    Verlauf(ctx).merkeMeldung("OsmAnd verbunden ($paket)")
+                    abonniere(ctx)
                 }
 
                 override fun onServiceDisconnected(name: ComponentName?) {
@@ -114,16 +128,24 @@ object OsmandNavigation {
                     // Dienst zurueck ist. Ein eigener Wiederholversuch liefe
                     // daneben und haelt nur das Telefon wach.
                     Log.i(TAG, "OsmAnd weg")
+                    lage = "OsmAnd beendet — wartet auf Rückkehr"
                     api = null
                     navigiert = false
                 }
             }
             if (ctx.bindService(absicht, verb, Context.BIND_AUTO_CREATE)) {
                 verbindung = verb
+                lage = "$paket gefunden — verbinde"
                 return true
             }
         }
-        Log.i(TAG, "Kein OsmAnd gefunden")
+        // Zwei Ursachen, und die zweite hat hier schon einmal einen Abend
+        // gekostet: entweder ist OsmAnd nicht installiert, ODER es steht nicht
+        // unter <queries> im Manifest und ist damit unsichtbar - auch wenn es
+        // laeuft. Beides sieht von hier aus gleich aus, also beides nennen.
+        Log.i(TAG, "Kein OsmAnd erreichbar")
+        lage = "OsmAnd nicht erreichbar — installiert? (sonst Sichtbarkeit im Manifest)"
+        Verlauf(ctx).merkeMeldung("OsmAnd nicht erreichbar")
         return false
     }
 
@@ -139,18 +161,31 @@ object OsmandNavigation {
         navigiert = false
     }
 
-    private fun abonniere() {
+    private fun abonniere(ctx: Context) {
         val schnitt = api ?: return
         try {
-            schnitt.registerForNavigationUpdates(
+            // DER RUECKGABEWERT IST EINE ANTWORT, keine Zierde: OsmAnd gibt
+            // die Nummer des Abonnements zurueck und -1, wenn es nichts
+            // eingerichtet hat. Wer ihn wegwirft, meldet "abonniert" und
+            // wartet danach auf Daten, die nie kommen.
+            val nummer = schnitt.registerForNavigationUpdates(
                 ANavigationUpdateParams().apply { setSubscribeToUpdates(true) },
                 rueckruf,
             )
-            Log.i(TAG, "Abbiegedaten abonniert")
+            if (nummer < 0) {
+                lage = "verbunden, aber OsmAnd nimmt das Abonnement nicht an"
+                Verlauf(ctx).merkeMeldung("OsmAnd lehnt das Abonnement ab ($nummer)")
+                Log.w(TAG, "registerForNavigationUpdates gab $nummer")
+            } else {
+                lage = "verbunden, Abbiegedaten abonniert"
+                Log.i(TAG, "Abbiegedaten abonniert (Nr. $nummer)")
+            }
         } catch (e: Exception) {
             // Auch ein RemoteException faellt hierher. Es waere nichts
             // gewonnen, die App deswegen zu beenden.
             Log.w(TAG, "Abonnieren fehlgeschlagen: " + e.message)
+            lage = "Abonnieren fehlgeschlagen: " + (e.message ?: "unbekannt")
+            Verlauf(ctx).merkeMeldung("OsmAnd: Abonnieren fehlgeschlagen")
         }
     }
 

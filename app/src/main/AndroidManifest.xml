@@ -79,6 +79,22 @@
         <intent>
             <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
         </intent>
+
+        <!-- OSMAND. Ohne diese drei Zeilen ist es fuer uns nicht vorhanden:
+             bindService findet den Dienst nicht, gibt false zurueck, und die
+             App meldet "kein OsmAnd gefunden" - auf einem Telefon, auf dem es
+             installiert ist und laeuft.
+
+             Genau so ist es passiert. Der Fehler ist besonders heimtueckisch,
+             weil nichts abstuerzt und nichts warnt: die Sichtbarkeitsregel gilt
+             seit Android 11 stillschweigend, und der einzige Hinweis steht im
+             Logcat, das man am Steuer nicht liest.
+
+             Drei Pakete, weil es OsmAnd dreifach gibt - die gekaufte Fassung,
+             die freie und die naechtliche. -->
+        <package android:name="net.osmand.plus" />
+        <package android:name="net.osmand" />
+        <package android:name="net.osmand.dev" />
     </queries>
 
     <application
