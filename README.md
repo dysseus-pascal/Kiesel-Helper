@@ -359,6 +359,38 @@ gradle test
 * Health Connect gibt es ab Android 14 im System; davor braucht es die App aus
   dem Play Store. Ohne sie zeigt Kiesel-Helper das an und tut sonst nichts.
 
+## OsmAnd
+
+Für die Navigation fragt Kiesel-Helper **OsmAnd selbst**, nicht seine
+Benachrichtigung. OsmAnd bietet dafür einen Dienst an (`OsmandAidlServiceV2`,
+im Manifest `exported="true"`, ohne Berechtigung und ohne Aufruferliste —
+nachgesehen, nicht angenommen). Was von dort kommt, ist ungleich besser als
+Text aus einer Meldung:
+
+| | |
+|---|---|
+| `updateNavigationInfo` | Entfernung zur Abzweigung **in Metern als Zahl**, Abbiegeart als **Kennzahl 1–14** (Kreisverkehr inbegriffen), Linksverkehr |
+| `getAppInfo` | Strassenname, Restweg, Restzeit, **Ankunftszeit als Unix-Sekunden** |
+
+Weitergereicht wird es an [Kieselstrasse](https://github.com/dysseus-pascal/Kieselstrasse).
+Höchstens alle vier Sekunden — OsmAnd meldet im Sekundentakt, und jede Meldung
+weiterzugeben hiesse, die Funkstrecke zur Uhr zu fluten. **Ausgenommen ist der
+Wechsel der Abbiegeart**: das ist der nächste Schritt, und der darf nicht auf
+den Takt warten.
+
 ## Lizenz
 
-[CC0 1.0](LICENSE) — gemeinfrei.
+**[GPLv3](LICENSE).** Bis zum 18.09.2026 war diese App gemeinfrei nach CC0 1.0.
+Mit OsmAnds Schnittstelle kam fremder Code ins Projekt — `osmand-api/` ist das
+Modul `OsmAnd-api` aus [osmandapp/OsmAnd](https://github.com/osmandapp/OsmAnd),
+unverändert übernommen, und OsmAnd steht unter GPLv3. Die ist Copyleft: wer ein
+solches Modul mit seiner App zu einem Werk verbindet und das verbreitet, stellt
+das Ganze unter dieselbe Lizenz.
+
+Übernommen wurde das **ganze** Modul und nicht nur das Gebrauchte, weil AIDL
+die Transaktionsnummern nach der Reihenfolge der Deklarationen vergibt — wer
+ungenutzte Methoden streicht, verschiebt alle folgenden, und die App riefe
+danach still die falsche Funktion auf.
+
+**Die Uhr-Apps sind davon nicht berührt.** Sie enthalten keinen fremden Code
+und bleiben gemeinfrei nach CC0 1.0.

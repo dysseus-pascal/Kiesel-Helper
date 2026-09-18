@@ -51,6 +51,12 @@ class EmpfangsDienst : Service() {
         }
         empfaenger = e
         Log.i(PebbleEmpfaenger.TAG, "Empfaenger zur Laufzeit angemeldet")
+
+        // OsmAnd anbinden, solange dieser Dienst laeuft. Er ist die richtige
+        // Stelle dafuer: er lebt so lange wie der Empfang selbst, und eine
+        // Bindung, die an einem Fenster haengt, faellt weg, sobald man es
+        // schliesst - also gerade dann, wenn man faehrt.
+        OsmandNavigation.binde(this, Kieselstrasse.UUID)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -98,6 +104,7 @@ class EmpfangsDienst : Service() {
             }
         }
         empfaenger = null
+        OsmandNavigation.loese(this)
         super.onDestroy()
     }
 
