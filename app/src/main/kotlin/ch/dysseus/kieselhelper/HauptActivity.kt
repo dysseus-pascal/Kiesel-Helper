@@ -59,6 +59,9 @@ class HauptActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Nochmal bei OsmAnd anklopfen. Wer dort eben den Schalter umgelegt
+        // hat, kommt als Naechstes hierher und will sehen, dass es wirkt.
+        OsmandNavigation.versucheErneut(this)
         auffrischen()
     }
 
@@ -136,10 +139,22 @@ class HauptActivity : ComponentActivity() {
         ko.addView(schild(lage.startsWith("verbunden"), "OsmAnd: $lage"))
         if (!lage.startsWith("verbunden")) {
             ko.addView(zart(
-                "Ohne Verbindung zu OsmAnd bleibt Kieselstrasse auf der Uhr " +
-                    "leer. OsmAnd muss installiert sein; die Verbindung " +
-                    "entsteht, sobald dieser Dienst läuft."
+                if (lage.startsWith("in OsmAnd freischalten"))
+                    "OsmAnd lässt fremde Apps erst nach einem Schalter zu. " +
+                        "Kiesel-Helper steht dort schon in der Liste — der " +
+                        "erste Verbindungsversuch hat ihn eingetragen, nur " +
+                        "ausgeschaltet. Nach dem Umlegen hierher " +
+                        "zurückkehren, das genügt."
+                else
+                    "Ohne Verbindung zu OsmAnd bleibt Kieselstrasse auf der " +
+                        "Uhr leer. OsmAnd muss installiert sein; die " +
+                        "Verbindung entsteht, sobald dieser Dienst läuft."
             ))
+            ko.addView(knopfHaupt("OsmAnd öffnen", breit = true) {
+                val start = packageManager.getLaunchIntentForPackage("net.osmand.plus")
+                    ?: packageManager.getLaunchIntentForPackage("net.osmand")
+                if (start != null) startActivity(start) else melde("OsmAnd nicht gefunden")
+            })
         }
         zustand.addView(ko)
 

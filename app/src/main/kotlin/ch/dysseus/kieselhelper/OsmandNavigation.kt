@@ -149,6 +149,23 @@ object OsmandNavigation {
         return false
     }
 
+    /**
+     * Nochmal anklopfen.
+     *
+     * NOETIG, WEIL DAS FREISCHALTEN IN EINER ANDEREN APP GESCHIEHT. Wer in
+     * OsmAnd den Schalter umlegt, aendert nichts an unserer Verbindung - sie
+     * steht ja. Nur das Abonnement wurde damals abgewiesen, und von selbst
+     * fragt niemand ein zweites Mal. Ohne diesen Weg muesste man den Dienst
+     * beenden und neu starten, um etwas zu merken.
+     *
+     * Wird beim Oeffnen des Hauptschirms gerufen: dort kommt man ohnehin
+     * vorbei, wenn man wissen will, ob es jetzt geht.
+     */
+    fun versucheErneut(context: Context) {
+        if (api != null) abonniere(context.applicationContext)
+        else binde(context, ziel ?: Kieselstrasse.UUID)
+    }
+
     fun loese(context: Context) {
         val verb = verbindung ?: return
         try {
@@ -173,8 +190,18 @@ object OsmandNavigation {
                 rueckruf,
             )
             if (nummer < 0) {
-                lage = "verbunden, aber OsmAnd nimmt das Abonnement nicht an"
-                Verlauf(ctx).merkeMeldung("OsmAnd lehnt das Abonnement ab ($nummer)")
+                // NICHT "geht nicht", sondern WAS ZU TUN IST.
+                //
+                // OsmAnd gibt -1 zurueck, wenn getApi() null liefert, und das
+                // tut es, solange die aufrufende App nicht freigeschaltet ist.
+                // Beim ersten Kontakt traegt OsmAnd sie selbst als
+                // "verbundene App" ein - aber AUSGESCHALTET. Erst ein Schalter
+                // in OsmAnd macht sie gueltig. Nachgelesen in OsmandAidlApi:
+                // isAppEnabled legt den Eintrag mit enabled=false an.
+                lage = "in OsmAnd freischalten: Menü › Plugins › Kiesel-Helper"
+                Verlauf(ctx).merkeMeldung(
+                    "OsmAnd: noch nicht freigeschaltet (Menü › Plugins)"
+                )
                 Log.w(TAG, "registerForNavigationUpdates gab $nummer")
             } else {
                 lage = "verbunden, Abbiegedaten abonniert"
