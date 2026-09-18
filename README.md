@@ -146,8 +146,21 @@ zum Anpassen gedacht sind:
 * `felder-anzeigen.json` — zeigt, was in den Benachrichtigungen einer App
   wirklich steht.
 * `google-maps-navigation.json`, `osmand-navigation.json` — Navigation an
-  [Kieselweg](https://github.com/dysseus-pascal/Kieselweg). Beide **ungeprüft**,
-  bis die Felder nachgemessen sind.
+  [Kieselweg](https://github.com/dysseus-pascal/Kieselweg). Beide **nachgemessen**
+  am Telefon, und beide anders, als sie aussehen sollten:
+
+| | Google Maps | OsmAnd |
+|---|---|---|
+| Entfernung zur Abzweigung | im Titel, vor einem Trennpunkt | im Titel, vor einem Trennpunkt |
+| Anweisung | im selben Titel, dahinter | im selben Titel, dahinter |
+| Ankunft | `untertext` | zweite Zeile des `grosstext` |
+| `android.progress` | Streckenfortschritt | steht auf 0, unbrauchbar |
+| kurz vor der Abzweigung | Titel **ohne** Entfernung — das ist das Jetzt | zählt bis zuletzt herunter |
+
+  Die Entfernung im Maps-Titel war das Ergebnis einer echten Fahrt, nicht einer
+  Messung am Schreibtisch: **am Stand steht dort nie eine Zahl.** Wer Maps nur
+  stehend misst, schliesst daraus, es gebe keine — und schickt der Uhr den Rest
+  bis zum Ziel. Der half an keiner Kreuzung.
 
 Zum Messen gibt es [tools/felder_messen.ps1](tools/felder_messen.ps1):
 

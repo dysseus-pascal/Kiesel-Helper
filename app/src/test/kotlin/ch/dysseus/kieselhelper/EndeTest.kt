@@ -21,19 +21,22 @@ class EndeTest {
     @Test
     fun mapsZettelHatEineRegelFuersEnde() {
         val m = Modul.lies(maps).modul!!
-        assertEquals(2, m.regeln.size)
-        assertEquals(Ausloeser.ERSCHEINT, m.regeln[0].ausloeser)
-        assertEquals(Ausloeser.VERSCHWINDET, m.regeln[1].ausloeser)
+        // Meter, Kilometer, ohne Entfernung - und das Ende.
+        assertEquals(4, m.regeln.size)
+        for (i in 0..2) assertEquals(Ausloeser.ERSCHEINT, m.regeln[i].ausloeser)
+        assertEquals(Ausloeser.VERSCHWINDET, m.regeln[3].ausloeser)
     }
 
     @Test
     fun dasEndeSchicktFesteWerte() {
-        val s = Modul.lies(maps).modul!!.regeln[1].senke as Senke.AnDieUhr
-        // Ohne die Null fuer die Strecke zeigte die Uhr die letzte Entfernung
-        // weiter - ein fehlendes Feld laesst dort das alte stehen.
-        val max = s.felder.first { it.name == "FORTSCHRITT_MAX" }
-        assertEquals(Wert.Zahl(0), max.fest)
-        assertNull(max.aus)
+        val s = Modul.lies(maps).modul!!.regeln[3].senke as Senke.AnDieUhr
+        // MINUS EINS, NICHT NULL. Ohne eine Angabe zur Strecke zeigte die Uhr
+        // die letzte Entfernung weiter - ein fehlendes Feld laesst dort das
+        // alte stehen. Mit einer Null stuende gross "0 m" da, als waere die
+        // Abzweigung genau hier; erst minus eins heisst "gar keine Zahl".
+        val ent = s.felder.first { it.name == "ENTFERNUNG" }
+        assertEquals(Wert.Zahl(-1), ent.fest)
+        assertNull(ent.aus)
         assertEquals(Wert.Text("Navigation beendet"),
             s.felder.first { it.name == "ANWEISUNG" }.fest)
         // Und es startet die Uhr-App NICHT neu - ein Ende ist kein Anlass,

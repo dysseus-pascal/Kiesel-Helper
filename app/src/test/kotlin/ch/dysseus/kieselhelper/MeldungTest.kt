@@ -23,18 +23,25 @@ class MeldungTest {
 
     @Test
     fun mapsMeldungTraegtDieRohwerte() {
-        val r = Modul.lies(maps).modul!!.regeln[0]
-        // Ohne diese vier Platzhalter ist eine aufgezeichnete Fahrt nicht
-        // auswertbar - genau das ist einmal passiert.
-        for (feld in listOf("{titel}", "{untertext}",
-                            "{extra:android.progress}", "{extra:android.progressMax}")) {
-            assertTrue("Platzhalter $feld fehlt in: " + r.meldung, r.meldung.contains(feld))
+        // JEDE Regel, die etwas schickt, muss den Rohtext mitschreiben, aus
+        // dem sie geschnitten hat - nicht nur die erste.
+        //
+        // Dieser Verlauf hat sich schon einmal bezahlt gemacht: er war es, der
+        // spaeter bewiesen hat, dass Maps die Entfernung sehr wohl in den
+        // Titel legt. Am Stand ist das nicht zu sehen, dort steht nie eine
+        // Zahl. Ohne die Aufzeichnung waere es eine Vermutung geblieben.
+        for (i in 0..2) {
+            val r = Modul.lies(maps).modul!!.regeln[i]
+            for (feld in listOf("{titel}", "{untertext}")) {
+                assertTrue("Platzhalter $feld fehlt in Regel $i: " + r.meldung,
+                    r.meldung.contains(feld))
+            }
         }
     }
 
     @Test
     fun dieEndeRegelMeldetAuchEtwas() {
-        val r = Modul.lies(maps).modul!!.regeln[1]
+        val r = Modul.lies(maps).modul!!.regeln[3]
         assertEquals("Navigation beendet", r.meldung)
     }
 }

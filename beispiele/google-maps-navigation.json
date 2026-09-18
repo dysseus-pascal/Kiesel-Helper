@@ -1,25 +1,81 @@
 {
   "format": 2,
   "name": "Google Maps → Kieselweg",
-  "beschreibung": "Schickt die Navigationsanweisung von Google Maps an die Uhr-App Kieselweg — und sagt der Uhr auch, wenn die Navigation zu Ende ist. Nachgemessen an Android 16: Maps benutzt das Live-Updates-Format, kennt KEINE Entfernung zur nächsten Abzweigung und legt Anweisung und Strasse zusammen in den Titel.",
+  "beschreibung": "Schickt die Navigationsanweisung von Google Maps an die Uhr-App Kieselweg — und sagt der Uhr auch, wenn die Navigation zu Ende ist. Nachgemessen an Android 16 und an einer echten Fahrt: Maps benutzt das Live-Updates-Format und schreibt die Entfernung zur nächsten Abzweigung in den Titel, vor einen Trennpunkt (»450 m · Turn left onto …«). Im letzten Takt vor der Abzweigung lässt es sie weg — das ist das Jetzt, und dann steht die Anweisung allein da.",
   "quelle": {
     "art": "benachrichtigung",
     "paket": "com.google.android.apps.maps"
   },
   "schluessel": {
     "ANWEISUNG": 10000,
-    "ZUSATZ": 10002,
-    "FORTSCHRITT": 10004,
-    "FORTSCHRITT_MAX": 10005
+    "ENTFERNUNG": 10001,
+    "ZUSATZ": 10002
   },
   "regeln": [
     {
-      "wenn": [
-        "titel",
-        "extra:android.progressMax"
-      ],
+      "wenn": ["titel"],
       "nur_wenn": {
-        "extra:android.template": "ProgressStyle"
+        "extra:android.template": "ProgressStyle",
+        "titel": "^[0-9]+([.,][0-9]+)?\\s*m\\s*[^0-9A-Za-z\\s]"
+      },
+      "senden": {
+        "an": "888e2bc3-f95a-40ce-ac86-01eeeded7d36",
+        "starten": true,
+        "hoechstens_alle_s": 10,
+        "felder": {
+          "ANWEISUNG": {
+            "aus": "titel",
+            "art": "text",
+            "muster": "^[0-9]+(?:[.,][0-9]+)?\\s*m\\s*[^0-9A-Za-z\\s]\\s*(.+)$"
+          },
+          "ENTFERNUNG": {
+            "aus": "titel",
+            "art": "zahl",
+            "muster": "^\\s*([0-9]+(?:[.,][0-9]+)?)\\s*m\\s*[^0-9A-Za-z\\s]"
+          },
+          "ZUSATZ": {
+            "aus": "untertext",
+            "art": "text"
+          }
+        }
+      },
+      "meldung": "{titel} | unter: {untertext}"
+    },
+    {
+      "wenn": ["titel"],
+      "nur_wenn": {
+        "extra:android.template": "ProgressStyle",
+        "titel": "^[0-9]+([.,][0-9]+)?\\s*km\\s*[^0-9A-Za-z\\s]"
+      },
+      "senden": {
+        "an": "888e2bc3-f95a-40ce-ac86-01eeeded7d36",
+        "starten": true,
+        "hoechstens_alle_s": 10,
+        "felder": {
+          "ANWEISUNG": {
+            "aus": "titel",
+            "art": "text",
+            "muster": "^[0-9]+(?:[.,][0-9]+)?\\s*km\\s*[^0-9A-Za-z\\s]\\s*(.+)$"
+          },
+          "ENTFERNUNG": {
+            "aus": "titel",
+            "art": "zahl",
+            "muster": "^\\s*([0-9]+(?:[.,][0-9]+)?)\\s*km\\s*[^0-9A-Za-z\\s]",
+            "faktor": 1000
+          },
+          "ZUSATZ": {
+            "aus": "untertext",
+            "art": "text"
+          }
+        }
+      },
+      "meldung": "{titel} | unter: {untertext}"
+    },
+    {
+      "wenn": ["titel"],
+      "nur_wenn": {
+        "extra:android.template": "ProgressStyle",
+        "titel": "^(?![0-9]+([.,][0-9]+)?\\s*k?m\\s*[^0-9A-Za-z\\s])"
       },
       "senden": {
         "an": "888e2bc3-f95a-40ce-ac86-01eeeded7d36",
@@ -30,27 +86,21 @@
             "aus": "titel",
             "art": "text"
           },
+          "ENTFERNUNG": {
+            "wert": -1,
+            "art": "zahl"
+          },
           "ZUSATZ": {
             "aus": "untertext",
             "art": "text"
-          },
-          "FORTSCHRITT": {
-            "aus": "extra:android.progress",
-            "art": "zahl"
-          },
-          "FORTSCHRITT_MAX": {
-            "aus": "extra:android.progressMax",
-            "art": "zahl"
           }
         }
       },
-      "meldung": "{titel} | unter: {untertext} | {extra:android.progress}/{extra:android.progressMax} m"
+      "meldung": "{titel} | ohne Entfernung | unter: {untertext}"
     },
     {
       "ausloeser": "verschwindet",
-      "wenn": [
-        "paket"
-      ],
+      "wenn": ["paket"],
       "senden": {
         "an": "888e2bc3-f95a-40ce-ac86-01eeeded7d36",
         "felder": {
@@ -58,17 +108,13 @@
             "wert": "Navigation beendet",
             "art": "text"
           },
+          "ENTFERNUNG": {
+            "wert": -1,
+            "art": "zahl"
+          },
           "ZUSATZ": {
             "wert": "",
             "art": "text"
-          },
-          "FORTSCHRITT": {
-            "wert": 0,
-            "art": "zahl"
-          },
-          "FORTSCHRITT_MAX": {
-            "wert": 0,
-            "art": "zahl"
           }
         }
       },
