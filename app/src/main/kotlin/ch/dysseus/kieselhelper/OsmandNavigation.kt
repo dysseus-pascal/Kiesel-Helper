@@ -56,8 +56,15 @@ object OsmandNavigation {
      * ExternalApiHelper von OsmAnd; das Buendel traegt die Angaben zur
      * laufenden Abbiegung unter dem Vorsatz "current_".
      */
-    private const val SCHL_NAME = "current_turn_name"
-    private const val SCHL_WINKEL = "current_turn_angle"
+    // "next_" ist die Abzweigung, die KOMMT - "current_" ist die, in der man
+    // gerade steckt. Nur die naechste hat eine Entfernung, und nur sie gehoert
+    // aufs Handgelenk.
+    private const val SCHL_ENTFERNUNG = "next_turn_distance"
+    private const val SCHL_ART = "next_turn_type"
+    private const val SCHL_NAME = "next_turn_name"
+
+    /** Wie oft bei OsmAnd nachgefragt wird, solange die Bindung steht. */
+    private const val ABFRAGE_MS = 2000L
 
     /**
      * Wie oft hoechstens an die Uhr. OsmAnd meldet im Sekundentakt; jede
@@ -120,6 +127,7 @@ object OsmandNavigation {
                     lage = "verbunden mit $paket"
                     Verlauf(ctx).merkeMeldung("OsmAnd verbunden ($paket)")
                     abonniere(ctx)
+                    starteTakt(ctx)
                 }
 
                 override fun onServiceDisconnected(name: ComponentName?) {
@@ -176,6 +184,7 @@ object OsmandNavigation {
         verbindung = null
         api = null
         navigiert = false
+        stoppeTakt()
     }
 
     private fun abonniere(ctx: Context) {
@@ -228,8 +237,10 @@ object OsmandNavigation {
          * Ordnung.
          */
         override fun updateNavigationInfo(info: ADirectionInfo?) {
-            val i = info ?: return
-            melde(i.distanceTo, i.turnType)
+            // Nur als Anlass, nicht als Quelle: die Nachfrage holt ohnehin
+            // alles, und so gibt es EINEN Weg zu den Werten statt zweier, die
+            // sich widersprechen koennen.
+            app?.let { frageAb(it) }
         }
 
         override fun onUpdate() {}
@@ -249,11 +260,11 @@ object OsmandNavigation {
      * [TAKT_MS] - ausser die Abbiegeart hat gewechselt, denn das ist der
      * naechste Schritt und der darf nicht warten.
      */
-    private fun melde(meter: Int, art: Int) {
+    private fun melde(meter: Int, art: Int, strasse: String?, ankunft: Long, rest: Int) {
         val ctx = app ?: return
         val an = ziel ?: return
 
-        navigiert = art > 0
+        navigiert = true
 
         if (art == letzteArt && meter == letzteMeter) return
         val jetzt = System.currentTimeMillis()
@@ -267,48 +278,131 @@ object OsmandNavigation {
         val felder = mutableMapOf<Int, Wert>(
             Kieselstrasse.ABBIEGEART to Wert.Zahl(art.toLong()),
             Kieselstrasse.ENTFERNUNG to Wert.Zahl(meter.toLong()),
+            // Leer heisst auf der Uhr LOESCHEN - sonst bliebe die Strasse von
+            // vorhin unter der neuen Abzweigung stehen.
+            Kieselstrasse.STRASSE to Wert.Text(strasse ?: ""),
         )
-        strasseUndAnkunft(felder)
+        if (ankunft > 0) felder[Kieselstrasse.ANKUNFT] = Wert.Zahl(ankunft)
+        if (rest > 0) felder[Kieselstrasse.REST] = Wert.Zahl(rest.toLong())
 
+        // NEUER SCHRITT STARTET DIE UHR-APP. Eine AppMessage erreicht nur eine
+        // laufende Watchapp; ohne das bliebe der Schirm dunkel, bis man sie von
+        // Hand oeffnet.
         UhrSender.sende(ctx, an, neuerSchritt, felder)
-        Verlauf(ctx).merkeMeldung("OsmAnd: Art $art, $meter m")
+        Verlauf(ctx).merkeMeldung(
+            "OsmAnd: Art $art, $meter m" + if (strasse.isNullOrBlank()) "" else " — $strasse"
+        )
+    }
+
+    // --- Nachfragen statt warten ---
+
+    private var takt: android.os.Handler? = null
+
+    /**
+     * OsmAnd im Takt fragen, statt auf seinen Rueckruf zu warten.
+     *
+     * WARUM BEIDES. Der Rueckruf `updateNavigationInfo` ist der schoenere Weg -
+     * er meldet sich von selbst, genau wenn sich etwas aendert. Nur kam er beim
+     * ersten Versuch am Geraet nie an, obwohl Verbindung und Abonnement
+     * bestaetigt waren. Woran es lag, laesst sich ohne Kabel nicht feststellen.
+     *
+     * `getAppInfo` braucht ihn nicht: es liefert dasselbe auf Nachfrage, und
+     * sogar mehr - Entfernung, Abbiegeart, Strasse, Restweg und Ankunftszeit in
+     * einem Zug. Zwei Sekunden Takt sind fuer eine Anzeige am Handgelenk
+     * reichlich; die Bremse in `melde` haelt die Funkstrecke ohnehin frei.
+     *
+     * Der Rueckruf bleibt trotzdem angemeldet. Kommt er, ist die Anzeige
+     * schneller; kommt er nicht, faellt es niemandem auf.
+     */
+    private fun starteTakt(ctx: Context) {
+        if (takt != null) return
+        val faden = android.os.HandlerThread("osmand-takt").apply { start() }
+        val h = android.os.Handler(faden.looper)
+        takt = h
+        h.post(object : Runnable {
+            override fun run() {
+                frageAb(ctx)
+                h.postDelayed(this, ABFRAGE_MS)
+            }
+        })
+    }
+
+    private fun stoppeTakt() {
+        takt?.removeCallbacksAndMessages(null)
+        takt = null
     }
 
     /**
-     * Strassenname, Ankunftszeit und Restweg dazuholen.
+     * Einmal nachsehen, was OsmAnd gerade weiss.
      *
-     * Sie stehen nicht in der Abbiegemeldung, sondern in `getAppInfo`. Das ist
-     * ein zweiter Aufruf je Meldung - er kostet wenig, und ohne ihn haette die
-     * Uhr eine Zahl ohne Ort.
-     *
-     * Schlaegt er fehl, wird trotzdem geschickt: eine Entfernung ohne
-     * Strassennamen ist brauchbar, gar nichts nicht.
+     * Kein Abbiegeziel heisst: es wird nicht navigiert. Dann einmal das Ende
+     * melden und danach schweigen - nicht alle zwei Sekunden dasselbe.
      */
-    private fun strasseUndAnkunft(felder: MutableMap<Int, Wert>) {
+    private fun frageAb(ctx: Context) {
         val schnitt = api ?: return
         try {
             val info = schnitt.appInfo ?: return
             val kurve: Bundle? = info.turnInfo
-            // EINMAL aufschreiben, was wirklich drinsteht. Die Schluesselnamen
-            // sind aus OsmAnds Quelltext gelesen, nicht gemessen - und ein
-            // Name, der danebenliegt, liefert still null statt einer Warnung.
-            if (!kurveGemeldet && kurve != null) {
+
+            if (!kurveGemeldet && kurve != null && !kurve.isEmpty) {
                 kurveGemeldet = true
-                Log.i(TAG, "turnInfo-Schluessel: " + kurve.keySet().joinToString(", "))
-                Log.i(TAG, "  Rest " + info.leftDistance + " m, Restzeit " + info.leftTime +
-                    " s, Ankunft " + info.arrivalTime)
+                // EINMAL aufschreiben, was wirklich drinsteht. Die
+                // Schluesselnamen sind aus OsmAnds Quelltext gelesen, nicht
+                // gemessen - und ein Name, der danebenliegt, liefert still
+                // null statt einer Warnung.
+                Log.i(TAG, "turnInfo: " + kurve.keySet().joinToString(", "))
+                Verlauf(ctx).merkeMeldung("OsmAnd-Felder: " + kurve.keySet().joinToString(", "))
             }
-            val name = kurve?.getString(SCHL_NAME)
-            if (!name.isNullOrBlank()) felder[Kieselstrasse.STRASSE] = Wert.Text(name)
-            if (info.arrivalTime > 0L) {
-                felder[Kieselstrasse.ANKUNFT] = Wert.Zahl(info.arrivalTime)
+
+            val meter = kurve?.getInt(SCHL_ENTFERNUNG, -1) ?: -1
+            if (kurve == null || meter <= 0) {
+                if (navigiert) meldeEnde()
+                return
             }
-            if (info.leftDistance > 0) {
-                felder[Kieselstrasse.REST] = Wert.Zahl(info.leftDistance.toLong())
-            }
+            val kuerzel = kurve.getString(SCHL_ART)
+            val nr = ausfahrt(kuerzel)
+            val name = kurve.getString(SCHL_NAME).orEmpty()
+            // Die Ausfahrtnummer gehoert VOR den Strassennamen: im Kreisel ist
+            // sie die eigentliche Anweisung, der Name bloss die Bestaetigung.
+            val strasse = if (nr > 0) "$nr. Ausfahrt" + (if (name.isBlank()) "" else " · $name")
+                          else name
+            melde(meter, artAusText(kuerzel), strasse, info.arrivalTime, info.leftDistance)
         } catch (e: Exception) {
-            Log.w(TAG, "getAppInfo fehlgeschlagen: " + e.message)
+            Log.w(TAG, "Nachfrage fehlgeschlagen: " + e.message)
         }
+    }
+
+    /**
+     * Aus OsmAnds Kuerzel die Kennzahl machen.
+     *
+     * Die Schnittstelle liefert hier Text, nicht die Zahl - dieselben Kuerzel,
+     * die OsmAnd in seine Routendateien schreibt. Kreisverkehre tragen die
+     * Ausfahrtnummer gleich mit ("RNDB3"), deshalb wird nur der Anfang
+     * verglichen.
+     */
+    private fun artAusText(s: String?): Int = when {
+        s == null -> 0
+        s.startsWith("RNDB") -> 13
+        s.startsWith("RNLB") -> 14
+        s == "C" -> 1
+        s == "TL" -> 2
+        s == "TSLL" -> 3
+        s == "TSHL" -> 4
+        s == "TR" -> 5
+        s == "TSLR" -> 6
+        s == "TSHR" -> 7
+        s == "KL" -> 8
+        s == "KR" -> 9
+        s == "TU" -> 10
+        s == "TRU" -> 11
+        s == "OFFR" -> 12
+        else -> 0
+    }
+
+    /** Die Ausfahrtnummer aus "RNDB3" - 0, wenn keine dasteht. */
+    private fun ausfahrt(s: String?): Int {
+        if (s == null || !(s.startsWith("RNDB") || s.startsWith("RNLB"))) return 0
+        return s.drop(4).toIntOrNull() ?: 0
     }
 
     /**
