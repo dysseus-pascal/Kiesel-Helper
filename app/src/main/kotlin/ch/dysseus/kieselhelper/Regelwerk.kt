@@ -155,7 +155,10 @@ object Regelwerk {
                 }
                 val roh = felder[f.aus]
                 if (roh == null) { fehlt = true; break }
-                val w = if (f.alsText) Wert.Text(roh.alsText())
+                // Das Muster gilt fuer BEIDE Arten. Bei "zahl" schneidet es
+                // die Zahl aus dem Fliesstext, bei "text" das Stueck Text -
+                // OsmAnd legt beides in denselben Titel, "80 m • Turn right".
+                val w = if (f.alsText) roh.alsText(f.muster)?.let { Wert.Text(it) }
                 else roh.alsZahl(f.muster, f.faktor)?.let { Wert.Zahl(it) }
                 if (w == null) { fehlt = true; break }
                 belegt[f.nummer] = w

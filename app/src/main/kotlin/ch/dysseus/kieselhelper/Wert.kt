@@ -22,6 +22,34 @@ sealed class Wert {
     }
 
     /**
+     * Den Wert als Text lesen - wahlweise nur ein Stueck davon.
+     *
+     * Der Grund steht im Titel einer OsmAnd-Benachrichtigung: "80 m • Turn
+     * right and go". Entfernung UND Anweisung im selben Feld. Ohne Muster
+     * bleibt nur, den ganzen Titel als Anweisung zu schicken - dann steht die
+     * Zahl zweimal auf der Uhr, einmal gross und einmal mitten im Satz.
+     *
+     * `alsZahl` konnte das Herausschneiden von Anfang an, `alsText` nicht -
+     * und der Parser reichte das Muster trotzdem schon durch. Es wurde
+     * stillschweigend verworfen: die haesslichste Sorte Luecke, weil ein
+     * Zettel dabei richtig aussieht und anders wirkt.
+     *
+     * Rueckgabe null heisst: das Muster passt hier nicht. Wie bei `alsZahl`
+     * ist das ein Grund, die Regel NICHT anzuwenden - nicht einer, Leeres
+     * einzutragen.
+     */
+    fun alsText(muster: Regex?): String? {
+        val roh = alsText()
+        if (muster == null) return roh
+        val treffer = muster.find(roh) ?: return null
+        // Die erste Fanggruppe, sonst der ganze Treffer - dieselbe Regel wie
+        // bei alsZahl, damit ein Zettel nicht zwei Sorten Muster kennen muss.
+        val stueck = treffer.groupValues.getOrNull(1)?.takeIf { it.isNotEmpty() }
+            ?: treffer.value
+        return stueck.trim().ifEmpty { null }
+    }
+
+    /**
      * Den Wert als Zahl lesen.
      *
      * `muster` ist ein regulaerer Ausdruck mit einer Fanggruppe; er wird
