@@ -1,58 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Kiesel-Helper</string>
-    <string name="intro_kurz">Nimmt entgegen, was die Uhr meldet, und trägt es in die Gesundheitsakte ein.</string>
-    <string name="intro">Kiesel-Helper kann das Eintragen — er weiss nur nicht, wofür. Das sagt ihm eine Beschreibung: eine kleine Datei in einem GitHub-Repo, die nennt, welche Uhr-App gemeint ist und was aus ihren Werten werden soll. Kein Programmcode, nur ein Zettel.</string>
 
-    <string name="abschnitt_zustand">ZUSTAND</string>
-    <string name="abschnitt_eingebunden">EINGEBUNDEN</string>
-    <string name="abschnitt_quelle">ADRESSE</string>
-    <string name="abschnitt_katalog">KATALOG</string>
-
-    <string name="einbinden">Beschreibung einbinden</string>
-    <string name="einbinden_titel">Beschreibung einbinden</string>
-   <string name="zurueck">‹ Zurück</string>
+    <string name="zurueck">‹ Zurück</string>
     <string name="verlauf">Verlauf</string>
-    <string name="verlauf_kurz">Verlauf ansehen</string>
     <string name="verlauf_hinweis">Was Kiesel-Helper getan hat, als niemand hinsah. Die letzten hundert Meldungen — sie überstehen einen Neustart und brauchen kein Kabel.</string>
     <string name="verlauf_anzahl">%1$d MELDUNGEN</string>
     <string name="leeren">Verlauf leeren</string>
-
-    <string name="keine_module_titel">Noch nichts eingebunden</string>
-    <string name="keine_module">Solange keine Beschreibung geladen ist, nimmt Kiesel-Helper zwar Meldungen entgegen, trägt aber nichts ein.</string>
-    <string name="nicht_verwendbar">Nicht verwendbar</string>
-
-    <string name="adresse_titel">Adresse des Beschreibungs-Repos</string>
-    <string name="adresse_hinweis">https://github.com/…/Kiesel-Helper-Drinktervall</string>
-    <string name="laden">Laden</string>
-    <string name="erneuern">Erneuern</string>
-    <string name="entfernen">Entfernen</string>
-    <string name="kein_selbstlauf">Die Adresse aus der Browserzeile genügt — die Datei darin findet die App selbst. Geholt wird nur, wenn Sie es hier auslösen: nie von selbst im Hintergrund.</string>
-
-    <string name="geladen">%1$s geladen</string>
-    <string name="erneuert">%1$s erneuert</string>
-    <string name="nicht_geholt">Nicht geholt: %1$s</string>
-    <string name="aus_feld">, aus %1$s</string>
-
-    <string name="erlaubnis">Erteilen</string>
-    <string name="erlaubnis_fehlt">Erlaubnis fehlt</string>
-    <string name="erlaubnis_da">Erlaubnis erteilt</string>
 
     <string name="hc_fehlt">Die Gesundheitsakte (Health Connect) ist auf diesem Gerät nicht verfügbar. Ab Android 14 steckt sie im System, davor braucht es die App aus dem Play Store.</string>
     <string name="hc_update">Health Connect muss aktualisiert werden.</string>
 
     <string name="nichts_bisher">Noch nichts empfangen.</string>
     <string name="zuletzt">Zuletzt %1$s</string>
-    <string name="geholt_am">Geholt am %1$s</string>
 
-   <string name="kanal_name">Empfang</string>
-    <string name="kanal_meldung">Zettel-Meldungen</string>
-    <string name="benachrichtigungen_fehlt">Zugriff auf Benachrichtigungen fehlt</string>
-    <string name="benachrichtigungen_da">Benachrichtigungen freigegeben</string>
-    <string name="freigeben">Freigeben</string>
+    <string name="kanal_name">Empfang</string>
     <string name="dienst_laeuft">Wartet auf Meldungen der Uhr</string>
     <string name="dienst_hinweis">Der Empfang läuft im Hintergrund weiter; die Meldung in der Leiste gehört dazu. Die App muss dafür nicht offen sein.</string>
 
-    <string name="katalog">Eine Beschreibung darf hieraus wählen — hinzufügen kann sie nichts.</string>
-    <string name="katalog_hinweis">Eine neue Art kostet eine neue Fassung der App: Berechtigungen für die Gesundheitsakte stehen im Manifest und werden beim Installieren festgeschrieben. Gelesen wird übrigens nichts — Kiesel-Helper trägt nur ein.</string>
+    <!-- Steht im Auswahlblatt der Widgets, unter dem Namen. -->
+    <string name="widget_beschreibung">Schritte, Bewegung, Schlaf und Wasser auf dem Startbildschirm</string>
 </resources>

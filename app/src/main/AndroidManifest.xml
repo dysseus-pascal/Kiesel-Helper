@@ -1,56 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- DER KATALOG.
-         ============
-         Dies ist der einzige Teil von Kiesel-Helper, den eine Beschreibung
-         NICHT erweitern kann. Berechtigungen stehen im Manifest und werden
-         beim Installieren festgeschrieben; eine nachgeladene Beschreibung
-         kann keine hinzufuegen. Was hier fehlt, kostet eine neue Fassung der
-         App - alles andere kostet nur einen Zettel.
+    <!-- WAS DIE APP MIT DER GESUNDHEITSAKTE TUT.
+         ================================
+         Zwei Dinge SCHREIBEN, neun LESEN. Frueher standen hier 22
+         Schreibrechte als Vorrat: die App konnte damals Beschreibungen
+         nachladen, und was im Manifest fehlt, kann keine Beschreibung
+         nachreichen. Seit die Aufgaben fest im Code stehen, ist der Vorrat
+         nur noch Laerm - zwanzig ungenutzte Rechte im Berechtigungsdialog
+         sehen aus, als wolle die App mehr, als sie braucht.
 
-         Deshalb steht hier ein VORRAT und nicht nur das heute Gebrauchte.
-         Aufgenommen ist, was eine Pebble-Uhr wirklich hergibt; nicht
-         aufgenommen ist, wofuer eine Uhr ein schlechtes Eingabegeraet waere
-         (Gewicht, Blutdruck, Koerpertemperatur - das tippt man am Telefon).
-
-           HERZRATENVARIABILITAET  Herzintervall, in Gebrauch
-           WASSER                  Drinktervall, in Gebrauch
-           HERZFREQUENZ            der Sensor liegt ohnehin am Handgelenk
-           ERNAEHRUNG              fuer Koffein und Praeparate (SupCycle)
-           SCHRITTE                zaehlt die Uhr von Haus aus
-           SCHLAF                  Herzintervall misst ohnehin nachts
-
-         GELESEN WIRD NICHTS. Kiesel-Helper traegt nur ein. Eine Leseerlaubnis
-         waere eine ungleich groessere Offenlegung und wird von nichts
-         gebraucht, was diese App tut. -->
+         GELESEN WIRD JETZT DOCH, und das ist eine ungleich groessere
+         Offenlegung als das Schreiben. Der Grund steht auf dem
+         Gesundheits-Schirm: die Akte selbst ist ueberladen und zeigt darum
+         nichts zuerst. Diese App zeigt acht Zahlen und sonst nichts - dafuer
+         muss sie sie lesen duerfen. -->
     <uses-permission android:name="android.permission.health.WRITE_HEART_RATE_VARIABILITY" />
-    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE" />
-    <uses-permission android:name="android.permission.health.WRITE_RESTING_HEART_RATE" />
-    <uses-permission android:name="android.permission.health.WRITE_OXYGEN_SATURATION" />
-    <uses-permission android:name="android.permission.health.WRITE_RESPIRATORY_RATE" />
-    <uses-permission android:name="android.permission.health.WRITE_WEIGHT" />
-    <uses-permission android:name="android.permission.health.WRITE_BODY_FAT" />
-    <uses-permission android:name="android.permission.health.WRITE_HEIGHT" />
-    <uses-permission android:name="android.permission.health.WRITE_BODY_TEMPERATURE" />
-    <uses-permission android:name="android.permission.health.WRITE_BLOOD_GLUCOSE" />
-    <uses-permission android:name="android.permission.health.WRITE_BASAL_METABOLIC_RATE" />
-    <uses-permission android:name="android.permission.health.WRITE_VO2_MAX" />
-    <uses-permission android:name="android.permission.health.WRITE_STEPS" />
-    <uses-permission android:name="android.permission.health.WRITE_DISTANCE" />
-    <uses-permission android:name="android.permission.health.WRITE_ELEVATION_GAINED" />
-    <uses-permission android:name="android.permission.health.WRITE_FLOORS_CLIMBED" />
-    <uses-permission android:name="android.permission.health.WRITE_WHEELCHAIR_PUSHES" />
-    <uses-permission android:name="android.permission.health.WRITE_ACTIVE_CALORIES_BURNED" />
-    <uses-permission android:name="android.permission.health.WRITE_TOTAL_CALORIES_BURNED" />
     <uses-permission android:name="android.permission.health.WRITE_HYDRATION" />
-    <uses-permission android:name="android.permission.health.WRITE_NUTRITION" />
-    <uses-permission android:name="android.permission.health.WRITE_SLEEP" />
 
-    <!-- Neu gegenueber der Vorgaenger-App: die Beschreibungen kommen aus dem
-         Netz. Geholt wird nur, wenn jemand den Knopf drueckt - nie von selbst
-         im Hintergrund. Eine stille Aenderung an dem, was in eine
-         Gesundheitsakte schreibt, waere genau das, was man nicht will. -->
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_DISTANCE" />
+    <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
+    <uses-permission android:name="android.permission.health.READ_EXERCISE" />
+    <uses-permission android:name="android.permission.health.READ_HYDRATION" />
+    <uses-permission android:name="android.permission.health.READ_SLEEP" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY" />
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
@@ -171,6 +148,19 @@
             <intent-filter>
                 <action android:name="com.getpebble.action.app.RECEIVE" />
             </intent-filter>
+        </receiver>
+
+        <!-- Das Widget. exported="true" ist Pflicht: den Broadcast schickt
+             der Startbildschirm, also ein fremder Prozess. -->
+        <receiver
+            android:name=".GesundheitWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_gesundheit_info" />
         </receiver>
 
     </application>

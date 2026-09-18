@@ -4,6 +4,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.view.View
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Toast
@@ -18,14 +19,17 @@ import java.text.DateFormat
 import java.util.Date
 
 /**
- * Der einzige Bildschirm: was die App tut und ob sie es darf.
+ * Zwei Reiter: was der Koerper meldet, und was die App tut.
  *
- * ER ZEIGT DREI FESTE AUFGABEN UND FRAGT NACH NICHTS. Vorher stand hier eine
- * Liste eingebundener Beschreibungen mit einem Knopf zum Nachladen - die App
- * konnte Dinge tun, die ihr niemand einprogrammiert hatte. Das war richtig
- * gedacht fuer eine App, die viele benutzen und die neue Uhr-Apps kennenlernen
- * soll, ohne neu gebaut zu werden. Diese benutzt einer, und fuer ihn sind es
- * drei Aufgaben; die stehen jetzt im Code statt in einer Datei aus dem Netz.
+ * GESUNDHEIT STEHT VORNE, weil man deswegen die App oeffnet. Die
+ * Gesundheitsakte selbst kann alles und zeigt darum nichts zuerst; hier stehen
+ * acht Zahlen auf einem Schirm, ohne Suchen.
+ *
+ * TECHNIK IST DER ALTE SCHIRM. Er zeigt drei feste Aufgaben und fragt nach
+ * nichts. Vorher stand dort eine Liste eingebundener Beschreibungen mit einem
+ * Knopf zum Nachladen - die App konnte Dinge tun, die ihr niemand
+ * einprogrammiert hatte. Das war richtig gedacht fuer eine App, die viele
+ * benutzen; diese benutzt einer, und fuer ihn sind es drei Aufgaben.
  *
  * Was bleibt, ist die Frage nach der Erlaubnis. Die kann kein Code sich selbst
  * geben.
@@ -34,6 +38,8 @@ class HauptActivity : ComponentActivity() {
 
     private lateinit var wurzel: LinearLayout
     private lateinit var zustand: LinearLayout
+    private lateinit var gesundheit: LinearLayout
+    private lateinit var technik: LinearLayout
     private var erlaubnisStarter: ActivityResultLauncher<Set<String>>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -68,40 +74,51 @@ class HauptActivity : ComponentActivity() {
     private fun baueAnsicht(): ScrollView {
         wurzel = spalte()
         zustand = spalte()
+        gesundheit = spalte()
+        technik = spalte()
 
         wurzel.addView(kopf(getString(R.string.app_name)))
-        wurzel.addView(fliesstext(
+        wurzel.addView(reiterleiste(listOf("Gesundheit", "Technik")) { welcher ->
+            gesundheit.visibility = if (welcher == 0) View.VISIBLE else View.GONE
+            technik.visibility = if (welcher == 0) View.GONE else View.VISIBLE
+        })
+        wurzel.luft(10f)
+        wurzel.addView(gesundheit)
+        wurzel.addView(technik)
+        technik.visibility = View.GONE
+
+        technik.addView(fliesstext(
             "Nimmt entgegen, was die Uhr meldet, und holt bei OsmAnd, was für " +
                 "die Navigation auf die Uhr gehört."
         ))
-        wurzel.luft(8f)
-        wurzel.addView(abschnitt("ZUSTAND"))
-        wurzel.addView(zustand)
+        technik.luft(8f)
+        technik.addView(abschnitt("ZUSTAND"))
+        technik.addView(zustand)
 
-        wurzel.luft(8f)
-        wurzel.addView(abschnitt("WAS SIE TUT"))
-        wurzel.addView(aufgabenKarte(
+        technik.luft(8f)
+        technik.addView(abschnitt("WAS SIE TUT"))
+        technik.addView(aufgabenKarte(
             "Drinktervall → Gesundheitsakte",
             "Jedes getrunkene Glas wird als Wassermenge eingetragen, mit dem " +
                 "Zeitpunkt von der Uhr. Dasselbe Glas nur einmal."
         ))
-        wurzel.addView(aufgabenKarte(
+        technik.addView(aufgabenKarte(
             "Herzintervall → Gesundheitsakte",
             "Die nächtliche RMSSD-Messung wird als Herzratenvariabilität " +
                 "eingetragen."
         ))
-        wurzel.addView(aufgabenKarte(
+        technik.addView(aufgabenKarte(
             "OsmAnd → Kieselstrasse",
             "Abbiegeart, Entfernung, Strasse und Ankunftszeit gehen an die Uhr " +
                 "— aus OsmAnds eigener Schnittstelle, nicht aus seiner " +
                 "Benachrichtigung."
         ))
 
-        wurzel.luft(12f)
-        wurzel.addView(knopfHaupt("Verlauf ansehen", breit = true) {
+        technik.luft(12f)
+        technik.addView(knopfHaupt("Verlauf ansehen", breit = true) {
             startActivity(Intent(this, VerlaufActivity::class.java))
         })
-        wurzel.luft(12f)
+        technik.luft(12f)
 
         val roller = ScrollView(this)
         roller.addView(wurzel)
@@ -117,6 +134,54 @@ class HauptActivity : ComponentActivity() {
     }
 
     private fun auffrischen() {
+        auffrischenGesundheit()
+        auffrischenTechnik()
+    }
+
+    /**
+     * Die Zahlen neu holen.
+     *
+     * JEDES MAL NEU, auch beim blossen Zurueckkehren. Die Akte aendert sich,
+     * waehrend die App im Hintergrund liegt - ein gemerkter Stand von heute
+     * Morgen saehe genauso aus wie einer von eben.
+     */
+    private fun auffrischenGesundheit() {
+        lifecycleScope.launch {
+            val stand = Gesundheit(this@HauptActivity).lies()
+            val fehlt =
+                if (stand == null) emptySet()
+                else Akte(this@HauptActivity)
+                    .fehlendeBerechtigungen(Gesundheit.BERECHTIGUNGEN)
+
+            gesundheit.removeAllViews()
+
+            // DIESE KARTE STEHT OBEN, nicht unten. Ohne Lese-Erlaubnis
+            // antwortet die Akte nicht mit Nein, sondern gar nicht - die
+            // Felder blieben leer und saehen aus wie ein Fehler der App.
+            if (fehlt.isNotEmpty()) {
+                val k = karte()
+                k.addView(schild(false, "Lese-Erlaubnis fehlt"))
+                k.addView(zart(
+                    fehlt.size.toString() + " von " +
+                        Gesundheit.BERECHTIGUNGEN.size + " Werten sind " +
+                        "gesperrt. Gesperrt heisst hier leer — die Akte sagt " +
+                        "nicht Nein, sie schweigt."
+                ))
+                k.addView(knopfHaupt("Erlaubnis erteilen", breit = true) {
+                    erlaubnisStarter?.launch(fehlt) ?: melde("Noch nicht bereit")
+                })
+                gesundheit.addView(k)
+            }
+
+            gesundheit.addView(GesundheitTab.baue(this@HauptActivity, stand))
+
+            // Die Zahlen sind eben gelesen; das Widget soll nicht
+            // aelteres zeigen als der Schirm daneben.
+            GesundheitWidget.stosseAn(this@HauptActivity)
+        }
+    }
+
+    private fun auffrischenTechnik() {
         zustand.removeAllViews()
 
         val k = karte()
@@ -174,9 +239,9 @@ class HauptActivity : ComponentActivity() {
                     val fehlt = Akte(this@HauptActivity)
                         .fehlendeBerechtigungen(Aufgaben.BERECHTIGUNGEN)
                     if (fehlt.isEmpty()) {
-                        kk.addView(schild(true, "Erlaubnis erteilt"))
+                        kk.addView(schild(true, "Schreib-Erlaubnis erteilt"))
                     } else {
-                        kk.addView(schild(false, "Erlaubnis fehlt"))
+                        kk.addView(schild(false, "Schreib-Erlaubnis fehlt"))
                         kk.addView(zart(
                             "Ohne sie kommt eine Messung an und verschwindet " +
                                 "still — das fällt erst auf, wenn man sie sucht."

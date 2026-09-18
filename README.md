@@ -1,363 +1,101 @@
 # Kiesel-Helper
 
-Android-App, die entgegennimmt, was Pebble-Uhren melden, und es in die
-Gesundheitsakte des Telefons (Health Connect) einträgt.
+Android-App mit zwei Gesichtern:
 
-Was eingetragen wird, steht **nicht in dieser App**. Es steht in
-Beschreibungen, die man aus GitHub-Repos lädt — eine je Uhr-App. Der Helper
-kann das Eintragen; er weiss nur nicht, wofür, bis ihm jemand einen Zettel
-gibt.
+* **vorne** acht Zahlen aus der Gesundheitsakte des Telefons — Schritte,
+  Distanz, Kalorien, Bewegung, Wasser, Schlaf, Ruhepuls, HRV — auf einem
+  Schirm und in einem Widget;
+* **dahinter** die Brücke zwischen Pebble-Uhr und Telefon: sie trägt ein, was
+  die Uhr misst, und schickt der Uhr, was OsmAnd navigiert.
 
 *Kiesel, weil Pebble.*
 
-## Warum
+## Warum vorne Zahlen stehen
 
-Bisher brauchte jede Uhr-App ihre eigene Companion-App: derselbe
-Broadcast-Empfänger, derselbe Vordergrunddienst, dieselben vier Fallstricke —
-jedes Mal neu, jedes Mal von Hand aufs Telefon. Der Teil, der sich tatsächlich
-unterscheidet, ist winzig: *diese UUID, dieses Feld, diese Satzart.*
+Health Connect kann alles und zeigt deshalb nichts zuerst. Bis zu der einen
+Zahl, die man täglich wissen will, sind es mehrere Griffe durch Listen — für
+eine Auskunft, die man im Vorbeigehen haben möchte.
 
-Genau dieser Teil ist hier herausgezogen.
+Die Daten liegen ohnehin schon dort, teils von dieser App selbst eingetragen.
+Sie anzuzeigen kostet keine neue Quelle, nur eine Leseerlaubnis.
 
-## Was eine Beschreibung ist — und was nicht
+**Kein Wert wird erfunden.** Steht nichts in der Akte, steht ein Strich da,
+keine Null. »Du bist heute keinen Schritt gegangen« ist etwas anderes als
+»niemand hat Schritte eingetragen«, und eine Null sagt das Erste, wenn das
+Zweite gilt.
 
-Eine Beschreibung ist eine JSON-Datei. **Kein Programmcode.** Sie sagt, welche
-Uhr-App gemeint ist, welche Felder deren Nachricht enthält und was daraus in
-der Akte werden soll. Mehr kann sie nicht sagen.
+### Der Schirm
 
-Nachladbarer Code wäre der naheliegende Gedanke und wurde verworfen — nicht aus
-Vorsicht, sondern weil er den Engpass gar nicht löst:
+Zwei Reiter. **Gesundheit** steht vorne, weil man deswegen die App öffnet;
+**Technik** ist der alte Schirm mit Zustand, Aufgaben und Verlauf.
 
-* **Berechtigungen lassen sich nicht nachreichen.** Was eine App in die
-  Gesundheitsakte schreiben darf, steht in ihrem Manifest und wird beim
-  Installieren festgeschrieben. Der Erlaubnis-Dialog zeigt nur, was angefragt
-  **und** angemeldet ist. Geladener Code könnte diese Liste nicht erweitern —
-  er stünde vor derselben Mauer wie ein Zettel.
-* **Android 14 verlangt, dass nachgeladener Code schreibgeschützt liegt**
-  (»Safer Dynamic Code Loading«), Android 17 dehnt das auf native
-  Bibliotheken aus. Der Weg wird enger, nicht breiter.
-* **Play Protect meldet nachgeladenen Code**, auch bei einer App, die nie im
-  Play Store war.
+| Gruppe | Werte |
+|---|---|
+| Bewegung | Schritte, Aktiv, Distanz, Kalorien |
+| Herz und Schlaf | Schlaf, Wasser, Ruhepuls, HRV |
 
-Bleibt also der Zettel. Und ein Zettel hat einen Vorzug, den Code nie hätte:
-man kann ihn lesen. Er ist zwanzig Zeilen lang, steht in einem öffentlichen
-Repo, und was er anordnen kann, ist durch den Katalog unten begrenzt.
+Einen Balken bekommt nur, was ein Ziel hat. Für einen Ruhepuls gibt es keins,
+und ein Balken ohne Ziel wäre eine Behauptung darüber, was gut ist.
 
-## Der Katalog
+### Das Widget
 
-Die Satzarten, die diese Fassung eintragen kann. Eine Beschreibung darf hieraus
-**wählen** — hinzufügen kann sie nichts.
+Vier Kacheln mit Balken — Schritte, Aktiv, Schlaf, Wasser — und darunter leise
+Ruhepuls, HRV und Distanz. Vier und nicht acht: auf dem Startbildschirm liest
+man im Vorbeigehen, und nur was ein Ziel hat, lohnt dort den Blick.
 
-| `art` | was | Einheit | Angaben |
-|---|---|---|---|
-| `hrv_rmssd` | Herzratenvariabilität | ms | `wert` + `zeitpunkt` |
-| `herzfrequenz` | Herzfrequenz | bpm | `wert` + `zeitpunkt` |
-| `ruhepuls` | Ruhepuls | bpm | `wert` + `zeitpunkt` |
-| `sauerstoff` | Sauerstoffsättigung | % | `wert` + `zeitpunkt` |
-| `atemfrequenz` | Atemfrequenz | 1/min | `wert` + `zeitpunkt` |
-| `gewicht` | Gewicht | g | `wert` + `zeitpunkt` |
-| `koerperfett` | Körperfettanteil | % | `wert` + `zeitpunkt` |
-| `groesse` | Körpergrösse | mm | `wert` + `zeitpunkt` |
-| `temperatur` | Körpertemperatur | m°C | `wert` + `zeitpunkt` |
-| `blutzucker` | Blutzucker | mg/dl | `wert` + `zeitpunkt` |
-| `grundumsatz` | Grundumsatz | kcal/d | `wert` + `zeitpunkt` |
-| `vo2max` | VO2max | ml/kg/min | `wert` + `zeitpunkt` |
-| `schritte` | Schritte | Schritte | `menge` + `beginn` + `dauer_s` |
-| `strecke` | Zurückgelegte Strecke | m | `menge` + `beginn` + `dauer_s` |
-| `hoehenmeter` | Höhenmeter | m | `menge` + `beginn` + `dauer_s` |
-| `stockwerke` | Stockwerke | Stockwerke | `menge` + `beginn` + `dauer_s` |
-| `rollstuhl` | Rollstuhlstösse | Stösse | `menge` + `beginn` + `dauer_s` |
-| `aktive_kalorien` | Aktive Kalorien | kcal | `menge` + `beginn` + `dauer_s` |
-| `gesamt_kalorien` | Gesamtkalorien | kcal | `menge` + `beginn` + `dauer_s` |
-| `hydration` | Getrunkenes Wasser | ml | `menge` + `beginn` + `dauer_s` |
-| `koffein` | Koffein | mg | `menge` + `beginn` + `dauer_s` |
-| `schlaf` | Schlaf | — | `beginn` + `dauer_s` |
+Es frischt sich **alle 30 Minuten** auf; kürzer lässt Android nicht zu. Dazu
+nach jedem eigenen Eintrag (Wasser, HRV) und immer dann, wenn der
+Gesundheits-Schirm gerade gelesen hat — ein Widget, das älter ist als die App,
+die eben daneben offen war, sieht nach Fehler aus.
 
-**Die Einheiten sind durchweg ganzzahlig gewählt** — Gramm statt Kilogramm,
-Millimeter statt Meter, Milligrad statt Grad. Ein Zettel trägt ganze Zahlen;
-wer Gewicht in `kg` verlangte, könnte 72,4 kg nicht ausdrücken.
+### Die Ziele
 
-Nicht aufgenommen sind: alles zum Zyklus (schon der Eintrag im Manifest wäre
-eine Aussage); Blutdruck (die Akte will zwei Werte in einem Satz, eine Regel
-liefert einen); und Reihenwerte wie Leistung (dort will die Akte eine Folge von
-Proben).
-
-**Eine Art zu ergänzen kostet eine neue Fassung der App:** eine Zeile in
-`Katalog.kt`, eine `<uses-permission>`-Zeile im Manifest, und das neue APK aufs
-Telefon. Alles andere kostet nur einen Zettel. Diese Grenze ist von Android
-gesetzt, nicht von mir.
-
-**Gelesen wird nichts.** Kiesel-Helper trägt nur ein. Eine Leseerlaubnis wäre
-eine ungleich grössere Offenlegung und wird von nichts gebraucht, was diese App
-tut.
-
-## Quellen und Senken
-
-Der Katalog oben sagt, **was** eingetragen werden kann. Daneben steht die
-zweite Wahl, die ein Zettel trifft: **woher** die Werte kommen und **wohin**
-sie gehen.
-
-**Quellen**
-
-| `quelle.art` | Felder | braucht |
+| | | |
 |---|---|---|
-| `appmessage` | die Namen aus `schluessel` | nichts — die Pebble-App sendet von selbst |
-| `benachrichtigung` | `titel`, `text`, `untertext`, `grosstext`, `zusatz`, `ticker`, `paket`, `wann`, `dauerhaft`, dazu jedes `extra:<name>` | einmalige Freigabe in den Systemeinstellungen |
+| Wasser | 8 × 300 ml | kommt aus Drinktervall |
+| Schritte | 10 000 | Hausnummer |
+| Aktiv | 30 min | Hausnummer |
+| Schlaf | 8 h | Hausnummer |
 
-Zusätzlich liefert **jede** Quelle das Feld `jetzt` — den Augenblick des
-Empfangs in Sekunden. Gedacht für Quellen ohne eigenen Zeitstempel. Es ist der
-schlechtere Zeitpunkt, aber manchmal der einzige.
+Nur das Wasserziel ist echt. Die anderen drei stehen als Konstanten in
+`Gesundheit.kt`; wer andere will, ändert sie dort. Eine Einstellung dafür wäre
+ein Bildschirm mehr für eine Zahl, die man einmal im Leben setzt.
 
-**Senken** — eine Regel wählt genau eine:
+## Was sie einträgt
 
-| Feld | was geschieht |
-|---|---|
-| `eintrag` | ein Satz in der Gesundheitsakte (Katalog oben) |
-| `senden` | eine AppMessage an eine Uhr-App, auf Wunsch mit `"starten": true` |
-| `melden` | eine Benachrichtigung auf dem Telefon |
+Drei feste Aufgaben, **im Code**, nicht in einer Datei aus dem Netz:
 
-Damit ist der Weg **in beide Richtungen** offen: Uhr → Telefon war schon da,
-Telefon → Uhr ist dazugekommen. Eine Navigationsanweisung von OsmAnd auf der
-Uhr ist ab hier ein Zettel und keine neue Fassung der App.
-
-**Was `melden` gut kann:** herausfinden, was in den Benachrichtigungen einer
-App überhaupt steht. Siehe [beispiele/felder-anzeigen.json](beispiele/felder-anzeigen.json)
-— der erste Zettel, den man für eine neue App schreibt. Ohne ihn rät man, wo
-die Angabe steckt.
-
-**Die Freigabe für Benachrichtigungen** erteilt man einmal in *Einstellungen →
-Benachrichtigungen → Benachrichtigungszugriff*. Es gibt dafür keinen Dialog und
-keine Abfrage zur Laufzeit; eine App kann nur hinführen, und genau das tut der
-Knopf auf der Karte. Ohne Zettel für ein Paket wird jede Benachrichtigung
-sofort wieder verworfen, ohne gelesen zu werden.
-
-## Bekannte Beschreibungen
-
-* [Kiesel-Helper-Drinktervall](https://github.com/dysseus-pascal/Kiesel-Helper-Drinktervall)
-  — getrunkenes Wasser
-* [Kiesel-Helper-Herzintervall](https://github.com/dysseus-pascal/Kiesel-Helper-Herzintervall)
-  — Herzratenvariabilität
-
-**Beispiele im Ordner [beispiele/](beispiele/)** — keine eigenen Repos, weil sie
-zum Anpassen gedacht sind:
-
-* `probe.json` — hört auf die Shell des Telefons und meldet zurück. Damit lässt
-  sich die Benachrichtigungs-Quelle in zwei Zeilen nachweisen.
-* `felder-anzeigen.json` — zeigt, was in den Benachrichtigungen einer App
-  wirklich steht.
-* `google-maps-navigation.json`, `osmand-navigation.json` — Navigation an
-  [Kieselweg](https://github.com/dysseus-pascal/Kieselweg). Beide **nachgemessen**
-  am Telefon, und beide anders, als sie aussehen sollten:
-
-| | Google Maps | OsmAnd |
+| Von | Nach | Was |
 |---|---|---|
-| Entfernung zur Abzweigung | im Titel, vor einem Trennpunkt | im Titel, vor einem Trennpunkt |
-| Anweisung | im selben Titel, dahinter | im selben Titel, dahinter |
-| Ankunft | `untertext` | zweite Zeile des `grosstext` |
-| `android.progress` | Streckenfortschritt | steht auf 0, unbrauchbar |
-| kurz vor der Abzweigung | Titel **ohne** Entfernung — das ist das Jetzt | zählt bis zuletzt herunter |
+| Drinktervall | Gesundheitsakte | jedes getrunkene Glas als Wassermenge, mit dem Zeitpunkt von der Uhr |
+| Herzintervall | Gesundheitsakte | die nächtliche RMSSD-Messung als Herzratenvariabilität |
+| OsmAnd | Kieselstrasse | Abbiegeart, Entfernung, Strasse, Ankunftszeit |
 
-  Die Entfernung im Maps-Titel war das Ergebnis einer echten Fahrt, nicht einer
-  Messung am Schreibtisch: **am Stand steht dort nie eine Zahl.** Wer Maps nur
-  stehend misst, schliesst daraus, es gebe keine — und schickt der Uhr den Rest
-  bis zum Ziel. Der half an keiner Kreuzung.
+Auf jedem Eintrag liegt ein **Riegel** gegen Doppelte: die Uhr schickt ihren
+Stand bei jeder Gelegenheit mit, nicht nur beim Trinken. Ohne ihn stünde
+dasselbe Glas mehrfach in der Akte.
 
-Zum Messen gibt es [tools/felder_messen.ps1](tools/felder_messen.ps1):
+### Es gab einmal ein Zettelsystem
 
-```powershell
-toolselder_messen.ps1 com.google.android.apps.maps
-```
+Bis Fassung 0.3.0 stand *nicht* im Code, was eingetragen wird: die App lud
+JSON-Beschreibungen aus GitHub-Repos, eine je Uhr-App, und führte aus, was dort
+stand. Das war richtig gedacht für eine App, die viele benutzen und die neue
+Uhr-Apps kennenlernen soll, ohne neu gebaut zu werden.
 
-## Beschreibung laden
+Diese benutzt einer. Für ihn sind es drei Aufgaben, und der ganze Apparat —
+Katalog, Regelwerk, Zettelleser, Einbinde-Schirm, zwei Beschreibungs-Repos —
+kostete mehr, als er trug. Er ist weg; die App wurde dabei von 3660 auf gut
+1500 Zeilen kleiner.
 
-1. App öffnen.
-2. Die Adresse des Repos einsetzen — die, die im Browser oben steht, etwa
-   `https://github.com/dysseus-pascal/Kiesel-Helper-Drinktervall`. Die App
-   macht daraus selbst die Adresse der `kiesel.json`. Eine fertige Adresse
-   direkt auf eine `.json` geht auch.
-3. **Laden.** Die Datei wird sofort eingelesen; bei Fehlern wird nichts
-   abgelegt und die Meldung sagt, was fehlt. Danach fragt die App die
-   Erlaubnisse ab, die genau diese Beschreibung braucht.
+Die Mauer, an der das Zettelsystem ohnehin stand: **Berechtigungen für die
+Gesundheitsakte stehen im Manifest** und werden beim Installieren
+festgeschrieben. Ein Zettel konnte die Liste so wenig erweitern wie
+nachgeladener Code. Was im Manifest fehlt, kann nichts nachreichen.
 
-**Nichts wird von selbst geholt.** Aktualisiert wird nur, wenn jemand
-*Erneuern* drückt. Eine stille Änderung an dem, was in eine Gesundheitsakte
-schreibt, wäre genau das, was man nicht will — und ein Netzzugriff im
-Hintergrund wäre ausserdem ein Fernsteuerungskanal, den niemand bestellt hat.
-
-## Das Format
-
-Es gibt zwei Formatnummern, und **beide bleiben gültig**. Fassung 1 ist der
-kurze Fall: Quelle ist immer eine Uhr-App, Senke immer die Gesundheitsakte.
-Das hier ist die vollständige, echte Beschreibung für Drinktervall — mehr
-braucht es nicht:
-
-```json
-{
-  "format": 1,
-  "name": "Drinktervall",
-  "uuid": "5b0f7a3e-2c8d-4b61-9e4f-7d2a1c9b8e50",
-  "quelle": "https://github.com/dysseus-pascal/Drinktervall",
-  "beschreibung": "Trägt jedes getrunkene Glas als Wassermenge in die Gesundheitsakte ein.",
-
-  "schluessel": {
-    "GLASS_ML": 10008,
-    "DRANK_AT": 10009
-  },
-
-  "regeln": [
-    {
-      "wenn": ["DRANK_AT", "GLASS_ML"],
-      "nicht_zweimal_fuer": "DRANK_AT",
-      "eintrag": {
-        "art": "hydration",
-        "menge": { "aus": "GLASS_ML", "einheit": "ml" },
-        "beginn": { "aus": "DRANK_AT", "einheit": "s" },
-        "dauer_s": 60
-      },
-      "meldung": "{GLASS_ML} ml eingetragen"
-    }
-  ]
-}
-```
-
-| Feld | Bedeutung |
-|---|---|
-| `format` | Muss `1` sein. Eine Fassung, die die Zahl nicht kennt, lehnt die Datei ab, statt zu raten. |
-| `uuid` | Die UUID der Uhr-App. Daran wird die Nachricht erkannt. |
-| `schluessel` | Feldname → Nummer, wie das Feld in der Nachricht ankommt. Die Nummern ergeben sich aus der Reihenfolge der `messageKeys` in der `package.json` der Uhr-App, beginnend bei 10000. |
-| `regeln[].wenn` | Diese Felder müssen in der Nachricht stehen, damit die Regel greift. Ohne diese Bedingung trüge eine blosse Standmeldung der Uhr jedes Mal einen weiteren Eintrag ein. |
-| `regeln[].nicht_zweimal_fuer` | Zweimal derselbe Wert in diesem Feld heisst: dieselbe Messung. Meist ein Zeitstempel. Schützt vor erneut zugestellten Nachrichten. |
-| `regeln[].meldung` | Text für die Statusanzeige. `{FELD}` wird durch den Wert ersetzt. |
-| `regeln[].eintrag.art` | Eine `art` aus dem Katalog oben. |
-| `… .wert` / `.menge` | `{ "aus": FELD, "einheit": … }`. Die Einheit muss die des Katalogs sein — ein `g` statt `mg` verschöbe jeden Wert um das Tausendfache, und niemand sähe es dem Eintrag an. |
-| `… .zeitpunkt` / `.beginn` | `{ "aus": FELD, "einheit": "s" }` oder `"ms"`. |
-| `… .dauer_s` | Länge der Spanne in Sekunden. Muss grösser als null sein — die Akte lehnt eine Spanne der Länge null ab. |
-
-### Fassung 2
-
-Fassung 2 ändert an alldem nichts, sie ergänzt. Neu sind `quelle` als Objekt
-und die beiden anderen Senken:
-
-```json
-{
-  "format": 2,
-  "name": "OsmAnd-Navigation",
-  "quelle": { "art": "benachrichtigung", "paket": "net.osmand.plus" },
-  "schluessel": { "ANWEISUNG": 10000, "ENTFERNUNG": 10001 },
-  "regeln": [
-    {
-      "wenn": ["titel"],
-      "nur_wenn": { "titel": "^[0-9]+([.,][0-9]+)?\\s*m\\s*•" },
-      "senden": {
-        "an": "00000000-0000-0000-0000-000000000000",
-        "starten": true,
-        "felder": {
-          "ANWEISUNG":  { "aus": "titel", "art": "text", "muster": "•\\s*(.+)$" },
-          "ENTFERNUNG": { "aus": "titel", "art": "zahl", "muster": "^\\s*([0-9]+(?:[.,][0-9]+)?)\\s*m\\s*•" }
-        }
-      },
-      "meldung": "{titel}"
-    }
-  ]
-}
-```
-
-Dieses Beispiel ist nachgemessen, und es sah vorher anders aus: der Entwurf
-erwartete die Anweisung in `text` und irgendeine Ziffer im Titel. In
-Wirklichkeit ist `text` **leer**, und OsmAnd legt Entfernung und Anweisung in
-**denselben** Titel — »80 m • Turn right and go«. Beide Male schneidet dasselbe
-`muster` aus, einmal die Zahl und einmal den Text.
-
-| Feld | Bedeutung |
-|---|---|
-| `quelle` | `{ "art": "appmessage", "uuid": … }` oder `{ "art": "benachrichtigung", "paket": … }`. Fehlt es, gilt das `uuid` ganz oben und damit Fassung 1. |
-| `nur_wenn` | Feld → regulärer Ausdruck, der passen muss. Das ist der Unterschied zwischen »Maps hat eine Benachrichtigung« und »Maps navigiert«. |
-| `senden.an` | UUID der Uhr-App. |
-| `senden.starten` | Eine AppMessage erreicht nur die **laufende** Uhr-App. Mit `true` geht ein Start voraus. |
-| `senden.felder` | Schlüsselname → `{ aus, art, muster?, faktor? }`. Der Name muss in `schluessel` stehen — dort steht seine Nummer auf dem Draht. |
-| `… .art` | `"text"` oder `"zahl"`. |
-| `… .muster` | Regulärer Ausdruck mit einer Fanggruppe. Gilt für **beide** Arten: bei `"zahl"` schneidet er die Zahl aus dem Fliesstext (»in 250 m« → `250`), bei `"text"` das Stück Text. Passt er nicht, fehlt das Feld — und die Regel greift nicht, statt Leeres zu schicken. |
-| `… .faktor` | Multiplikator nach dem Ausschneiden. Für km → m: `1000`. |
-| `melden` | `{ "titel": …, "text": … }` — eine Benachrichtigung auf dem Telefon. `{FELD}` wird auch hier ersetzt. |
-
-**Mehr Rechnen als Ausschneiden und Malnehmen gibt es nicht.** Das ist Absicht:
-je mehr ein Zettel kann, desto mehr wird er eine Programmiersprache — und am
-Ende dieses Wegs stünde wieder nachgeladener Code, nur mit mehr Umwegen.
-
-Eingelesen wird nach dem Alles-oder-nichts-Grundsatz: **entweder ein Modul oder
-eine Liste von Fehlern**, nie ein halbes. Eine Beschreibung, die nur teilweise
-verstanden wurde, schriebe teilweise falsche Werte in eine Gesundheitsakte —
-und das fällt niemandem auf.
-
-Geprüft wird beim Laden: Format, UUID, Schlüsselnummern, die Pflichtangaben der
-gewählten Satzart, die Einheit, und dass jedes genannte Feld auch deklariert
-ist.
-
-## Was die App sonst noch tut
-
-* **Empfangen.** Die Pebble-App verschickt eingehende AppMessages als
-  *impliziten* Broadcast — und den bekommt ab Android 8 nur ein zur Laufzeit
-  angemeldeter Empfänger. Deshalb läuft ein Vordergrunddienst mit einer stillen
-  Meldung in der Leiste; er ist der Preis dafür, dass Messungen auch dann
-  ankommen, wenn die App nicht offen ist.
-* **Bestätigen.** Quittiert wird jede Nachricht einer bekannten UUID, und
-  *zuerst*, dann wird geschrieben — sonst läuft die Uhr in ihren Zeitablauf,
-  sobald die Akte einmal langsam ist. Für eine **unbekannte** UUID wird
-  ausdrücklich **nicht** bestätigt: die Nachricht gilt einer fremden Watchapp,
-  und ein ACK von hier behauptete, wir hätten sie verarbeitet.
-* **Neustart überstehen.** Nach einem Neustart des Telefons fährt der Dienst
-  wieder hoch. Er ist vom Typ `specialUse` und **nicht** `dataSync`, und das
-  ist kein Geschmack: Android 15 verbietet, einen `dataSync`-Dienst aus einem
-  `BOOT_COMPLETED`-Empfänger zu starten, und lässt ihn ohnehin nur sechs
-  Stunden je vierundzwanzig laufen. Mit `dataSync` wäre der Empfang nach einem
-  Neustart nie wieder hochgekommen und im Betrieb täglich verstummt.
-* **Benachrichtigungen mithören**, wenn ein Zettel es verlangt. Der
-  `NotificationListenerService` ist dabei nebenbei der stabilste
-  Hintergrundläufer, den Android hergibt: das System bindet ihn selbst, bindet
-  nach Neustart und nach Abstürzen neu, ohne Vordergrunddienst und ohne
-  Zeitgrenze.
-
-## Bauen
-
-Auf dem Entwicklungsrechner steht kein Android-SDK. Gebaut wird deshalb bei
-GitHub Actions; jeder Push erzeugt ein Debug-APK als Artefakt des Laufs
-([Bauen](../../actions/workflows/bauen.yml) → letzter Lauf → *kiesel-helper-debug*).
-
-Der Lauf belegt, dass die App übersetzt und ein Paket ergibt. Dass sie am
-Telefon das Richtige **tut**, belegt er nicht — das zeigt sich erst dort.
-
-```bash
-adb install -r kiesel-helper-debug.apk
-```
-
-Wer lokal baut, braucht JDK 17, ein Android-SDK mit API 36 und Gradle 9.5.1
-(9.6 hat eine interne Schnittstelle entfernt, auf die das Android-Plugin 8.x
-noch baut):
-
-```bash
-gradle assembleDebug
-```
-
-**Der Zettelleser lässt sich ohne Telefon prüfen** — er ist reine Logik, kein
-Android. Das ist wichtiger, als es klingt: ein Zettel kommt aus dem Netz, und
-was er anordnet, landet in einer Gesundheitsakte. Der Leser ist die einzige
-Stelle, die zwischen beidem steht.
-
-```bash
-gradle test
-```
-
-## Grenzen
-
-* Die App prüft eine Beschreibung auf **Form**, nicht auf **Sinn**. Wer
-  `hydration` mit einer Zahl aus dem falschen Feld füttert, bekommt saubere
-  Einträge mit falschen Werten. Deshalb prüfen die Beschreibungs-Repos ihre
-  Schlüsselnummern wöchentlich gegen die Uhr-App gegen.
-* Die Schlüsselnummern hängen an der Reihenfolge der `messageKeys` in einem
-  **anderen** Repo. Wer dort eine Zeile dazwischen einfügt, verschiebt alle
-  folgenden Nummern.
-* Health Connect gibt es ab Android 14 im System; davor braucht es die App aus
-  dem Play Store. Ohne sie zeigt Kiesel-Helper das an und tut sonst nichts.
+Mit dem Zettelsystem ging auch der `NotificationListenerService` — und mit ihm
+die unangenehmste Freigabe, die diese App je verlangt hat: Zugriff auf **jede**
+Benachrichtigung des Telefons, für eine Handvoll Zahlen. Seit OsmAnd über seine
+eigene Schnittstelle antwortet, braucht es ihn nicht mehr.
 
 ## OsmAnd
 
@@ -377,6 +115,76 @@ Höchstens alle vier Sekunden — OsmAnd meldet im Sekundentakt, und jede Meldun
 weiterzugeben hiesse, die Funkstrecke zur Uhr zu fluten. **Ausgenommen ist der
 Wechsel der Abbiegeart**: das ist der nächste Schritt, und der darf nicht auf
 den Takt warten.
+
+**Zwei stille Hürden**, beide erst am Telefon sichtbar:
+
+* Ohne `<queries>` im Manifest ist OsmAnd seit Android 11 schlicht unsichtbar —
+  `bindService` findet nichts, nichts stürzt ab, nichts warnt, und auf der Uhr
+  kommt nichts an.
+* OsmAnd lässt fremde Apps erst nach einem **Schalter** zu: beim ersten
+  Verbindungsversuch trägt es die App unter *Menü → Plugins* ein, aber
+  ausgeschaltet. Bis der Schalter umgelegt ist, antwortet jede Methode mit −1.
+  Die App sagt das inzwischen auf dem Technik-Schirm, statt still zu schweigen.
+
+## Was die App sonst noch tut
+
+* **Empfangen.** Die Pebble-App verschickt eingehende AppMessages als
+  *impliziten* Broadcast — und den bekommt ab Android 8 nur ein zur Laufzeit
+  angemeldeter Empfänger. Deshalb läuft ein Vordergrunddienst mit einer stillen
+  Meldung in der Leiste; er ist der Preis dafür, dass Messungen auch dann
+  ankommen, wenn die App nicht offen ist.
+* **Bestätigen.** Quittiert wird jede Nachricht einer bekannten UUID, und
+  *zuerst*, dann wird geschrieben — sonst läuft die Uhr in ihren Zeitablauf,
+  sobald die Akte einmal langsam ist. Für eine **unbekannte** UUID wird
+  ausdrücklich **nicht** bestätigt: die Nachricht gilt einer fremden Watchapp,
+  und ein ACK von hier behauptete, wir hätten sie verarbeitet.
+* **Neustart überstehen.** Nach einem Neustart des Telefons fährt der Dienst
+  wieder hoch. Er ist vom Typ `specialUse` und **nicht** `dataSync`, und das
+  ist kein Geschmack: Android 15 verbietet, einen `dataSync`-Dienst aus einem
+  `BOOT_COMPLETED`-Empfänger zu starten, und lässt ihn ohnehin nur sechs
+  Stunden je vierundzwanzig laufen. Mit `dataSync` wäre der Empfang nach einem
+  Neustart nie wieder hochgekommen und im Betrieb täglich verstummt.
+* **Mitschreiben.** Die letzten hundert Meldungen mit Zeitstempel stehen unter
+  *Verlauf*. Gebaut, weil der Logcat-Puffer nur Stunden hält und im Auto kein
+  Kabel steckt — eine Fahrt muss ihre Spur selbst mitbringen.
+
+## Bauen
+
+```bash
+gradle assembleDebug
+```
+
+Gebraucht werden JDK 17, ein Android-SDK mit API 36 und Gradle 9.5.1 (9.6 hat
+eine interne Schnittstelle entfernt, auf die das Android-Plugin 8.x noch baut).
+
+Dieselbe Kette läuft bei GitHub Actions; jeder Push erzeugt ein Debug-APK als
+Artefakt des Laufs ([Bauen](../../actions/workflows/bauen.yml) → letzter Lauf →
+*kiesel-helper-debug*). Fertige Pakete hängen an den
+[Veröffentlichungen](../../releases).
+
+```bash
+adb install -r kiesel-helper-debug.apk
+```
+
+Der Lauf belegt, dass die App übersetzt und ein Paket ergibt. Dass sie am
+Telefon das Richtige **tut**, belegt er nicht — das zeigt sich erst dort.
+
+## Grenzen
+
+* **Gelesen wird, was andere eintragen.** Schritte, Puls und Schlaf kommen von
+  der Uhr oder einer anderen App; fehlt die Quelle, bleibt das Feld leer, und
+  daran kann diese App nichts ändern.
+* **Der Schlaf zählt ab 18 Uhr des Vortags.** Wer um 23 Uhr ins Bett geht, hat
+  seinen Schlaf am Vortag begonnen — ein Fenster ab Mitternacht schnitte ihn in
+  zwei Hälften. Wer tagsüber schläft, sieht das nicht.
+* **Die HRV ist die jüngste aus sieben Tagen**, nicht die von heute. Sie kommt
+  nachts von der Uhr und gilt tagsüber weiter; ein Tagesfenster liesse sie am
+  Nachmittag verschwinden, obwohl sie steht.
+* **Ohne Leseerlaubnis schweigt die Akte**, sie sagt nicht Nein. Die Felder
+  blieben leer und sähen aus wie ein Fehler der App — deshalb steht auf dem
+  Gesundheits-Schirm eine Karte, die es benennt.
+* Health Connect gibt es ab Android 14 im System; davor braucht es die App aus
+  dem Play Store.
 
 ## Lizenz
 

@@ -139,6 +139,9 @@ object Aufgaben {
             ?: return "Gesundheitsakte nicht verfügbar"
         return try {
             klient.insertRecords(listOf(satz))
+            // Das Widget zeigt Wasser; ein Glas, das erst in einer halben
+            // Stunde dort ankommt, sieht aus wie ein verschlucktes.
+            GesundheitWidget.stosseAn(context)
             meldung
         } catch (e: Exception) {
             // Die haeufigste Ursache ist eine fehlende Erlaubnis. Sie zu

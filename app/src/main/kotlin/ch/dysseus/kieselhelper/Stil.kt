@@ -241,3 +241,143 @@ fun View.randUmSystemleisten() {
         fenster
     }
 }
+
+/**
+ * Eine Zahl mit Namen, Einheit und Balken.
+ *
+ * DER BALKEN ERSCHEINT NUR MIT ZIEL. Fuer einen Ruhepuls gibt es keins, und
+ * ein Balken ohne Ziel waere eine Behauptung darueber, was gut ist.
+ *
+ * Fehlt der Wert ganz, steht das da - nicht eine Null. "Du bist heute keinen
+ * Schritt gegangen" ist etwas anderes als "niemand hat Schritte eingetragen",
+ * und eine Null sagt das Erste, wenn das Zweite gilt.
+ */
+fun Context.messwert(
+    name: String,
+    text: String?,
+    einheit: String,
+    anteil: Float,
+    mitBalken: Boolean,
+): LinearLayout = LinearLayout(this).apply {
+    orientation = LinearLayout.VERTICAL
+    layoutParams = LinearLayout.LayoutParams(
+        0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+    ).apply { setMargins(dp(4f), dp(6f), dp(4f), dp(6f)) }
+
+    addView(TextView(this@messwert).apply {
+        this.text = name
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+        setTextColor(farbe(R.color.schrift_zart))
+    })
+
+    addView(LinearLayout(this@messwert).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = android.view.Gravity.BOTTOM
+        addView(TextView(this@messwert).apply {
+            this.text = text ?: "—"
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 24f)
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(farbe(if (text == null) R.color.schrift_zart else R.color.schrift))
+        })
+        if (text != null && einheit.isNotEmpty()) {
+            addView(TextView(this@messwert).apply {
+                this.text = " " + einheit
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                setTextColor(farbe(R.color.schrift_zart))
+                setPadding(0, 0, 0, dp(3f))
+            })
+        }
+    })
+
+    if (mitBalken) {
+        addView(View(this@messwert).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(6f)
+            ).apply { topMargin = dp(6f) }
+            background = GradientDrawable().apply {
+                setColor(farbe(R.color.linie))
+                cornerRadius = dp(3f).toFloat()
+            }
+        })
+        // Der gefuellte Teil liegt als eigene Sicht darueber, mit einem
+        // Gewicht als Breite - so passt er sich der Spaltenbreite an, ohne
+        // dass jemand Punkte ausrechnen muss.
+        addView(LinearLayout(this@messwert).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(6f)
+            ).apply { topMargin = -dp(6f) }
+            addView(View(this@messwert).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    0, dp(6f), anteil.coerceAtLeast(0.001f)
+                )
+                background = GradientDrawable().apply {
+                    setColor(farbe(R.color.akzent))
+                    cornerRadius = dp(3f).toFloat()
+                }
+            })
+            addView(View(this@messwert).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    0, dp(6f), (1f - anteil).coerceAtLeast(0.001f)
+                )
+            })
+        })
+    }
+}
+
+/** Zwei Messwerte nebeneinander. Mehr als zwei wird auf einem Telefon eng. */
+fun Context.messreihe(links: View, rechts: View): LinearLayout =
+    LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        addView(links)
+        addView(rechts)
+    }
+
+/**
+ * Zwei Reiter in einem Streifen.
+ *
+ * KEIN TabLayout. Das zoege Material samt Abhaengigkeiten herein, fuer zwei
+ * Woerter und einen Umschalter. Der gewaehlte Reiter steht auf hellem Grund,
+ * der andere bleibt im Streifen - das genuegt, um zu sagen, wo man ist.
+ *
+ * Die Leiste merkt sich ihre Wahl selbst und meldet sie nur weiter; wer sie
+ * benutzt, blendet daraufhin um.
+ */
+fun Context.reiterleiste(namen: List<String>, waehle: (Int) -> Unit): LinearLayout {
+    val leiste = reihe()
+    leiste.setPadding(dp(4f), dp(4f), dp(4f), dp(4f))
+    leiste.background = GradientDrawable().apply {
+        setColor(farbe(R.color.linie))
+        cornerRadius = dp(12f).toFloat()
+    }
+
+    val felder = mutableListOf<TextView>()
+    fun male(gewaehlt: Int) {
+        felder.forEachIndexed { i, feld ->
+            feld.background = if (i == gewaehlt) GradientDrawable().apply {
+                setColor(farbe(R.color.karte))
+                cornerRadius = dp(9f).toFloat()
+            } else null
+            feld.setTextColor(
+                farbe(if (i == gewaehlt) R.color.schrift else R.color.schrift_zart)
+            )
+        }
+    }
+
+    namen.forEachIndexed { i, name ->
+        val feld = TextView(this).apply {
+            text = name
+            gravity = Gravity.CENTER
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+            setTypeface(typeface, Typeface.BOLD)
+            setPadding(dp(10f), dp(9f), dp(10f), dp(9f))
+            layoutParams = LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+            )
+            setOnClickListener { male(i); waehle(i) }
+        }
+        felder += feld
+        leiste.addView(feld)
+    }
+    male(0)
+    return leiste
+}
