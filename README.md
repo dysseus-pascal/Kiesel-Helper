@@ -233,22 +233,27 @@ und die beiden anderen Senken:
   "schluessel": { "ANWEISUNG": 10000, "ENTFERNUNG": 10001 },
   "regeln": [
     {
-      "wenn": ["titel", "text"],
-      "nur_wenn": { "titel": "[0-9]" },
-      "nicht_zweimal_fuer": "text",
+      "wenn": ["titel"],
+      "nur_wenn": { "titel": "^[0-9]+([.,][0-9]+)?\\s*m\\s*•" },
       "senden": {
         "an": "00000000-0000-0000-0000-000000000000",
         "starten": true,
         "felder": {
-          "ANWEISUNG":  { "aus": "text",  "art": "text" },
-          "ENTFERNUNG": { "aus": "titel", "art": "zahl", "muster": "([0-9.,]+)" }
+          "ANWEISUNG":  { "aus": "titel", "art": "text", "muster": "•\\s*(.+)$" },
+          "ENTFERNUNG": { "aus": "titel", "art": "zahl", "muster": "^\\s*([0-9]+(?:[.,][0-9]+)?)\\s*m\\s*•" }
         }
       },
-      "meldung": "{text} in {titel}"
+      "meldung": "{titel}"
     }
   ]
 }
 ```
+
+Dieses Beispiel ist nachgemessen, und es sah vorher anders aus: der Entwurf
+erwartete die Anweisung in `text` und irgendeine Ziffer im Titel. In
+Wirklichkeit ist `text` **leer**, und OsmAnd legt Entfernung und Anweisung in
+**denselben** Titel — »80 m • Turn right and go«. Beide Male schneidet dasselbe
+`muster` aus, einmal die Zahl und einmal den Text.
 
 | Feld | Bedeutung |
 |---|---|
@@ -258,7 +263,7 @@ und die beiden anderen Senken:
 | `senden.starten` | Eine AppMessage erreicht nur die **laufende** Uhr-App. Mit `true` geht ein Start voraus. |
 | `senden.felder` | Schlüsselname → `{ aus, art, muster?, faktor? }`. Der Name muss in `schluessel` stehen — dort steht seine Nummer auf dem Draht. |
 | `… .art` | `"text"` oder `"zahl"`. |
-| `… .muster` | Regulärer Ausdruck mit einer Fanggruppe, angewandt bevor eine Zahl gelesen wird. Braucht man ständig: eine Benachrichtigung trägt »in 250 m«, nicht `250`. |
+| `… .muster` | Regulärer Ausdruck mit einer Fanggruppe. Gilt für **beide** Arten: bei `"zahl"` schneidet er die Zahl aus dem Fliesstext (»in 250 m« → `250`), bei `"text"` das Stück Text. Passt er nicht, fehlt das Feld — und die Regel greift nicht, statt Leeres zu schicken. |
 | `… .faktor` | Multiplikator nach dem Ausschneiden. Für km → m: `1000`. |
 | `melden` | `{ "titel": …, "text": … }` — eine Benachrichtigung auf dem Telefon. `{FELD}` wird auch hier ersetzt. |
 

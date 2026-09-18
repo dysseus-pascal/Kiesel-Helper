@@ -42,9 +42,11 @@ class MapsTest {
 
     @Test
     fun osmandZettelWirdVerstanden() {
+        // Nur, dass er einlesbar ist. Was er tut, steht in OsmandTest - und
+        // dort gegen das, was am Telefon gemessen wurde.
         val e = Modul.lies(zettel("osmand-navigation.json"))
         assertEquals(emptyList<String>(), e.fehler)
-        assertEquals(5L, ((e.modul!!.regeln[0].senke) as Senke.AnDieUhr).hoechstensAlleS)
+        assertEquals(Quelle.Benachrichtigung("net.osmand.plus"), e.modul!!.quelle)
     }
 
     @Test
