@@ -34,9 +34,8 @@ import java.util.UUID
  * standardmaessig auf true, AppMessages gehen dann an PKJS UND an die
  * klassische Companion-App.
  *
- * WAS HIER NICHT MEHR STEHT: die Regeln. Die liegen im [Regelwerk], weil die
- * zweite Quelle - die Benachrichtigungen - dieselben braucht. Diese Klasse tut
- * nur noch zwei Dinge: Felder benennen und weiterreichen.
+ * WAS HIER NICHT STEHT: was mit den Werten geschieht. Das steht in [Aufgaben].
+ * Diese Klasse tut zwei Dinge - bestaetigen und weiterreichen.
  */
 class PebbleEmpfaenger : BroadcastReceiver() {
 
@@ -44,14 +43,11 @@ class PebbleEmpfaenger : BroadcastReceiver() {
         if (intent.action != ACTION_RECEIVE) return
 
         val uuid = leseUuid(intent) ?: return
-        val module = ModulSpeicher(context).alle().filter {
-            (it.quelle as? Quelle.Uhr)?.uuid == uuid
-        }
 
-        // Fuer eine UUID ohne Zettel NICHT bestaetigen: die Nachricht gilt
+        // Fuer eine unbekannte UUID NICHT bestaetigen: die Nachricht gilt
         // einer fremden Watchapp, und ein ACK von uns behauptete, wir haetten
         // sie verarbeitet.
-        if (module.isEmpty()) return
+        if (uuid !in Aufgaben.BEKANNTE_UHREN) return
 
         val daten = intent.getStringExtra(EXTRA_MSG_DATA)
         if (daten == null) {
@@ -70,14 +66,15 @@ class PebbleEmpfaenger : BroadcastReceiver() {
         val ergebnis = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                for (m in module) {
-                    // Aus Nummern werden Namen - erst damit sehen die Regeln
-                    // bei beiden Quellen gleich aus.
-                    val felder = mutableMapOf<String, Wert>()
-                    for ((name, nummer) in m.schluessel) {
-                        nachNummer[nummer]?.let { felder[name] = it }
-                    }
-                    Regelwerk.wendeAn(context, m, felder)
+                // Nur die Zahlen. Beide Aufgaben tragen Messwerte ein, und ein
+                // Messwert ist eine Zahl - Text kaeme hier nie vor.
+                val zahlen = mutableMapOf<Int, Long>()
+                for ((nummer, wert) in nachNummer) {
+                    (wert as? Wert.Zahl)?.let { zahlen[nummer] = it.zahl }
+                }
+                Aufgaben.verarbeite(context, uuid, zahlen)?.let {
+                    Verlauf(context).merkeMeldung(it)
+                    Log.i(TAG, it)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Verarbeitung fehlgeschlagen", e)

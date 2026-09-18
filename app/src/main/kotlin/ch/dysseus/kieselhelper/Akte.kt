@@ -7,37 +7,15 @@ import androidx.health.connect.client.records.metadata.Metadata
 import java.time.Instant
 
 /**
- * Traegt in die Gesundheitsakte des Telefons ein.
+ * Der Zugang zur Gesundheitsakte des Telefons.
  *
- * Kennt keine einzelne Uhr-App mehr — nur noch [Satzart]en. Was davon wann
- * geschrieben wird, sagt die Beschreibung; dieser Teil fuehrt es nur aus.
+ * NUR NOCH DER ZUGANG. Frueher stand hier auch das Eintragen, gesteuert ueber
+ * einen Katalog von 22 Satzarten - eine Auswahl fuer Beschreibungen, die nie
+ * geschrieben wurden. Was eingetragen wird, steht jetzt in [Aufgaben], und
+ * zwar ausgeschrieben: zwei Satzarten, beide sichtbar an der Stelle, an der
+ * sie gebraucht werden.
  */
 class Akte(private val context: Context) {
-
-    /**
-     * Einen Satz eintragen.
-     *
-     * Rueckgabe ist ein Satz fuer die Statusanzeige, kein Fehlercode: die App
-     * besteht im Kern aus einem Empfaenger, und ohne diese Zeile saehe man ihr
-     * von aussen nie an, ob sie ueberhaupt etwas tut.
-     */
-    suspend fun schreibe(
-        art: Satzart,
-        dauerSekunden: Long,
-        wert: Double,
-        beginn: Instant,
-        meldung: String,
-    ): String {
-        val klient = bereit() ?: return nichtVerfuegbar()
-
-        if (!erteilt(klient, art.berechtigung)) {
-            return "Erlaubnis für ${art.klartext} fehlt — App öffnen und erteilen"
-        }
-
-        val satz = art.baue(wert, beginn, dauerSekunden, uhrenHerkunft())
-        klient.insertRecords(listOf(satz))
-        return meldung
-    }
 
     /**
      * Welche der noetigen Berechtigungen fehlen?
@@ -52,7 +30,7 @@ class Akte(private val context: Context) {
         return noetig - erteilt
     }
 
-    private fun bereit(): HealthConnectClient? {
+    fun bereit(): HealthConnectClient? {
         return when (HealthConnectClient.getSdkStatus(context)) {
             HealthConnectClient.SDK_AVAILABLE -> HealthConnectClient.getOrCreate(context)
             else -> null
