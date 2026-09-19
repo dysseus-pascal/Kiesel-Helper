@@ -245,6 +245,23 @@ object OsmandNavigation {
         false
     }
 
+    /**
+     * OsmAnd nach vorne holen.
+     *
+     * Die Fuehrung laeuft nach [navigiere] schon - aber im Hintergrund. Wer
+     * eben ein Ziel uebergeben hat, will die Karte sehen und nicht selbst
+     * suchen gehen.
+     */
+    fun holeNachVorn(context: Context): Boolean {
+        val start = context.packageManager.getLaunchIntentForPackage("net.osmand.plus")
+            ?: context.packageManager.getLaunchIntentForPackage("net.osmand")
+            ?: context.packageManager.getLaunchIntentForPackage("net.osmand.dev")
+            ?: return false
+        start.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(start)
+        return true
+    }
+
     /** Ob gerade eine Verbindung zu OsmAnd steht. */
     val verbunden: Boolean get() = api != null
 

@@ -1,5 +1,8 @@
 package ch.dysseus.kieselhelper
 
+import android.content.Context
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLDecoder
@@ -157,5 +160,51 @@ object Kartenlink {
             }
         }
         return aktuell
+    }
+
+    /**
+     * Ein Ziel an OsmAnd geben - auf dem Weg, der am ehesten ankommt.
+     *
+     * DIE KOORDINATE GEHT VOR, und das war einmal andersherum. Die Ueberlegung
+     * war: der Name trifft den Eingang, das @lat,lon in einem Google-Link ist
+     * nur die Bildmitte. Stimmt - aber OsmAnds Suche ist offline und findet
+     * nur, was in der geladenen Karte steht und dort auch so heisst. Im
+     * Versuch fand sie eine ganz gewoehnliche Adresse nicht, und ein Ziel, das
+     * nicht ankommt, ist schlechter als eins, das zwanzig Meter danebenliegt.
+     *
+     * Bleibt nur ein Name, wird er ZUERST in eine Koordinate umgesetzt
+     * ([Ortsuche]) und erst dann uebergeben. OsmAnds eigene Suche ist der
+     * letzte Ausweg, nicht der erste.
+     *
+     * Laeuft im Hintergrund: die Ortsuche fragt womoeglich uebers Netz.
+     */
+    suspend fun uebergib(context: Context, ziel: Kartenlink.Ziel): Uebergabe =
+        withContext(Dispatchers.IO) {
+            if (ziel.lat != null && ziel.lon != null) {
+                val gut = OsmandNavigation.navigiere(ziel.text, ziel.lat, ziel.lon)
+                return@withContext Uebergabe(gut, "Koordinate aus dem Link", ziel.lat, ziel.lon)
+            }
+            val name = ziel.text
+            if (name.isNullOrBlank()) return@withContext Uebergabe(false, "kein Ziel")
+
+            Ortsuche.finde(context, name)?.let { (lat, lon) ->
+                val gut = OsmandNavigation.navigiere(name, lat, lon)
+                return@withContext Uebergabe(gut, "Adresse umgesetzt", lat, lon)
+            }
+            // Letzter Ausweg: OsmAnd selbst suchen lassen.
+            val gut = OsmandNavigation.sucheUndNavigiere(name, 0.0, 0.0)
+            Uebergabe(gut, "an OsmAnds Suche gegeben")
+        }
+
+    /** Was bei der Uebergabe herauskam - fuer den Verlauf und den Pruefstand. */
+    data class Uebergabe(
+        val geschafft: Boolean,
+        val weg: String,
+        val lat: Double? = null,
+        val lon: Double? = null,
+    ) {
+        val beschreibung: String
+            get() = weg + (if (lat != null && lon != null)
+                ": " + Zahlen.zwei(lat) + ", " + Zahlen.zwei(lon) else "")
     }
 }

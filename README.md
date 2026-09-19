@@ -430,9 +430,32 @@ Ein Google-Maps-Link öffnet OsmAnd mit gesetztem Ziel. Die App zerlegt dabei
 ein halbes Dutzend Linkformen — `dir/?destination=`, `search/?query=`,
 `place/Name/@lat,lon`, das alte `daddr=`, und `geo:`.
 
-**Ein Name im Link schlägt die Koordinate.** Das `@lat,lon` in einem
-`place`-Link ist die Bildmitte, nicht der Eingang; steht ein Name daneben, geht
-der an OsmAnds eigene Suche.
+**Die Koordinate geht vor — und das war einmal andersherum.** Die Überlegung
+war: der Name trifft den Eingang, das `@lat,lon` in einem Google-Link ist nur
+die Bildmitte. Das stimmt, aber **OsmAnds Suche ist offline** und findet nur,
+was in der geladenen Karte steht und dort auch so heisst. Im Versuch fand sie
+eine gewöhnliche Adresse nicht — und ein Ziel, das nicht ankommt, ist
+schlechter als eines, das zwanzig Meter danebenliegt.
+
+**Bleibt nur ein Name, wird er erst in eine Koordinate umgesetzt**, bevor
+OsmAnd überhaupt gefragt wird. Zwei Wege, in dieser Reihenfolge:
+
+1. **Androids eigener `Geocoder`** — kostet nichts, verlässt das Telefon
+   womöglich gar nicht. Er braucht aber einen Dienst im Hintergrund, und den
+   hat nicht jedes Gerät; ohne Google-Dienste fehlt er.
+2. **Nominatim**, der Suchdienst von OpenStreetMap. Dieselbe Datengrundlage,
+   aus der OsmAnds Karten stammen — was er findet, liegt also auch dort, wo
+   OsmAnd hinfährt.
+
+OsmAnds eigene Suche ist damit der **letzte** Ausweg, nicht der erste.
+
+> **Was dabei das Telefon verlässt:** im zweiten Fall die Adresse, an einen
+> fremden Rechner. Nur für Links **ohne** Koordinate, und nur wenn gerade
+> jemand einen angetippt hat. Steht eine Koordinate im Link, wird niemand
+> gefragt.
+
+Nach erfolgreicher Übergabe wird OsmAnd **nach vorne geholt**. Die Führung
+läuft sonst im Hintergrund, und man sucht die Karte selbst.
 
 **Kurzlinks** (`maps.app.goo.gl`) werden erst aufgelöst — nur der Kopf der
 Antwort, höchstens fünf Sprünge. Eine Google-Maps-Seite ist ein Megabyte

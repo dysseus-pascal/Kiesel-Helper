@@ -60,25 +60,13 @@ class KartenlinkActivity : ComponentActivity() {
                 kotlinx.coroutines.delay(1200)
             }
 
-            val geschafft = when {
-                ziel.lat != null && ziel.lon != null && ziel.text.isNullOrBlank() ->
-                    OsmandNavigation.navigiere(null, ziel.lat, ziel.lon)
-                // MIT NAMEN SUCHT OSMAND SELBST. Die Koordinate aus einem
-                // Google-Link ist oft die Bildmitte und nicht der Eingang;
-                // der Name trifft genauer, und die Koordinate sagt OsmAnd,
-                // wo es suchen soll.
-                !ziel.text.isNullOrBlank() && ziel.lat != null && ziel.lon != null ->
-                    OsmandNavigation.sucheUndNavigiere(ziel.text, ziel.lat, ziel.lon)
-                !ziel.text.isNullOrBlank() ->
-                    OsmandNavigation.sucheUndNavigiere(ziel.text, 0.0, 0.0)
-                else -> false
-            }
+            val aus = Kartenlink.uebergib(this@KartenlinkActivity, ziel)
 
-            if (geschafft) {
+            if (aus.geschafft) {
                 Verlauf(this@KartenlinkActivity).merkeMeldung(
-                    "Kartenlink an OsmAnd: " + (ziel.text ?: (ziel.lat.toString() + ", " + ziel.lon))
+                    "Kartenlink an OsmAnd (" + aus.beschreibung + ")"
                 )
-                starteOsmAnd()
+                OsmandNavigation.holeNachVorn(this@KartenlinkActivity)
                 finish()
             } else {
                 fertig(
@@ -86,22 +74,6 @@ class KartenlinkActivity : ComponentActivity() {
                         "Menü → Plugins → Kiesel-Helper einschalten."
                 )
             }
-        }
-    }
-
-    /**
-     * OsmAnd nach vorne holen.
-     *
-     * Die Fuehrung laeuft nach [OsmandNavigation.navigiere] schon - aber im
-     * Hintergrund. Wer auf einen Kartenlink tippt, will die Karte sehen.
-     */
-    private fun starteOsmAnd() {
-        val start = packageManager.getLaunchIntentForPackage("net.osmand.plus")
-            ?: packageManager.getLaunchIntentForPackage("net.osmand")
-            ?: packageManager.getLaunchIntentForPackage("net.osmand.dev")
-        if (start != null) {
-            start.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            startActivity(start)
         }
     }
 

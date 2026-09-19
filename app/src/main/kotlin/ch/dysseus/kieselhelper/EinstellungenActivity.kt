@@ -314,23 +314,20 @@ class EinstellungenActivity : ComponentActivity() {
                 OsmandNavigation.versucheErneut(this@EinstellungenActivity)
                 kotlinx.coroutines.delay(1200)
             }
-            val geschafft = when {
-                !ziel.text.isNullOrBlank() -> OsmandNavigation.sucheUndNavigiere(
-                    ziel.text, ziel.lat ?: 0.0, ziel.lon ?: 0.0
-                )
-                ziel.lat != null && ziel.lon != null ->
-                    OsmandNavigation.navigiere(null, ziel.lat, ziel.lon)
-                else -> false
-            }
-            linkbefund.text = gefunden + "\n\n" + if (geschafft) {
-                "An OsmAnd übergeben."
+
+            linkbefund.text = gefunden + "\n\nWird übergeben …"
+            val aus = Kartenlink.uebergib(this@EinstellungenActivity, ziel)
+            linkbefund.text = gefunden + "\n\n" + if (aus.geschafft) {
+                // NACH VORNE HOLEN, nicht nur uebergeben: die Fuehrung
+                // laeuft sonst im Hintergrund, und man sucht OsmAnd selbst.
+                OsmandNavigation.holeNachVorn(this@EinstellungenActivity)
+                "Übergeben — " + aus.beschreibung
             } else {
-                "OsmAnd hat abgelehnt — meist fehlt dort die Freigabe " +
-                    "unter Menü → Plugins."
+                "OsmAnd hat abgelehnt (" + aus.weg + "). Meist fehlt dort " +
+                    "die Freigabe unter Menü → Plugins."
             }
         }
     }
-
     private fun aufgabenKarte(titel: String, text: String): LinearLayout {
         val k = karte()
         k.addView(kartentitel(titel))
