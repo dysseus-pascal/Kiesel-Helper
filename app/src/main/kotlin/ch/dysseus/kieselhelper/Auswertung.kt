@@ -19,8 +19,20 @@ import java.time.LocalDate
  */
 object Auswertung {
 
-    /** Ein Wochentag im Mittel. `mittel == null` heisst: kein einziger Tag. */
-    data class Profilwert(val tag: DayOfWeek, val mittel: Double?, val anzahl: Int)
+    /**
+     * Ein Wochentag im Mittel - mit seiner Streuung.
+     *
+     * DER MITTELWERT ALLEIN IST EINE HALBE AUSSAGE. Drei Mittwoche mit 4000,
+     * 8000 und 12000 Schritten ergeben denselben Schnitt wie drei mit je 8000,
+     * und nur einer der beiden Faelle heisst "typisch".
+     */
+    data class Profilwert(
+        val tag: DayOfWeek,
+        val mittel: Double?,
+        val anzahl: Int,
+        val kleinster: Double? = null,
+        val groesster: Double? = null,
+    )
 
     /** Eine Kalenderwoche im Mittel, benannt nach ihrem Montag. */
     data class Wochenwert(val montag: LocalDate, val mittel: Double, val anzahl: Int)
@@ -63,10 +75,13 @@ object Auswertung {
 
         val profil = WOCHENTAGE.map { wochentag ->
             val treffer = tage.filter { it.first.dayOfWeek == wochentag }
+            val genug = treffer.size >= MINDESTENS
             Profilwert(
                 wochentag,
-                if (treffer.size >= MINDESTENS) treffer.map { it.second }.average() else null,
+                if (genug) treffer.map { it.second }.average() else null,
                 treffer.size,
+                if (genug) treffer.minOf { it.second } else null,
+                if (genug) treffer.maxOf { it.second } else null,
             )
         }
         val gezaehlt = profil.filter { it.mittel != null }
@@ -112,5 +127,123 @@ object Auswertung {
         val a = alt.map { it.second }.average()
         if (a == 0.0) return null
         return (jung.map { it.second }.average() - a) / a * 100
+    }
+
+    /**
+     * Zwei Groessen gegeneinander.
+     *
+     * DIE EINZIGE STELLE, DIE EINEN ZUSAMMENHANG BEHAUPTET - und deshalb die,
+     * die am meisten Vorsicht braucht. Gerechnet wird der Korrelationskoeffizient
+     * nach Pearson und eine Ausgleichsgerade nach kleinsten Quadraten; beides
+     * sagt NICHTS ueber Ursache und Wirkung. Wer lange schlaeft, hat vielleicht
+     * einen tieferen Ruhepuls - oder wer einen tieferen Ruhepuls hat, schlaeft
+     * besser, oder beides haengt an einem dritten, das hier gar nicht steht.
+     */
+    data class Zusammenhang(
+        val n: Int,
+        /** Pearson, -1 bis 1. `null`, wenn eine Seite gar nicht schwankt. */
+        val r: Double?,
+        val steigung: Double,
+        val achse: Double,
+        val punkte: List<Pair<Double, Double>>,
+    ) {
+        /** Reicht die Zahl der Tage fuer eine Aussage? */
+        val belastbar: Boolean get() = n >= PAARE_MINDESTENS && r != null
+
+        /**
+         * Die Staerke in Worten.
+         *
+         * Die Grenzen sind Konvention, keine Naturkonstante - aber eine Zahl
+         * wie 0,37 allein sagt den meisten Menschen nichts, und "schwach" ist
+         * ehrlicher als das Schweigen dazu.
+         */
+        val staerke: String
+            get() {
+                val betrag = kotlin.math.abs(r ?: 0.0)
+                return when {
+                    betrag < 0.2 -> "kein erkennbarer"
+                    betrag < 0.4 -> "ein schwacher"
+                    betrag < 0.6 -> "ein mittlerer"
+                    else -> "ein deutlicher"
+                }
+            }
+    }
+
+    /** Unter so vielen gemeinsamen Tagen wird kein Zusammenhang gezeigt. */
+    const val PAARE_MINDESTENS = 14
+
+    /**
+     * Die Tage verbinden, an denen BEIDE Groessen etwas wissen.
+     *
+     * Ein Tag mit Schlaf, aber ohne Ruhepuls gehoert in kein Paar. Ihn mit
+     * einem Mittelwert aufzufuellen hiesse, eine Messung zu erfinden, und
+     * gerade hier faellt so etwas nicht auf: die Wolke sieht danach sogar
+     * ordentlicher aus.
+     */
+    fun zusammenhang(
+        eins: List<Pair<LocalDate, Double>>,
+        zwei: List<Pair<LocalDate, Double>>,
+        heute: LocalDate,
+    ): Zusammenhang {
+        val b = zwei.toMap()
+        val paare = eins.filter { it.first < heute }
+            .mapNotNull { (tag, x) -> b[tag]?.let { y -> x to y } }
+        val n = paare.size
+        if (n < 3) return Zusammenhang(n, null, 0.0, 0.0, paare)
+
+        val mx = paare.sumOf { it.first } / n
+        val my = paare.sumOf { it.second } / n
+        var sxy = 0.0; var sxx = 0.0; var syy = 0.0
+        paare.forEach { (x, y) ->
+            sxy += (x - mx) * (y - my)
+            sxx += (x - mx) * (x - mx)
+            syy += (y - my) * (y - my)
+        }
+        if (sxx <= 0.0 || syy <= 0.0) return Zusammenhang(n, null, 0.0, my, paare)
+
+        val steigung = sxy / sxx
+        return Zusammenhang(
+            n = n,
+            r = sxy / kotlin.math.sqrt(sxx * syy),
+            steigung = steigung,
+            achse = my - steigung * mx,
+            punkte = paare,
+        )
+    }
+
+    /**
+     * Wochenende gegen Werktag.
+     *
+     * Beide Seiten brauchen genug Tage; sonst vergleicht man vier Wochen
+     * Arbeit mit einem einzigen Sonntag und nennt den Unterschied ein Muster.
+     */
+    data class Wochenendbild(
+        val werktag: Double,
+        val wochenende: Double,
+        val tageWerk: Int,
+        val tageFrei: Int,
+    ) {
+        val unterschied: Double get() = wochenende - werktag
+    }
+
+    /** Je Seite mindestens so viele Tage. */
+    const val SEITE_MINDESTENS = 3
+
+    fun wochenende(
+        reihe: List<Pair<LocalDate, Double>>,
+        heute: LocalDate,
+    ): Wochenendbild? {
+        val tage = reihe.filter { it.first < heute }
+        val frei = tage.filter {
+            it.first.dayOfWeek == DayOfWeek.SATURDAY || it.first.dayOfWeek == DayOfWeek.SUNDAY
+        }
+        val werk = tage - frei.toSet()
+        if (frei.size < SEITE_MINDESTENS || werk.size < SEITE_MINDESTENS) return null
+        return Wochenendbild(
+            werk.map { it.second }.average(),
+            frei.map { it.second }.average(),
+            werk.size,
+            frei.size,
+        )
     }
 }

@@ -6,13 +6,12 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.SystemClock
 import android.util.Log
 import android.widget.RemoteViews
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.text.DateFormat
-import java.util.Date
 
 /**
  * Vier Zahlen auf dem Startbildschirm.
@@ -95,8 +94,36 @@ class GesundheitWidget : AppWidgetProvider() {
                 )
             )
 
+            // DER KNOPF IST DIE ANTWORT AUF DIE HALBE STUNDE. Android laesst
+            // ein Widget nicht oefter von selbst nachsehen; wer es jetzt
+            // wissen will, tippt hier und wartet zwei Sekunden.
+            v.setOnClickPendingIntent(
+                R.id.w_auffrischen,
+                PendingIntent.getBroadcast(
+                    context, 1,
+                    Intent(context, GesundheitWidget::class.java).apply {
+                        action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                        putExtra(
+                            AppWidgetManager.EXTRA_APPWIDGET_IDS,
+                            AppWidgetManager.getInstance(context).getAppWidgetIds(
+                                ComponentName(context, GesundheitWidget::class.java)
+                            )
+                        )
+                    },
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                )
+            )
+
+            // WIE ALT, NICHT WANN. "21:12" beantwortet die Frage nicht, die
+            // man am Widget hat; "vor 04:30" beantwortet sie. Der Chronometer
+            // zaehlt selbst weiter und braucht dafuer keinen Wecker - ein
+            // Dreiminutentakt aus einem Alarm waere vierhundertachtzig
+            // Weckrufe am Tag fuer eine Textzeile.
+            v.setChronometer(
+                R.id.w_stand, SystemClock.elapsedRealtime(), "vor %s", true
+            )
+
             if (stand == null) {
-                v.setTextViewText(R.id.w_stand, "")
                 v.setTextViewText(R.id.w_fuss, "Keine Gesundheitsakte")
                 return v
             }
@@ -110,10 +137,6 @@ class GesundheitWidget : AppWidgetProvider() {
             kachel(v, R.id.w_wasser_wert, R.id.w_wasser_balken,
                    Zahlen.ganz(stand.wasser.zahl)?.plus(" ml"), stand.wasser.anteil)
 
-            v.setTextViewText(
-                R.id.w_stand,
-                DateFormat.getTimeInstance(DateFormat.SHORT).format(Date())
-            )
             v.setTextViewText(R.id.w_fuss, fusszeile(stand))
             return v
         }

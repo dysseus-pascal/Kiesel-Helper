@@ -43,6 +43,9 @@ object TrendTab {
         Gruppe("Herz", listOf("ruhepuls", "puls_min", "puls_hoch", "puls_tief", "hrv")),
         Gruppe("Ernährung", listOf("wasser", "supp_faellig", "supp_genommen")),
         Gruppe("Aktiv", listOf("aktiv")),
+        Gruppe("Zusammenhänge", listOf(
+            "schlaf", "tief", "ruhepuls", "puls_min", "hrv", "schritte", "aktiv"
+        )),
     )
 
     // --- Die Auswahlleiste ---------------------------------------------------
@@ -109,6 +112,7 @@ object TrendTab {
         gewaehlt: Int,
         daten: Trenddaten,
         umfang: Pair<Int, LocalDate?>,
+        wolke: List<Gesundheit.Punkt> = emptyList(),
     ): LinearLayout {
         val s = ctx.spalte()
         val gruppe = GRUPPEN[gewaehlt]
@@ -132,8 +136,9 @@ object TrendTab {
 
         when (gruppe.name) {
             "Schlaf" -> schlaf(ctx, s, daten, heute)
-            "Herz" -> herz(ctx, s, daten, heute)
+            "Herz" -> herz(ctx, s, daten, heute, wolke)
             "Ernährung" -> ernaehrung(ctx, s, daten, heute)
+            "Zusammenhänge" -> zusammenhaenge(ctx, s, daten, heute)
             else -> einfach(ctx, s, gruppe, daten, heute)
         }
 
@@ -164,12 +169,17 @@ object TrendTab {
         val woche = ctx.karte()
         woche.addView(ctx.saeulenbild(
             bild.profil.map { p ->
-                Saeule(kurz(p.tag), p.mittel, hervor = p.tag == heute.dayOfWeek)
+                Saeule(kurz(p.tag), p.mittel, hervor = p.tag == heute.dayOfWeek,
+                       kleinster = p.kleinster, groesster = p.groesster)
             },
             ziel = bild.gesamt,
         ))
-        woche.addView(ctx.zart(schnittzeile(bild, form, einheit)))
+        woche.addView(ctx.zart(
+            schnittzeile(bild, form, einheit) +
+                " Der Fühler zeigt die Spanne, aus der gemittelt wurde."
+        ))
         extreme(ctx, woche, bild, form, einheit)
+        wochenendzeile(ctx, woche, daten, gruppe.spalten.first(), gruppe.name, form, heute)
         s.addView(woche)
 
         s.addView(ctx.abschnitt("VERLAUF"))
@@ -210,6 +220,8 @@ object TrendTab {
             }
         ))
         extreme(ctx, woche, gesamt, form, "")
+        wochenendzeile(ctx, woche, daten, "schlaf", "Schlaf", form, heute)
+        wochenendzeile(ctx, woche, daten, "tief", "Tiefschlaf", form, heute)
         s.addView(woche)
 
         s.addView(ctx.abschnitt("VERLAUF"))
@@ -236,7 +248,13 @@ object TrendTab {
      * Millisekunden gemessen; sie in dieselbe Achse zu zwingen hiesse, zwei
      * Einheiten uebereinanderzulegen und zu hoffen, dass es niemand liest.
      */
-    private fun herz(ctx: Context, s: LinearLayout, daten: Trenddaten, heute: LocalDate) {
+    private fun herz(
+        ctx: Context,
+        s: LinearLayout,
+        daten: Trenddaten,
+        heute: LocalDate,
+        wolke: List<Gesundheit.Punkt>,
+    ) {
         val ruhe = Auswertung.bild(
             verschmelze(daten["ruhepuls"].orEmpty(), daten["puls_min"].orEmpty()), heute
         )
@@ -270,6 +288,18 @@ object TrendTab {
             }
         ))
         s.addView(woche)
+
+        if (wolke.isNotEmpty()) {
+            s.addView(ctx.abschnitt("DER TYPISCHE TAG"))
+            val wolkenkarte = ctx.karte()
+            wolkenkarte.addView(ctx.pulsbild(emptyList(), ruhe.gesamt, wolke))
+            wolkenkarte.addView(ctx.zart(
+                "Alle Pulsmessungen der letzten 14 Tage, nach Tageszeit " +
+                    "übereinandergelegt. Die Linie ist der gleitende Median — " +
+                    "so verläuft ein Tag bei dir normalerweise."
+            ))
+            s.addView(wolkenkarte)
+        }
 
         s.addView(ctx.abschnitt("HRV"))
         val hrvKarte = ctx.karte()
@@ -325,6 +355,7 @@ object TrendTab {
         ))
         karte.addView(ctx.zart(schnittzeile(wasser, form, " ml")))
         extreme(ctx, karte, wasser, form, " ml")
+        wochenendzeile(ctx, karte, daten, "wasser", "Wasser", form, heute)
         s.addView(karte)
 
         s.addView(ctx.abschnitt("WASSER, VERLAUF"))
@@ -369,6 +400,112 @@ object TrendTab {
     /** Eine Nachkommastelle, aber ohne die ",0" bei glatten Zahlen. */
     private fun zehntel(d: Double): String =
         if (d == Math.floor(d)) (Zahlen.ganz(d) ?: "") else (Zahlen.eine(d) ?: "")
+
+
+    /**
+     * Zusammenhaenge: zwei Groessen gegeneinander.
+     *
+     * FUENF PAARE, NICHT ALLE. Aus sieben Spalten liessen sich einundzwanzig
+     * Paare bilden, und mindestens die Haelfte davon ist Unsinn - wer lange
+     * genug sucht, findet in jedem Datensatz eine Korrelation. Diese fuenf
+     * sind die, nach denen man wirklich fragt.
+     */
+    private val PAARE = listOf(
+        listOf("Schlaf", "schlaf", "Ruhepuls", "ruhepuls"),
+        listOf("Schlaf", "schlaf", "HRV", "hrv"),
+        listOf("Tiefschlaf", "tief", "HRV", "hrv"),
+        listOf("Schritte", "schritte", "Schlaf", "schlaf"),
+        listOf("Aktiv", "aktiv", "Ruhepuls", "ruhepuls"),
+    )
+
+    private fun zusammenhaenge(
+        ctx: Context,
+        s: LinearLayout,
+        daten: Trenddaten,
+        heute: LocalDate,
+    ) {
+        s.addView(ctx.abschnitt("ZUSAMMENHÄNGE"))
+
+        PAARE.forEach { (nameX, spalteX, nameY, spalteY) ->
+            val bild = Auswertung.zusammenhang(
+                reihe(daten, spalteX), reihe(daten, spalteY), heute
+            )
+            val karte = ctx.karte()
+            karte.addView(ctx.kartentitel("$nameX und $nameY"))
+
+            if (!bild.belastbar) {
+                karte.addView(ctx.zart(
+                    "Gemeinsame Tage: ${bild.n}. Gezeigt wird erst ab " +
+                        "${Auswertung.PAARE_MINDESTENS} — aus einer Handvoll Punkte " +
+                        "lässt sich jede Gerade legen, und sie sähe überzeugend aus."
+                ))
+                s.addView(karte)
+                return@forEach
+            }
+
+            karte.addView(ctx.streubild(bild, formel(spalteX), formel(spalteY)))
+            karte.addView(ctx.zart("waagerecht $nameX, senkrecht $nameY"))
+            val r = bild.r ?: 0.0
+            karte.addView(ctx.fliesstext(
+                "r = " + Zahlen.zwei(r) + " über ${bild.n} Tage — ${bild.staerke} " +
+                    "Zusammenhang." +
+                    if (kotlin.math.abs(r) >= 0.2)
+                        " Mehr $nameX ging mit " +
+                            (if (r > 0) "mehr" else "weniger") + " $nameY einher."
+                    else ""
+            ))
+            s.addView(karte)
+        }
+
+        // EINMAL AM ENDE, nicht fuenfmal daneben: der Satz gilt fuer alle
+        // Bilder hier, und wiederholt liest ihn niemand mehr.
+        s.addView(ctx.zart(
+            "Zusammenhang ist keine Ursache. Wer lange schläft, hat vielleicht " +
+                "einen tieferen Ruhepuls — oder wer einen tieferen Ruhepuls hat, " +
+                "schläft besser, oder beides hängt an einem dritten, das hier gar " +
+                "nicht steht. Und: fünf Paare sind fünf Versuche; bei genug " +
+                "Versuchen findet sich irgendwo immer eine Linie."
+        ))
+    }
+
+    /**
+     * Die Reihe zu einer Spalte - mit dem Ruhepuls als Sonderfall.
+     *
+     * Gemessener schlaegt geschaetzten, aber nie beide fuer denselben Tag.
+     */
+    private fun reihe(daten: Trenddaten, spalte: String): List<Pair<LocalDate, Double>> =
+        if (spalte == "ruhepuls")
+            verschmelze(daten["ruhepuls"].orEmpty(), daten["puls_min"].orEmpty())
+        else daten[spalte].orEmpty()
+
+    private fun formel(spalte: String): (Double) -> String =
+        if (spalte == "schlaf" || spalte == "tief") { d -> Zahlen.dauer(d) ?: "" }
+        else { d -> Zahlen.ganz(d) ?: "" }
+
+    /**
+     * Wochenende gegen Werktag, in einem Satz.
+     *
+     * Kein eigenes Bild: der Unterschied ist EINE Zahl, und ein Balkenpaar
+     * dafuer waere Verpackung. Steht hier nichts, fehlen auf einer Seite die
+     * Tage.
+     */
+    private fun wochenendzeile(
+        ctx: Context,
+        karte: LinearLayout,
+        daten: Trenddaten,
+        spalte: String,
+        name: String,
+        form: (Double) -> String,
+        heute: LocalDate,
+    ) {
+        val w = Auswertung.wochenende(reihe(daten, spalte), heute) ?: return
+        val mehr = w.unterschied >= 0
+        karte.addView(ctx.fliesstext(
+            "$name: " + form(w.wochenende) + " am Wochenende gegen " +
+                form(w.werktag) + " unter der Woche — " +
+                form(kotlin.math.abs(w.unterschied)) + (if (mehr) " mehr" else " weniger") + "."
+        ))
+    }
 
     // --- Kleinkram -----------------------------------------------------------
 

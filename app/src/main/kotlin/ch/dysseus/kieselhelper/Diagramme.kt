@@ -48,6 +48,13 @@ data class Saeule(
      * im anderen, und nebeneinander sieht es aus wie zwei Dinge.
      */
     val innen: Double? = null,
+    /**
+     * Die Spanne, aus der der Wert gemittelt wurde. Ein Mittelwert ohne sie
+     * ist eine halbe Aussage: drei Mittwoche mit 4000, 8000 und 12000
+     * Schritten ergeben denselben Schnitt wie drei mit je 8000.
+     */
+    val kleinster: Double? = null,
+    val groesster: Double? = null,
 )
 
 /**
@@ -139,6 +146,21 @@ class SaeulenView(
                         )
                     }
                 }
+            }
+
+            // Der Fuehler: von der kleinsten bis zur groessten Messung dieses
+            // Fachs, mit Querstrichen an den Enden.
+            val von = saeule.kleinster
+            val bis = saeule.groesster
+            if (von != null && bis != null && bis > von) {
+                stift.color = context.farbe(R.color.schrift_zart)
+                val oben = kopfHoehe + hoehe * (1f - (bis / spitze).coerceIn(0.0, 1.0).toFloat())
+                val unten = kopfHoehe + hoehe * (1f - (von / spitze).coerceIn(0.0, 1.0).toFloat())
+                val dick = context.dp(1f).toFloat()
+                leinwand.drawRect(mitte - dick / 2, oben, mitte + dick / 2, unten, stift)
+                val kappe = balken * 0.3f
+                leinwand.drawRect(mitte - kappe, oben - dick, mitte + kappe, oben, stift)
+                leinwand.drawRect(mitte - kappe, unten, mitte + kappe, unten + dick, stift)
             }
 
             saeule.oben?.let { text ->
@@ -422,6 +444,14 @@ class PulsView(
     ctx: Context,
     private val punkte: List<Gesundheit.Punkt>,
     private val ruhe: Double?,
+    /**
+     * Fruehere Tage, blass dahinter - der "typische Tag".
+     *
+     * Ist etwas da, zieht die Trendlinie durch die FRUEHEREN Punkte, nicht
+     * durch die heutigen: gefragt ist dann, wie ein Tag normalerweise
+     * verlaeuft, und heute liegt als einzelner Fall darueber.
+     */
+    private val frueher: List<Gesundheit.Punkt> = emptyList(),
 ) : View(ctx) {
 
     /** Halbe Fensterbreite des gleitenden Medians, in Minuten. */
@@ -431,6 +461,11 @@ class PulsView(
         style = Paint.Style.FILL
         color = context.farbe(R.color.akzent)
         alpha = 110
+    }
+    private val schatten = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = context.farbe(R.color.schrift_zart)
+        alpha = 45
     }
     private val linie = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -465,14 +500,15 @@ class PulsView(
         val boden = height - fuss
         val breite = width - rand
 
-        if (punkte.isEmpty()) {
+        val alle = punkte + frueher
+        if (alle.isEmpty()) {
             schrift.textAlign = Paint.Align.LEFT
-            leinwand.drawText("Keine Pulsmessungen heute", 0f, height / 2f, schrift)
+            leinwand.drawText("Keine Pulsmessungen", 0f, height / 2f, schrift)
             return
         }
 
-        val hoechster = punkte.maxOf { it.wert }
-        val tiefster = minOf(punkte.minOf { it.wert }, ruhe ?: Double.MAX_VALUE)
+        val hoechster = alle.maxOf { it.wert }
+        val tiefster = minOf(alle.minOf { it.wert }, ruhe ?: Double.MAX_VALUE)
         val oben = hoechster + 5
         val unten = maxOf(tiefster - 5, 0.0)
         val spanne = maxOf(oben - unten, 1.0)
@@ -487,15 +523,21 @@ class PulsView(
         }
 
         val punktgroesse = context.dp(1.7f).toFloat()
+        frueher.forEach { p ->
+            leinwand.drawCircle(x(p.minute), y(p.wert), punktgroesse * 0.8f, schatten)
+        }
         punkte.forEach { p ->
             leinwand.drawCircle(x(p.minute), y(p.wert), punktgroesse, tupfen)
         }
 
+        // Die Linie folgt den frueheren Tagen, wenn es welche gibt - sonst dem
+        // heutigen.
+        val grundlage = if (frueher.isNotEmpty()) frueher.sortedBy { it.minute } else punkte
         val faden = Path()
         var erster = true
-        var minute = punkte.first().minute
-        while (minute <= punkte.last().minute) {
-            val imFenster = punkte.filter { it.minute >= minute - fenster && it.minute <= minute + fenster }
+        var minute = grundlage.first().minute
+        while (minute <= grundlage.last().minute) {
+            val imFenster = grundlage.filter { it.minute >= minute - fenster && it.minute <= minute + fenster }
             // WENIGER ALS DREI PUNKTE SIND KEIN TREND. Eine Linie ueber eine
             // Luecke hinweg behauptete Messungen, die es nicht gibt.
             if (imFenster.size >= 3) {
@@ -533,9 +575,115 @@ class PulsView(
     }
 }
 
-fun Context.pulsbild(punkte: List<Gesundheit.Punkt>, ruhe: Double?): View =
-    PulsView(this, punkte, ruhe).apply {
+fun Context.pulsbild(
+    punkte: List<Gesundheit.Punkt>,
+    ruhe: Double?,
+    frueher: List<Gesundheit.Punkt> = emptyList(),
+): View =
+    PulsView(this, punkte, ruhe, frueher).apply {
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(124f)
         ).apply { topMargin = dp(10f) }
     }
+
+// --- Streubild --------------------------------------------------------------
+
+/**
+ * Zwei Groessen gegeneinander: eine Wolke mit einer Geraden hindurch.
+ *
+ * DIE ACHSEN BEGINNEN NICHT BEI NULL. Bei einem Ruhepuls zwischen 48 und 62
+ * waere die untere Haelfte des Bildes leer, und die Punkte klebten in einer
+ * Linie zusammen - man saehe nichts. Die Randbeschriftung nennt deshalb die
+ * tatsaechlichen Grenzen; ohne sie waere der Ausschnitt eine stille Luege.
+ */
+class StreuView(
+    ctx: Context,
+    private val bild: Auswertung.Zusammenhang,
+    private val formX: (Double) -> String,
+    private val formY: (Double) -> String,
+) : View(ctx) {
+
+    private val tupfen = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = ctx.farbe(R.color.akzent)
+        alpha = 150
+    }
+    private val gerade = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = ctx.dp(2f).toFloat()
+        color = ctx.farbe(R.color.akzent)
+    }
+    private val schrift = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_SP, 10f, ctx.resources.displayMetrics
+        )
+        color = ctx.farbe(R.color.schrift_zart)
+    }
+    private val rahmen = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = ctx.dp(1f).toFloat()
+        color = ctx.farbe(R.color.linie)
+    }
+
+    override fun onDraw(leinwand: Canvas) {
+        val punkte = bild.punkte
+        if (punkte.size < 3) {
+            schrift.textAlign = Paint.Align.LEFT
+            leinwand.drawText("Noch zu wenige gemeinsame Tage", 0f, height / 2f, schrift)
+            return
+        }
+
+        val fuss = context.dp(14f).toFloat()
+        val links = context.dp(30f).toFloat()
+        val boden = height - fuss
+        val breite = width.toFloat()
+
+        val xVon = punkte.minOf { it.first }
+        val xBis = punkte.maxOf { it.first }
+        val yVon = punkte.minOf { it.second }
+        val yBis = punkte.maxOf { it.second }
+        val xSpanne = maxOf(xBis - xVon, 1e-9)
+        val ySpanne = maxOf(yBis - yVon, 1e-9)
+        val luft = 0.06f
+
+        fun x(w: Double) = links + (breite - links) *
+            (luft + (1 - 2 * luft) * ((w - xVon) / xSpanne).toFloat())
+        fun y(w: Double) = boden * (1f - (luft + (1 - 2 * luft) *
+            ((w - yVon) / ySpanne).toFloat()))
+
+        leinwand.drawLine(links, boden, breite, boden, rahmen)
+        leinwand.drawLine(links, 0f, links, boden, rahmen)
+
+        val gross = context.dp(2.6f).toFloat()
+        punkte.forEach { (a, b) -> leinwand.drawCircle(x(a), y(b), gross, tupfen) }
+
+        // Die Gerade nur ueber den gemessenen Bereich. Darueber hinaus
+        // verlaengert waere sie eine Vorhersage, und dafuer taugt sie nicht.
+        if (bild.belastbar) {
+            leinwand.drawLine(
+                x(xVon), y(bild.achse + bild.steigung * xVon),
+                x(xBis), y(bild.achse + bild.steigung * xBis),
+                gerade,
+            )
+        }
+
+        schrift.textAlign = Paint.Align.LEFT
+        leinwand.drawText(formY(yBis), 0f, schrift.textSize, schrift)
+        leinwand.drawText(formY(yVon), 0f, boden - context.dp(1f).toFloat(), schrift)
+        leinwand.drawText(
+            formX(xVon), links + context.dp(2f), (height - context.dp(2f)).toFloat(), schrift
+        )
+        schrift.textAlign = Paint.Align.RIGHT
+        leinwand.drawText(formX(xBis), breite, (height - context.dp(2f)).toFloat(), schrift)
+    }
+}
+
+fun Context.streubild(
+    bild: Auswertung.Zusammenhang,
+    formX: (Double) -> String,
+    formY: (Double) -> String,
+): View = StreuView(this, bild, formX, formY).apply {
+    layoutParams = LinearLayout.LayoutParams(
+        ViewGroup.LayoutParams.MATCH_PARENT, dp(150f)
+    ).apply { topMargin = dp(10f) }
+}

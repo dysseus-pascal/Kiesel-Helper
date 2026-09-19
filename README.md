@@ -55,7 +55,7 @@ Zu jeder Karte ein Bild - eine Zahl allein sagt nicht, ob sie hoch ist.
 |---|---|
 | Bewegung | Schritte der letzten sieben Tage, mit Ziellinie |
 | Schlaf | die Nacht in Phasen (tief, REM, leicht, wach) + sieben Nächte |
-| Herz | Punktewolke aller Pulsmessungen des Tages, mit gleitendem Median als Trendlinie |
+| Herz | Punktewolke aller Pulsmessungen des Tages, mit gleitendem Median als Trendlinie; im Trend dieselbe Wolke über 14 Tage |
 | Ernährung | Wasser über sieben Tage, dazu die Supplemente: hell geplant, dunkel genommen |
 
 Selbst gezeichnet, ohne Diagramm-Bibliothek: die drei Bilder zusammen sind
@@ -151,6 +151,53 @@ alle Tage. So heisst »über der Linie« überall dasselbe.
 Die Auswahlleiste wird **einmal** gebaut und danach nur umgefärbt — sonst
 stünde sie nach jedem Umschalten wieder ganz links, während man rechts aussen
 getippt hat.
+
+### Zusammenhänge
+
+Eine eigene Gruppe im Trend: zwei Grössen gegeneinander als Punktewolke mit
+Ausgleichsgerade, dazu der Korrelationskoeffizient nach Pearson und die Zahl
+der gemeinsamen Tage.
+
+| | |
+|---|---|
+| Schlaf ↔ Ruhepuls | Schlaf ↔ HRV |
+| Tiefschlaf ↔ HRV | Schritte ↔ Schlaf |
+| Aktiv ↔ Ruhepuls | |
+
+**Fünf Paare, nicht alle.** Aus sieben Spalten liessen sich einundzwanzig
+bilden, und wer lange genug sucht, findet in jedem Datensatz eine Korrelation.
+
+**Erst ab 14 gemeinsamen Tagen** wird etwas gezeigt — durch eine Handvoll
+Punkte lässt sich jede Gerade legen, und sie sähe überzeugend aus. Gepaart wird
+nur, wo **beide** Grössen an demselben Tag etwas wissen; eine Lücke mit dem
+Mittelwert aufzufüllen hiesse, eine Messung zu erfinden, und gerade hier fällt
+das nicht auf: die Wolke sähe danach sogar ordentlicher aus.
+
+Unter den Bildern steht einmal, was für alle gilt: **Zusammenhang ist keine
+Ursache**, und fünf Paare sind fünf Versuche.
+
+### Der typische Tag
+
+Alle Pulsmessungen der letzten **14 Tage** nach Tageszeit übereinandergelegt
+(blass), die Trendlinie als gleitender Median hindurch. So verläuft ein Tag
+normalerweise — wann der Puls hochgeht, wie breit die Streuung mittags ist, wie
+tief es nachts wird.
+
+Vierzehn und nicht dreissig Tage: bei Zehnminutentakt sind das gut 2000
+Messungen am Tag, und dreissig Tage wären 60 000 Sätze über eine Prozessgrenze.
+Geblättert wird dabei über alle Seiten — wer nur die erste holt, zeichnet eine
+Wolke aus dem ersten Drittel des Zeitraums und nennt sie den typischen Tag.
+
+### Fühler und Wochenende
+
+Die Wochentagsbalken tragen einen **Fühler** von der kleinsten bis zur
+grössten Messung. Der Mittelwert allein ist eine halbe Aussage: drei Mittwoche
+mit 4000, 8000 und 12 000 Schritten ergeben denselben Schnitt wie drei mit je
+8000, und nur einer der beiden Fälle heisst »typisch«.
+
+Dazu je Gruppe eine Zeile **Wochenende gegen Werktag**. Kein eigenes Bild — der
+Unterschied ist eine Zahl, und ein Balkenpaar dafür wäre Verpackung. Beide
+Seiten brauchen mindestens drei Tage.
 
 **Zwei Regeln, die das Bild ehrlich halten:**
 

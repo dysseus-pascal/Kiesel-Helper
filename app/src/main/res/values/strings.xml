@@ -20,4 +20,5 @@
 
     <!-- Steht im Auswahlblatt der Widgets, unter dem Namen. -->
     <string name="widget_beschreibung">Schritte, Bewegung, Schlaf und Wasser auf dem Startbildschirm</string>
+    <string name="widget_auffrischen">Jetzt auffrischen</string>
 </resources>

@@ -24,6 +24,9 @@ object Zahlen {
 
     fun eine(d: Double?): String? = d?.let { String.format("%.1f", it) }
 
+    /** Zwei Stellen - fuer Groessen, die zwischen -1 und 1 leben. */
+    fun zwei(d: Double): String = String.format("%.2f", d)
+
     /** Minuten als "6 h 40" - eine Schlafdauer in Minuten liest niemand. */
     fun dauer(min: Double?): String? {
         val m = min?.toInt() ?: return null

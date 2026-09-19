@@ -177,8 +177,20 @@ class HauptActivity : ComponentActivity() {
             val speicher = Speicher(this@HauptActivity)
             gruppe.spalten.associateWith { speicher.reihe(it) } to speicher.umfang()
         }
+
+        // Die Wolke NUR fuer Herz. Sie liest vierzehn Tage Einzelmessungen aus
+        // der Akte - das ist die teuerste Abfrage der App, und fuer die
+        // Schritte-Gruppe braucht sie niemand.
+        val wolke = if (gruppe.name == "Herz") {
+            Gesundheit(this@HauptActivity).pulswolke()
+        } else {
+            emptyList()
+        }
+
         trendInhalt.removeAllViews()
-        trendInhalt.addView(TrendTab.inhalt(this@HauptActivity, trendWahl, daten, umfang))
+        trendInhalt.addView(
+            TrendTab.inhalt(this@HauptActivity, trendWahl, daten, umfang, wolke)
+        )
     }
 
     /**

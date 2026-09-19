@@ -32,12 +32,28 @@
             android:textSize="12sp"
             android:textStyle="bold" />
 
-        <TextView
+        <!-- EIN CHRONOMETER, KEINE UHRZEIT. "21:12" beantwortet die Frage
+             nicht, die man am Widget hat - die lautet "ist das noch aktuell".
+             Und ein Chronometer zaehlt SELBST weiter: er braucht keinen
+             Wecker, der das Telefon alle paar Minuten fuer eine Textzeile
+             aufweckt. -->
+        <Chronometer
             android:id="@+id/w_stand"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
             android:textColor="@color/schrift_zart"
             android:textSize="12sp" />
+
+        <ImageView
+            android:id="@+id/w_auffrischen"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="6dp"
+            android:padding="5dp"
+            android:src="@drawable/ic_auffrischen"
+            android:contentDescription="@string/widget_auffrischen" />
     </LinearLayout>
 
     <LinearLayout

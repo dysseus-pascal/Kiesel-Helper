@@ -155,6 +155,10 @@ class Gesundheit(private val context: Context) {
         /** So viele Pulspunkte passen auf einen Telefonschirm, ohne zu kleben. */
         const val PUNKTE_MAX = 400
 
+        /** Punkte in der Wolke ueber mehrere Tage, und wie viele Seiten dafuer. */
+        const val WOLKE_MAX = 1500
+        const val SEITEN_MAX = 12
+
         /**
          * Ab wann eine Nacht zaehlt.
          *
@@ -582,6 +586,60 @@ class Gesundheit(private val context: Context) {
         if (alle.size <= PUNKTE_MAX) return alle
         val schritt = alle.size.toDouble() / PUNKTE_MAX
         return (0 until PUNKTE_MAX).map { i -> alle[(i * schritt).toInt()] }
+    }
+
+
+    /**
+     * Alle Pulsmessungen der letzten Tage, nach Tageszeit uebereinandergelegt.
+     *
+     * DER TYPISCHE TAG. Eine einzelne Tageslinie sagt, was gestern war; diese
+     * Wolke sagt, wie ein Tag bei einem AUSSIEHT - wann der Puls hochgeht,
+     * wie breit die Streuung mittags ist, wie tief es nachts wird.
+     *
+     * VIERZEHN TAGE, NICHT DREISSIG. Die Akte gibt zwar mehr her, aber jede
+     * Messung ist ein Datensatz: bei zehn Minuten Takt sind das gut 2000 am
+     * Tag, und dreissig Tage waeren 60000 Saetze ueber eine
+     * Prozessgrenze. Vierzehn Tage zeigen dasselbe Muster.
+     *
+     * Blaettern ist Pflicht: `readRecords` liefert hoechstens eine Seite, und
+     * wer den Rest nicht holt, zeichnet eine Wolke aus dem ersten Drittel des
+     * Zeitraums und nennt sie den typischen Tag.
+     */
+    suspend fun pulswolke(tage: Int = 14): List<Punkt> {
+        val klient = Akte(context).bereit() ?: return emptyList()
+        val bis = LocalDate.now(zone).atStartOfDay()
+        val von = bis.minusDays(tage.toLong())
+
+        val gesammelt = mutableListOf<Punkt>()
+        var marke: String? = null
+        var seiten = 0
+        do {
+            val antwort = fange("Pulswolke") {
+                klient.readRecords(
+                    ReadRecordsRequest(
+                        HeartRateRecord::class,
+                        TimeRangeFilter.between(von, bis),
+                        pageSize = 1000,
+                        pageToken = marke,
+                    )
+                )
+            } ?: break
+
+            antwort.records.forEach { satz ->
+                satz.samples.forEach { probe ->
+                    val z = LocalDateTime.ofInstant(probe.time, zone)
+                    gesammelt += Punkt(z.hour * 60 + z.minute, probe.beatsPerMinute.toDouble())
+                }
+            }
+            marke = antwort.pageToken
+            seiten++
+        } while (marke != null && seiten < SEITEN_MAX && gesammelt.size < WOLKE_MAX * 4)
+
+        if (gesammelt.size <= WOLKE_MAX) return gesammelt.sortedBy { it.minute }
+        val schritt = gesammelt.size.toDouble() / WOLKE_MAX
+        return (0 until WOLKE_MAX)
+            .map { i -> gesammelt[(i * schritt).toInt()] }
+            .sortedBy { it.minute }
     }
 
     /**
