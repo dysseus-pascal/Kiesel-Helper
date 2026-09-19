@@ -270,6 +270,7 @@ class HauptActivity : ComponentActivity(), Eingaben {
      */
     override fun fuegeKoffein(mg: Int) {
         lifecycleScope.launch {
+            val augenblick = java.time.Instant.now()
             withContext(Dispatchers.IO) {
                 val heute = Einstellungen.heute(this@HauptActivity)
                 val jetzt = java.time.LocalTime.now()
@@ -279,6 +280,12 @@ class HauptActivity : ComponentActivity(), Eingaben {
                     heute,
                     mapOf("koffein_letzt" to (jetzt.hour * 60 + jetzt.minute).toDouble()),
                 )
+            }
+            // UND IN DIE AKTE. Die eigene Tabelle traegt den Trend, die Akte
+            // traegt es zu allen anderen Apps - und ueberlebt eine
+            // Neuinstallation dieser hier.
+            Aufgaben.koffein(this@HauptActivity, mg, augenblick)?.let {
+                Verlauf(this@HauptActivity).merkeMeldung(it)
             }
             gesundheitLaden()
         }

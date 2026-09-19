@@ -4,13 +4,19 @@ import android.content.Context
 import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
+import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.HydrationRecord
+import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
+import androidx.health.connect.client.request.ReadRecordsRequest
+import androidx.health.connect.client.time.TimeRangeFilter
+import androidx.health.connect.client.units.Mass
 import androidx.health.connect.client.units.Volume
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
@@ -89,6 +95,8 @@ object Aufgaben {
     val BERECHTIGUNGEN: Set<String> = setOf(
         HealthPermission.getWritePermission(HydrationRecord::class),
         HealthPermission.getWritePermission(HeartRateVariabilityRmssdRecord::class),
+        // Fuer Koffein und Praeparate: die Akte fuehrt beides als Ernaehrung.
+        HealthPermission.getWritePermission(NutritionRecord::class),
     )
 
     /**
@@ -183,6 +191,11 @@ object Aufgaben {
         if (!Riegel.neu(context, "drinktervall", wann.toString())) return null
 
         val beginn = Instant.ofEpochSecond(wann)
+        val klient = Akte(context).bereit() ?: return "Gesundheitsakte nicht verfügbar"
+        schonDa(context, klient, HydrationRecord::class, beginn, FENSTER_WASSER)?.let {
+            Log.i(TAG, "Wasser steht schon da, von " + it)
+            return "Übersprungen — $it hat dasselbe Glas schon eingetragen"
+        }
         val satz = HydrationRecord(
             startTime = beginn,
             startZoneOffset = null,
@@ -191,7 +204,7 @@ object Aufgaben {
             endTime = beginn.plusSeconds(60),
             endZoneOffset = null,
             volume = Volume.milliliters(ml.toDouble()),
-            metadata = herkunft(),
+            metadata = vonDerUhr("drinktervall-" + wann),
         )
         return schreibe(context, satz, "$ml ml eingetragen")
     }
@@ -208,11 +221,24 @@ object Aufgaben {
         if (ms <= 0 || wann <= 0) return null
         if (!Riegel.neu(context, "herzintervall", wann.toString())) return null
 
+        // DIE PEBBLE-APP KOENNTE DIESELBE MESSUNG EINTRAGEN. Sie synchronisiert
+        // die Gesundheitsdaten der Uhr selbst, und die Akte fuehrt nur
+        // zusammen, was aus derselben App kommt.
+        val klient = Akte(context).bereit() ?: return "Gesundheitsakte nicht verfügbar"
+        val zeitpunkt = Instant.ofEpochSecond(wann)
+        schonDa(
+            context, klient, HeartRateVariabilityRmssdRecord::class,
+            zeitpunkt, FENSTER_HRV,
+        )?.let {
+            Log.i(TAG, "HRV steht schon da, von " + it)
+            return "Übersprungen — $it hat die Messung schon eingetragen"
+        }
+
         val satz = HeartRateVariabilityRmssdRecord(
             time = Instant.ofEpochSecond(wann),
             zoneOffset = null,
             heartRateVariabilityMillis = ms.toDouble(),
-            metadata = herkunft(),
+            metadata = vonDerUhr("herzintervall-" + wann),
         )
         return schreibe(context, satz, "$ms ms eingetragen")
     }
@@ -224,8 +250,136 @@ object Aufgaben {
      * eingetippt - und man kann sie spaeter nicht mehr von einer echten
      * Eingabe unterscheiden.
      */
-    private fun herkunft(): Metadata =
-        Metadata.autoRecorded(device = Device(type = Device.TYPE_WATCH))
+
+    // --- Was von Hand kommt, aber trotzdem in die Akte gehoert ---
+
+    /**
+     * Ein koffeinhaltiges Getraenk eintragen.
+     *
+     * DIE AKTE HAT DAFUER EINEN PLATZ: ein Ernaehrungssatz traegt ein Feld
+     * `caffeine`. Lange stand das Koffein nur in der eigenen Tabelle, mit dem
+     * Hinweis, ein Schreibrecht mehr sei es nicht wert. Das war die falsche
+     * Abwaegung - eingetragen nuetzt es auch jeder anderen App und ueberlebt
+     * eine Neuinstallation.
+     *
+     * MANUELL und nicht automatisch aufgezeichnet: hier hat jemand einen Knopf
+     * gedrueckt. Die Akte unterscheidet das, und ein Kaffee, der sich als
+     * Messung ausgibt, waere eine kleine Luege.
+     *
+     * Die Kennung traegt den Augenblick - wer zweimal tippt, hat zweimal
+     * getrunken, und das sollen auch zwei Saetze sein.
+     */
+    suspend fun koffein(context: Context, mg: Int, zeitpunkt: Instant): String? {
+        val satz = NutritionRecord(
+            startTime = zeitpunkt,
+            startZoneOffset = null,
+            endTime = zeitpunkt.plusSeconds(60),
+            endZoneOffset = null,
+            caffeine = Mass.grams(mg / 1000.0),
+            metadata = vonHand("koffein-" + zeitpunkt.epochSecond),
+        )
+        return schreibe(context, satz, "$mg mg Koffein eingetragen")
+    }
+
+    /**
+     * Ein genommenes Praeparat eintragen.
+     *
+     * OHNE NAEHRSTOFFMENGEN, nur mit Namen. Ein Ernaehrungssatz ist der
+     * einzige Platz, den die Akte dafuer hat, und SupCycle kennt Namen und
+     * Zyklen, keine Milligramm. Eine Menge zu erfinden, damit das Feld
+     * gefuellt ist, waere schlimmer als ein leeres Feld: sie taeuchte
+     * Genauigkeit vor, die es nirgends gibt.
+     *
+     * Die Kennung ist TAG PLUS PLATZ, nicht die Uhrzeit. SupCycle meldet
+     * seinen Stand nach jedem Haken neu; mit dieser Kennung ersetzt der
+     * zweite Bericht den ersten, statt dasselbe Magnesium ein zweites Mal
+     * einzutragen.
+     */
+    private suspend fun praeparat(
+        context: Context,
+        name: String,
+        tag: LocalDate,
+        platz: Int,
+        zeitpunkt: Instant,
+    ) {
+        val satz = NutritionRecord(
+            startTime = zeitpunkt,
+            startZoneOffset = null,
+            endTime = zeitpunkt.plusSeconds(60),
+            endZoneOffset = null,
+            name = name,
+            metadata = vonHand("supcycle-" + tag + "-" + platz),
+        )
+        try {
+            Akte(context).bereit()?.insertRecords(listOf(satz))
+        } catch (e: Exception) {
+            Log.w(TAG, "Praeparat nicht eingetragen: " + e.message)
+        }
+    }
+
+    /**
+     * Die Kennung, an der die Akte einen Eintrag WIEDERERKENNT.
+     *
+     * DAS IST DER EIGENTLICHE SCHUTZ GEGEN DOPPELTE. Health Connect fuehrt
+     * Eintraege mit derselben `clientRecordId` derselben App zusammen: wird
+     * einer zweimal geschrieben, ERSETZT der zweite den ersten, statt
+     * danebenzustehen. Der [Riegel] daneben spart nur die Abfrage - er liegt
+     * in den Einstellungen der App und ist weg, sobald jemand deren Daten
+     * loescht. Die Kennung ueberlebt das.
+     *
+     * Sie muss deshalb aus dem EREIGNIS kommen und nicht aus der Uhrzeit des
+     * Schreibens: derselbe Schluck Wasser ergibt dieselbe Kennung, auch wenn
+     * die Uhr ihn eine Stunde spaeter noch einmal meldet.
+     */
+    private fun vonDerUhr(kennung: String): Metadata =
+        Metadata.autoRecorded(Device(type = Device.TYPE_WATCH), kennung)
+
+    private fun vonHand(kennung: String): Metadata =
+        Metadata.manualEntryWithId(kennung, Device(type = Device.TYPE_PHONE))
+
+    /**
+     * Schreibt schon jemand anderes dasselbe?
+     *
+     * DIE PEBBLE-APP TRAEGT SELBST EIN - Schritte, Schlaf, Puls, womoeglich
+     * auch die Herzratenvariabilitaet. Zwei Apps, die dieselbe Messung
+     * eintragen, ergeben ZWEI Saetze: die Akte fuehrt nur zusammen, was aus
+     * DERSELBEN App mit derselben Kennung kommt. Dagegen hilft keine Kennung,
+     * nur Nachsehen.
+     *
+     * Gefunden wird der Paketname des Fremden, sonst null. Ein eigener
+     * frueherer Satz zaehlt nicht als fremd - den ersetzt die Kennung.
+     */
+    private suspend fun <T : Record> schonDa(
+        context: Context,
+        klient: HealthConnectClient,
+        klasse: kotlin.reflect.KClass<T>,
+        zeit: Instant,
+        fenster: Duration,
+    ): String? = try {
+        klient.readRecords(
+            ReadRecordsRequest(
+                klasse,
+                TimeRangeFilter.between(zeit.minus(fenster), zeit.plus(fenster)),
+            )
+        ).records
+            .map { it.metadata.dataOrigin.packageName }
+            .firstOrNull { it.isNotEmpty() && it != context.packageName }
+    } catch (e: Exception) {
+        Log.w(TAG, "Nachsehen fehlgeschlagen: " + e.message)
+        null
+    }
+
+    /**
+     * Wie weit zwei Eintraege auseinanderliegen duerfen und trotzdem
+     * derselbe sind.
+     *
+     * Fuenf Minuten fuer die HRV: sie wird einmal in der Nacht gemessen, und
+     * zwei Apps, die dieselbe Messung melden, tun das nicht auf die Sekunde
+     * genau. Beim Wasser enger - zwei Glaeser in fuenf Minuten sind moeglich,
+     * zwei Eintraege in derselben Minute nicht.
+     */
+    private val FENSTER_HRV: Duration = Duration.ofMinutes(5)
+    private val FENSTER_WASSER: Duration = Duration.ofMinutes(1)
 
     private suspend fun schreibe(context: Context, satz: Record, meldung: String): String {
         val klient = Akte(context).bereit()

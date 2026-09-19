@@ -93,8 +93,15 @@ class EinstellungenActivity : ComponentActivity() {
         wurzel.addView(aufgabenKarte(
             "SupCycle → Ernährung",
             "Was heute ansteht, was davon abgehakt ist, und die Namen dazu. " +
-                "Landet im eigenen Speicher, nicht in der Akte — die kennt " +
-                "keine Satzart für »genommen«."
+                "Jedes genommene Präparat geht als Ernährungssatz in die Akte " +
+                "— ohne Mengen, denn SupCycle kennt Namen und Zyklen, keine " +
+                "Milligramm."
+        ))
+        wurzel.addView(aufgabenKarte(
+            "Koffein → Gesundheitsakte",
+            "Was du in der App antippst, wird als Ernährungssatz mit " +
+                "Koffeinmenge eingetragen. Die Akte ist damit auch hier die " +
+                "Quelle: gelesen wird, was dort steht, nicht die eigene Zählung."
         ))
         wurzel.addView(aufgabenKarte(
             "OsmAnd → Kieselstrasse",

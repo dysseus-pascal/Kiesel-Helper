@@ -135,6 +135,57 @@ Wasser kommt aus Drinktervall, der Schlaf aus den Einstellungen. Schritte und
 Aktiv bleiben Konstanten in `Gesundheit.kt`: zehntausend und dreissig Minuten
 sind Hausnummern, an denen sich ohnehin niemand misst.
 
+## Was in der Gesundheitsakte landet
+
+**Alles, wofür sie einen Platz hat.** Vier Satzarten schreibt die App:
+
+| Was | Satzart | Kennung |
+|---|---|---|
+| Wasser (Drinktervall) | `HydrationRecord` | `drinktervall-<Zeitpunkt>` |
+| HRV (Herzintervall) | `HeartRateVariabilityRmssdRecord` | `herzintervall-<Zeitpunkt>` |
+| Koffein | `NutritionRecord` (`caffeine`) | `koffein-<Zeitpunkt>` |
+| Präparate (SupCycle) | `NutritionRecord` (nur `name`) | `supcycle-<Tag>-<Platz>` |
+
+**Nur eines bleibt draussen: die Einschätzung von 1 bis 5.** Für »wie ich mich
+fühle« hat die Akte keinen Satz, und einen unpassenden zu nehmen hiesse, eine
+Zahl als etwas auszugeben, was sie nicht ist.
+
+Die Präparate gehen **ohne Nährstoffmengen** hinein. SupCycle kennt Namen und
+Zyklen, keine Milligramm; eine Menge zu erfinden, damit das Feld gefüllt ist,
+wäre schlimmer als ein leeres Feld — sie täuschte Genauigkeit vor, die es
+nirgends gibt.
+
+### Keine doppelten Einträge
+
+Zwei Quellen, zwei Mechanismen:
+
+**Gegen eigene Doppelte hilft die `clientRecordId`.** Health Connect führt
+Einträge mit derselben Kennung derselben App zusammen: wird einer zweimal
+geschrieben, **ersetzt** der zweite den ersten, statt danebenzustehen. Die
+Kennung kommt deshalb aus dem *Ereignis* und nicht aus der Uhrzeit des
+Schreibens — derselbe Schluck Wasser ergibt dieselbe Kennung, auch wenn die Uhr
+ihn eine Stunde später noch einmal meldet. Der Riegel in den Einstellungen
+spart nur die Abfrage; er ist weg, sobald jemand die App-Daten löscht, die
+Kennung überlebt das.
+
+**Gegen fremde Doppelte hilft nur Nachsehen.** Die Pebble-App trägt selbst ein
+— Schritte, Schlaf, Puls, womöglich auch die Herzratenvariabilität. Zwei Apps,
+die dieselbe Messung eintragen, ergeben **zwei** Sätze; die Akte führt nur
+zusammen, was aus derselben App mit derselben Kennung kommt. Vor jedem Schreiben
+schaut die App deshalb nach, ob dort schon etwas steht:
+
+| | Fenster | Warum |
+|---|---|---|
+| HRV | ± 5 min | einmal pro Nacht gemessen; zwei Apps melden sie nicht sekundengenau |
+| Wasser | ± 1 min | zwei Gläser in fünf Minuten sind möglich, zwei Einträge in derselben Minute nicht |
+
+Findet sich ein fremder Satz, wird **nicht** geschrieben, und im Verlauf steht,
+wer zuvorgekommen ist. Wer wirklich was einträgt, zeigt die Bestandsliste in
+den Einstellungen — sie nennt zu jeder Satzart die schreibende App.
+
+**Was schon doppelt drinsteht, räumt das nicht auf.** Die Prüfung greift ab
+jetzt; ältere Dubletten müsstest du in Health Connect selbst löschen.
+
 ## Der eigene Speicher
 
 **Health Connect vergisst.** Die Akte hält die Rohdaten nicht ewig; was älter
@@ -385,14 +436,13 @@ Drei feste Aufgaben, **im Code**, nicht in einer Datei aus dem Netz:
 |---|---|---|
 | Drinktervall | Gesundheitsakte | jedes getrunkene Glas als Wassermenge, mit dem Zeitpunkt von der Uhr |
 | Herzintervall | Gesundheitsakte | die nächtliche RMSSD-Messung als Herzratenvariabilität |
-| SupCycle | **eigener Speicher** | wie viele Präparate heute anstanden, wie viele davon genommen sind — und seit SupCycle 0.10.0 ihre Namen |
+| SupCycle | Gesundheitsakte + eigener Speicher | jedes genommene Präparat als Ernährungssatz mit Namen; die Quote bleibt für den Trend lokal |
 | OsmAnd | Kieselstrasse | Abbiegeart, Entfernung, Strasse, Ankunftszeit |
 
-**SupCycle geht nicht in die Akte, und das ist kein Versehen.** Health Connect
-kennt keine Satzart für »genommen«; am nächsten käme ein Ernährungssatz mit
-Nährstoffmassen — und die weiss SupCycle nicht, ein Plan dort besteht aus Namen
-und Zyklen, nicht aus Milligramm. Eine Zahl zu erfinden, damit sie in eine
-fremde Tabelle passt, wäre der schlechteste aller Wege.
+**SupCycle geht als Ernährungssatz in die Akte** — mit Namen, ohne Mengen. Der
+Plan dort besteht aus Namen und Zyklen, nicht aus Milligramm; eine Menge zu
+erfinden, damit das Feld gefüllt ist, wäre der schlechteste aller Wege. Die
+Quote »3 von 5« bleibt daneben im eigenen Speicher, weil der Trend sie braucht.
 
 Geschickt wird nichts Neues: SupCycle meldet Tag, Fälligkeits- und
 Abhak-Bitmaske ohnehin nach jeder Einnahme, für seine eigenen Timeline-Pins.

@@ -217,9 +217,11 @@ object GesundheitTab {
         // haelt man ein leeres Feld fuer einen Fehler der App.
         s.addView(ctx.zart(
             "Alles aus Health Connect. Ein Strich heisst: dort steht nichts — " +
-                "nicht, dass der Wert null ist. Wasser und HRV trägt diese App " +
-                "selbst ein, den Rest müssen Uhr oder andere Apps liefern. Was " +
-                "dort wirklich steht, sagt der Technik-Reiter."
+                "nicht, dass der Wert null ist. Wasser, HRV, Koffein und " +
+                "Präparate trägt diese App selbst ein, den Rest müssen Uhr " +
+                "oder andere Apps liefern. Die Einschätzung von 1 bis 5 bleibt " +
+                "hier: für »wie ich mich fühle« hat die Akte keinen Satz. Was " +
+                "dort wirklich steht, sagen die Einstellungen."
         ))
         return s
     }
@@ -305,8 +307,9 @@ object GesundheitTab {
         }
         k.addView(ctx.zart(
             "Kaffee 80 mg, Espresso 60, Tee 40, Energydrink 80 — Hausnummern " +
-                "für eine übliche Portion. Für die Frage »Koffein nach 16 Uhr " +
-                "gegen Tiefschlaf« zählt ohnehin vor allem der Zeitpunkt."
+                "für eine übliche Portion. Geht in die Gesundheitsakte, ist " +
+                "also auch für andere Apps da. Für die Frage »Koffein nach 16 " +
+                "Uhr gegen Tiefschlaf« zählt ohnehin vor allem der Zeitpunkt."
         ))
         return k
     }

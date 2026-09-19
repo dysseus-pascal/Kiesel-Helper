@@ -10,6 +10,7 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.HydrationRecord
+import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
@@ -171,6 +172,7 @@ class Gesundheit(private val context: Context) {
             HealthPermission.getReadPermission(HeartRateRecord::class),
             HealthPermission.getReadPermission(RestingHeartRateRecord::class),
             HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
+            HealthPermission.getReadPermission(NutritionRecord::class),
         )
 
         /**
@@ -285,6 +287,10 @@ class Gesundheit(private val context: Context) {
                         // wie weit der Tag ausgeschlagen hat.
                         HeartRateRecord.BPM_MAX,
                         HeartRateRecord.BPM_MIN,
+                        // Seit die App es selbst eintraegt, ist die Akte auch
+                        // beim Koffein die Quelle - und faengt mit, was eine
+                        // andere App eingetragen hat.
+                        NutritionRecord.CAFFEINE_TOTAL,
                     ),
                     timeRangeFilter = tag,
                 )
@@ -338,7 +344,9 @@ class Gesundheit(private val context: Context) {
             suppGenommen = Wert("Supplemente", suppGenommen, "", ziel = suppFaellig),
             suppListe = Supplemente.lies(context)?.heute.orEmpty(),
             energie = withContext(Dispatchers.IO) { speicher.wert(heute, "energie") }?.toInt(),
-            koffeinMg = withContext(Dispatchers.IO) { speicher.wert(heute, "koffein_mg") },
+            koffeinMg = summen?.get(NutritionRecord.CAFFEINE_TOTAL)
+                ?.inGrams?.times(1000)
+                ?: withContext(Dispatchers.IO) { speicher.wert(heute, "koffein_mg") },
             koffeinLetzt = withContext(Dispatchers.IO) { speicher.wert(heute, "koffein_letzt") },
             phasen = phasenAus(sitzungen),
             nachtzeiten = zeitenAus(sitzungen, heute),
@@ -384,6 +392,7 @@ class Gesundheit(private val context: Context) {
             "puls_hoch" to stand.pulsHoch.zahl,
             "puls_tief" to stand.pulsTief.zahl,
             "hrv" to stand.hrv.zahl,
+            "koffein_mg" to stand.koffeinMg,
         ))
     }
 
@@ -875,6 +884,7 @@ class Gesundheit(private val context: Context) {
             "Puls" to HeartRateRecord::class,
             "Ruhepuls" to RestingHeartRateRecord::class,
             "HRV" to HeartRateVariabilityRmssdRecord::class,
+            "Ernährung" to NutritionRecord::class,
         ).map { (name, klasse) -> zaehle(klient, name, klasse, fenster) }
     }
 
