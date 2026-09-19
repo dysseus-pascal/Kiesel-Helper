@@ -4,7 +4,9 @@ Android-App mit zwei Gesichtern:
 
 * **vorne** acht Zahlen aus der Gesundheitsakte des Telefons — Schritte,
   Distanz, Kalorien, Bewegung, Wasser, Schlaf, Ruhepuls, HRV — auf einem
-  Schirm und in einem Widget;
+  Schirm, in Bildern und in einem Widget;
+* **daneben** der Trend: was ein typischer Mittwoch bei einem ist, aus einer
+  eigenen Tabelle, weil Health Connect vergisst;
 * **dahinter** die Brücke zwischen Pebble-Uhr und Telefon: sie trägt ein, was
   die Uhr misst, und schickt der Uhr, was OsmAnd navigiert.
 
@@ -26,8 +28,9 @@ Zweite gilt.
 
 ### Der Schirm
 
-Zwei Reiter. **Gesundheit** steht vorne, weil man deswegen die App öffnet;
-**Technik** ist der alte Schirm mit Zustand, Aufgaben und Verlauf.
+Drei Reiter. **Gesundheit** steht vorne, weil man deswegen die App öffnet;
+**Trend** rechnet aus dem eigenen Speicher; **Technik** ist der alte Schirm mit
+Zustand, Aufgaben und Verlauf.
 
 | Karte | Werte |
 |---|---|
@@ -93,6 +96,60 @@ die eben daneben offen war, sieht nach Fehler aus.
 Nur das Wasserziel ist echt. Die anderen drei stehen als Konstanten in
 `Gesundheit.kt`; wer andere will, ändert sie dort. Eine Einstellung dafür wäre
 ein Bildschirm mehr für eine Zahl, die man einmal im Leben setzt.
+
+## Der eigene Speicher
+
+**Health Connect vergisst.** Die Akte hält die Rohdaten nicht ewig; was älter
+ist, ist weg — und mit ihm jede Aussage darüber, wie ein Mittwoch bei einem
+normalerweise aussieht. Deshalb eine eigene SQLite-Tabelle: **eine Zeile je
+Tag**, dreizehn Spalten. Ein Tagesstand kostet gut hundert Zeichen, ein Jahr
+passt in weniger als ein einzelnes Foto.
+
+Keine Rohdaten — der Pulsverlauf von vorletztem Dienstag interessiert
+niemanden. Es sind die Zahlen, aus denen sich ein Muster lesen lässt.
+
+| | |
+|---|---|
+| **Beim ersten Start** | wird nachgetragen, was die Akte noch hat (30 Tage, drei Abfragen) |
+| **Bei jedem Lesen** | fällt der heutige Stand in die Tabelle |
+| **Nie** | wird ein bekannter Wert mit einem unbekannten überschrieben |
+
+Der letzte Punkt ist der wichtigste: wer morgens die App öffnet, hat noch
+keinen Schlaf von heute Nacht in der Akte, und der gestrige Eintrag darf davon
+nicht sterben.
+
+**Gemessener und geschätzter Ruhepuls stehen in getrennten Spalten.** Einem aus
+dem Nachttief hergeleiteten Wert sieht man in einem Jahresmittel nicht mehr an,
+woher er kam.
+
+## Der Trend
+
+Die Frage, die ein Tageswert nicht beantwortet: *7985 Schritte — ist das viel?*
+
+| Bild | Antwort |
+|---|---|
+| **Typische Woche** | sieben Balken, einer je Wochentag, im Mittel über alles Gespeicherte |
+| **Verlauf** | acht Kalenderwochen, dazu die Veränderung der letzten vier gegenüber den vier davor |
+
+Die gestrichelte Linie ist in beiden Bildern **dasselbe**: der Schnitt über
+alle Tage. So heisst »über der Linie« überall dasselbe.
+
+Wählbar sind sieben Grössen: Schritte, Schlaf, Tiefschlaf, Wasser, Aktiv,
+Ruhepuls, HRV.
+
+**Zwei Regeln, die das Bild ehrlich halten:**
+
+* **Heute zählt nicht mit.** Ein angefangener Tag hat immer zu wenig Schritte;
+  wer ihn einrechnet, bekommt ein Wochenprofil, in dem der heutige Wochentag
+  für immer der schwächste ist — das Muster wäre ein Abbild der Uhrzeit, zu der
+  man hinschaut.
+* **Ein Wochentag bleibt leer, bis er zweimal aufgezeichnet ist.** Aus einem
+  einzigen Mittwoch ein Muster zu lesen ist keine Auswertung, sondern eine
+  Erinnerung.
+
+Die Veränderung vergleicht **vier Wochen gegen vier Wochen**, nicht eine gegen
+eine: ein Feiertag, eine Erkältung, ein Wochenende weg, und eine Einzelwoche
+springt um dreissig Prozent.
 
 ## Was sie einträgt
 
@@ -201,6 +258,16 @@ adb install -r kiesel-helper-debug.apk
 
 Der Lauf belegt, dass die App übersetzt und ein Paket ergibt. Dass sie am
 Telefon das Richtige **tut**, belegt er nicht — das zeigt sich erst dort.
+
+**Die Auswertung lässt sich ohne Telefon prüfen** — sie ist reine Rechnung.
+Das ist wichtiger, als es klingt: sie ist die einzige Stelle der App, die
+etwas *behauptet* (»dein Mittwoch ist schwach«), und eine falsch gezogene
+Grenze fällt am Gerät nicht auf, weil das Bild immer plausibel aussieht.
+
+```bash
+gradle test
+```
+
 
 ## Grenzen
 

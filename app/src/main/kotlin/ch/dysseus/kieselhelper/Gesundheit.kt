@@ -18,6 +18,8 @@ import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -197,7 +199,7 @@ class Gesundheit(private val context: Context) {
             klient.readRecords(ReadRecordsRequest(SleepSessionRecord::class, nacht)).records
         } ?: emptyList()
 
-        return Stand(
+        val stand = Stand(
             schritte = Wert("Schritte", summen?.get(StepsRecord.COUNT_TOTAL)?.toDouble(),
                             "", ZIEL_SCHRITTE),
             distanz = Wert("Distanz",
@@ -222,6 +224,144 @@ class Gesundheit(private val context: Context) {
             pulsverlauf = pulsverlauf(klient, tag),
             gelesen = Instant.now(),
         )
+
+        // JEDES LESEN IST EIN EINTRAG. Die Akte selbst vergisst; was hier
+        // nicht in die eigene Tabelle faellt, ist in einem Monat als
+        // Mittwoch nicht mehr nachweisbar.
+        merke(stand, heute)
+        return stand
+    }
+
+    /** Den Tagesstand in die eigene Tabelle schreiben. */
+    private suspend fun merke(stand: Stand, tag: LocalDate) = withContext(Dispatchers.IO) {
+        Speicher(context).merke(tag, mapOf(
+            "schritte" to stand.schritte.zahl,
+            "distanz" to stand.distanz.zahl,
+            "kalorien" to stand.kalorien.zahl,
+            "aktiv" to stand.aktiv.zahl,
+            "wasser" to stand.wasser.zahl,
+            "schlaf" to stand.schlaf.zahl,
+            "tief" to stand.phasen?.tief,
+            "rem" to stand.phasen?.rem,
+            "leicht" to stand.phasen?.leicht,
+            "wach" to stand.phasen?.wach,
+            // GEMESSEN UND GESCHAETZT IN GETRENNTE SPALTEN. Ein aus dem
+            // Nachttief hergeleiteter Ruhepuls darf spaeter nicht als
+            // eingetragener durchgehen - in einem Jahresmittel sieht man
+            // ihm nicht mehr an, woher er kam.
+            "ruhepuls" to stand.ruhepuls.zahl.takeUnless { stand.ruhepuls.geschaetzt },
+            "puls_min" to stand.ruhepuls.zahl.takeIf { stand.ruhepuls.geschaetzt },
+            "hrv" to stand.hrv.zahl,
+        ))
+    }
+
+
+    /**
+     * Die Vergangenheit einmal aus der Akte holen.
+     *
+     * BEIM ERSTEN START IST DIE EIGENE TABELLE LEER, die Akte aber nicht: dort
+     * liegen meist die letzten dreissig Tage. Sie einmal abzuschreiben ist der
+     * Unterschied zwischen "in drei Wochen sagt dir die App etwas" und "sie
+     * sagt es jetzt".
+     *
+     * DREI ABFRAGEN FUER DREISSIG TAGE, nicht dreissig mal drei: die
+     * Tagessummen kommen als Eimer zurueck, Schlaf und HRV als Saetze, die
+     * hier selbst auf Tage verteilt werden.
+     *
+     * Laeuft jedes Mal ueber das ganze Fenster und nicht nur ueber die Luecken.
+     * Das kostet ein paar hundert Millisekunden im Hintergrund und erspart die
+     * Frage, ob ein Tag, der gestern halb leer eingetragen wurde, je wieder
+     * angefasst wird - [Speicher.merke] ueberschreibt nichts mit nichts.
+     */
+    suspend fun nachtragen(tage: Int = 30) {
+        val klient = Akte(context).bereit() ?: return
+        val heute = LocalDate.now(zone)
+        val von = heute.minusDays(tage.toLong())
+        val jetzt = LocalDateTime.now(zone)
+
+        val eimer = fange("Nachtragen: Tagessummen") {
+            klient.aggregateGroupByPeriod(
+                AggregateGroupByPeriodRequest(
+                    metrics = setOf(
+                        StepsRecord.COUNT_TOTAL,
+                        DistanceRecord.DISTANCE_TOTAL,
+                        ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL,
+                        ExerciseSessionRecord.EXERCISE_DURATION_TOTAL,
+                        HydrationRecord.VOLUME_TOTAL,
+                        RestingHeartRateRecord.BPM_AVG,
+                        HeartRateRecord.BPM_MIN,
+                    ),
+                    timeRangeFilter = TimeRangeFilter.between(von.atStartOfDay(), jetzt),
+                    timeRangeSlicer = Period.ofDays(1),
+                )
+            )
+        } ?: emptyList()
+
+        val sitzungen = fange("Nachtragen: Schlaf") {
+            klient.readRecords(
+                ReadRecordsRequest(
+                    SleepSessionRecord::class,
+                    TimeRangeFilter.between(von.minusDays(1).atTime(NACHT_AB), jetzt),
+                )
+            ).records
+        } ?: emptyList()
+
+        val hrvSaetze = fange("Nachtragen: HRV") {
+            klient.readRecords(
+                ReadRecordsRequest(
+                    HeartRateVariabilityRmssdRecord::class,
+                    TimeRangeFilter.between(von.atStartOfDay(), jetzt),
+                )
+            ).records
+        } ?: emptyList()
+
+        // Jede Schlafsitzung gehoert zu EINER Nacht, und die Nacht heisst nach
+        // dem Morgen: wer um 23 Uhr einschlaeft, hat in der Nacht auf morgen
+        // geschlafen. Ohne diese Zuordnung landete dieselbe Nacht je nach
+        // Einschlafzeit mal auf dem einen, mal auf dem anderen Tag.
+        val naechte = HashMap<LocalDate, MutableList<SleepSessionRecord>>()
+        sitzungen.forEach { sitzung ->
+            val beginn = LocalDateTime.ofInstant(sitzung.startTime, zone)
+            val nacht = if (beginn.toLocalTime() >= NACHT_AB) beginn.toLocalDate().plusDays(1)
+                        else beginn.toLocalDate()
+            naechte.getOrPut(nacht) { mutableListOf() }.add(sitzung)
+        }
+
+        val hrvNachTag = HashMap<LocalDate, Double>()
+        hrvSaetze.sortedBy { it.time }.forEach { satz ->
+            hrvNachTag[LocalDateTime.ofInstant(satz.time, zone).toLocalDate()] =
+                satz.heartRateVariabilityMillis
+        }
+
+        val speicher = Speicher(context)
+        withContext(Dispatchers.IO) {
+            eimer.forEach { e ->
+                val tag = e.startTime.toLocalDate()
+                val nacht = naechte[tag].orEmpty()
+                val phasen = phasenAus(nacht)
+                val geschlafen = nacht.sumOf {
+                    Duration.between(it.startTime, it.endTime).toMinutes()
+                }.toDouble().takeIf { it > 0 }
+
+                speicher.merke(tag, mapOf(
+                    "schritte" to e.result[StepsRecord.COUNT_TOTAL]?.toDouble(),
+                    "distanz" to e.result[DistanceRecord.DISTANCE_TOTAL]?.inKilometers,
+                    "kalorien" to e.result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]
+                        ?.inKilocalories,
+                    "aktiv" to e.result[ExerciseSessionRecord.EXERCISE_DURATION_TOTAL]
+                        ?.toMinutes()?.toDouble(),
+                    "wasser" to e.result[HydrationRecord.VOLUME_TOTAL]?.inMilliliters,
+                    "schlaf" to geschlafen,
+                    "tief" to phasen?.tief,
+                    "rem" to phasen?.rem,
+                    "leicht" to phasen?.leicht,
+                    "wach" to phasen?.wach,
+                    "ruhepuls" to e.result[RestingHeartRateRecord.BPM_AVG]?.toDouble(),
+                    "puls_min" to e.result[HeartRateRecord.BPM_MIN]?.toDouble(),
+                    "hrv" to hrvNachTag[tag],
+                ))
+            }
+        }
     }
 
     /**

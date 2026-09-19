@@ -28,19 +28,34 @@ import java.util.Locale
  * Balken; und ein Bild ohne Daten sagt das, statt leer dazustehen.
  */
 
-// --- Wochenbalken -----------------------------------------------------------
+// --- Saeulen ----------------------------------------------------------------
 
 /**
- * Sieben Tage nebeneinander.
+ * Eine Saeule: Beschriftung unten, Wert, und wahlweise eine Zahl obendrueber.
  *
- * Der heutige Balken steht voll im Akzent, die sechs davor blasser - heute ist
- * noch nicht zu Ende und darf nicht wie ein schwacher Tag aussehen.
+ * Ein Wert von `null` heisst: kein Balken. Nicht einer der Hoehe null - der
+ * sagt "an dem Tag nichts getan", und gemeint ist "an dem Tag nichts
+ * gemessen".
  */
-class WochenbildView(
+data class Saeule(
+    val beschriftung: String,
+    val wert: Double?,
+    val hervor: Boolean = false,
+    val oben: String? = null,
+)
+
+/**
+ * Saeulen nebeneinander, mit gestrichelter Ziellinie.
+ *
+ * Dasselbe Bild traegt drei Dinge: die Woche in Tagen, das Wochenprofil ueber
+ * Monate und den Verlauf in Wochen. Eine Zeichnung statt dreier - so gilt
+ * ueberall dieselbe Regel, was ein fehlender Wert bedeutet und woran die Hoehe
+ * haengt.
+ */
+class SaeulenView(
     ctx: Context,
-    private val werte: List<Gesundheit.Tageswert>,
+    private val saeulen: List<Saeule>,
     private val ziel: Double?,
-    private val beschriftung: (Double) -> String,
 ) : View(ctx) {
 
     private val stift = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -52,7 +67,9 @@ class WochenbildView(
         style = Paint.Style.STROKE
         strokeWidth = context.dp(1f).toFloat()
         color = context.farbe(R.color.schrift_zart)
-        pathEffect = DashPathEffect(floatArrayOf(context.dp(3f).toFloat(), context.dp(3f).toFloat()), 0f)
+        pathEffect = DashPathEffect(
+            floatArrayOf(context.dp(3f).toFloat(), context.dp(3f).toFloat()), 0f
+        )
     }
 
     private fun sp(wert: Float) = TypedValue.applyDimension(
@@ -60,56 +77,58 @@ class WochenbildView(
     )
 
     override fun onDraw(leinwand: Canvas) {
-        if (werte.isEmpty()) return
+        if (saeulen.isEmpty()) {
+            schrift.textAlign = Paint.Align.LEFT
+            leinwand.drawText("Noch keine Tage im Speicher", 0f, height / 2f, schrift)
+            return
+        }
 
         val fussHoehe = context.dp(16f).toFloat()
         val kopfHoehe = sp(11f)
         val hoehe = height - fussHoehe - kopfHoehe
         val breite = width.toFloat()
-        val fach = breite / werte.size
+        val fach = breite / saeulen.size
         val balken = minOf(fach * 0.52f, context.dp(22f).toFloat())
         val ecke = balken / 2.5f
 
         // Die Spitze des Bildes: das Ziel, sonst der hoechste Wert. Sonst
         // waere eine schwache Woche optisch eine starke - jedes Bild
         // skalierte sich seine eigene Bestleistung zurecht.
-        val groesster = werte.mapNotNull { it.zahl }.maxOrNull() ?: 0.0
+        val groesster = saeulen.mapNotNull { it.wert }.maxOrNull() ?: 0.0
         val spitze = maxOf(ziel ?: 0.0, groesster, 1.0) * 1.05
-        val heute = LocalDate.now()
 
-        werte.forEachIndexed { i, tag ->
+        saeulen.forEachIndexed { i, saeule ->
             val mitte = fach * i + fach / 2
             val links = mitte - balken / 2
 
-            // Die leere Spur - sie zeigt, dass der Tag da ist, auch ohne Wert.
+            // Die leere Spur - sie zeigt, dass das Fach da ist, auch ohne Wert.
             stift.color = context.farbe(R.color.linie)
             leinwand.drawRoundRect(
                 RectF(links, kopfHoehe, links + balken, kopfHoehe + hoehe), ecke, ecke, stift
             )
 
-            val zahl = tag.zahl
+            val zahl = saeule.wert
             if (zahl != null && zahl > 0) {
                 val anteil = (zahl / spitze).coerceIn(0.0, 1.0).toFloat()
                 val oben = kopfHoehe + hoehe * (1f - anteil)
                 stift.color = context.farbe(R.color.akzent)
-                stift.alpha = if (tag.tag == heute) 255 else 150
+                stift.alpha = if (saeule.hervor) 255 else 150
                 leinwand.drawRoundRect(
                     RectF(links, oben, links + balken, kopfHoehe + hoehe), ecke, ecke, stift
                 )
                 stift.alpha = 255
+            }
 
-                if (tag.tag == heute) {
-                    schrift.textAlign = Paint.Align.CENTER
-                    schrift.color = context.farbe(R.color.schrift)
-                    leinwand.drawText(beschriftung(zahl), mitte, kopfHoehe - sp(2f), schrift)
-                    schrift.color = context.farbe(R.color.schrift_zart)
-                }
+            saeule.oben?.let { text ->
+                schrift.textAlign = Paint.Align.CENTER
+                schrift.color = context.farbe(R.color.schrift)
+                leinwand.drawText(text, mitte, kopfHoehe - sp(2f), schrift)
+                schrift.color = context.farbe(R.color.schrift_zart)
             }
 
             schrift.textAlign = Paint.Align.CENTER
             leinwand.drawText(
-                tag.tag.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.getDefault()),
-                mitte, height - context.dp(3f).toFloat(), schrift
+                saeule.beschriftung, mitte, height - context.dp(3f).toFloat(), schrift
             )
         }
 
@@ -121,15 +140,38 @@ class WochenbildView(
     }
 }
 
-/** Ein Wochenbild, fertig eingehaengt. */
+/** Ein Saeulenbild, fertig eingehaengt. */
+fun Context.saeulenbild(saeulen: List<Saeule>, ziel: Double? = null): View =
+    SaeulenView(this, saeulen, ziel).apply {
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(96f)
+        ).apply { topMargin = dp(10f) }
+    }
+
+/**
+ * Sieben Tage: der heutige voll im Akzent, die sechs davor blasser.
+ *
+ * KURZ UND NICHT SCHMAL als Beschriftung: im Deutschen heissen Dienstag und
+ * Donnerstag beide "D", Samstag und Sonntag beide "S". Ein Buchstabe spart
+ * Platz und kostet die Aussage.
+ */
 fun Context.wochenbild(
     werte: List<Gesundheit.Tageswert>,
     ziel: Double? = null,
     beschriftung: (Double) -> String = { Zahlen.ganz(it) ?: "" },
-): View = WochenbildView(this, werte, ziel, beschriftung).apply {
-    layoutParams = LinearLayout.LayoutParams(
-        ViewGroup.LayoutParams.MATCH_PARENT, dp(96f)
-    ).apply { topMargin = dp(10f) }
+): View {
+    val heute = LocalDate.now()
+    return saeulenbild(
+        werte.map { tag ->
+            Saeule(
+                tag.tag.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
+                tag.zahl,
+                hervor = tag.tag == heute,
+                oben = if (tag.tag == heute && tag.zahl != null) beschriftung(tag.zahl) else null,
+            )
+        },
+        ziel,
+    )
 }
 
 // --- Schlafphasen -----------------------------------------------------------

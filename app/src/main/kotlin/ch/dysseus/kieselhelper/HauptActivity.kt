@@ -14,7 +14,9 @@ import androidx.activity.result.contract.ActivityResultContract
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.DateFormat
 import java.util.Date
 
@@ -40,6 +42,9 @@ class HauptActivity : ComponentActivity() {
     private lateinit var zustand: LinearLayout
     private lateinit var gesundheit: LinearLayout
     private lateinit var technik: LinearLayout
+    private lateinit var trend: LinearLayout
+    /** Welche Groesse der Trend-Schirm gerade auswertet. */
+    private var trendWahl = 0
     private var erlaubnisStarter: ActivityResultLauncher<Set<String>>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,6 +66,14 @@ class HauptActivity : ComponentActivity() {
 
         setContentView(baueAnsicht())
         EmpfangsDienst.starte(this)
+
+        // EINMAL JE START, nicht bei jedem Zurueckkehren: die Akte haelt rund
+        // dreissig Tage, und die einmal abzuschreiben ist der Unterschied
+        // zwischen "in drei Wochen sagt dir die App etwas" und "jetzt".
+        lifecycleScope.launch {
+            Gesundheit(this@HauptActivity).nachtragen()
+            auffrischenTrend()
+        }
     }
 
     override fun onResume() {
@@ -75,16 +88,20 @@ class HauptActivity : ComponentActivity() {
         wurzel = spalte()
         zustand = spalte()
         gesundheit = spalte()
+        trend = spalte()
         technik = spalte()
 
         wurzel.addView(kopf(getString(R.string.app_name)))
-        wurzel.addView(reiterleiste(listOf("Gesundheit", "Technik")) { welcher ->
+        wurzel.addView(reiterleiste(listOf("Gesundheit", "Trend", "Technik")) { welcher ->
             gesundheit.visibility = if (welcher == 0) View.VISIBLE else View.GONE
-            technik.visibility = if (welcher == 0) View.GONE else View.VISIBLE
+            trend.visibility = if (welcher == 1) View.VISIBLE else View.GONE
+            technik.visibility = if (welcher == 2) View.VISIBLE else View.GONE
         })
         wurzel.luft(10f)
         wurzel.addView(gesundheit)
+        wurzel.addView(trend)
         wurzel.addView(technik)
+        trend.visibility = View.GONE
         technik.visibility = View.GONE
 
         technik.addView(fliesstext(
@@ -135,7 +152,32 @@ class HauptActivity : ComponentActivity() {
 
     private fun auffrischen() {
         auffrischenGesundheit()
+        auffrischenTrend()
         auffrischenTechnik()
+    }
+
+    /**
+     * Den Trend-Schirm neu rechnen.
+     *
+     * DIE TABELLE WIRD IM HINTERGRUND GELESEN. Ein Jahr sind dreihundert
+     * Zeilen - das ist schnell, aber SQLite auf dem Hauptfaden ist es nie,
+     * und der Fehler faellt erst auf, wenn die Tabelle gross genug ist.
+     */
+    private fun auffrischenTrend() {
+        lifecycleScope.launch {
+            val groesse = TrendTab.GROESSEN[trendWahl]
+            val (reihe, umfang) = withContext(Dispatchers.IO) {
+                val speicher = Speicher(this@HauptActivity)
+                speicher.reihe(groesse.spalte) to speicher.umfang()
+            }
+            trend.removeAllViews()
+            trend.addView(TrendTab.baue(
+                this@HauptActivity, trendWahl, reihe, umfang
+            ) { gewaehlt ->
+                trendWahl = gewaehlt
+                auffrischenTrend()
+            })
+        }
     }
 
     /**
