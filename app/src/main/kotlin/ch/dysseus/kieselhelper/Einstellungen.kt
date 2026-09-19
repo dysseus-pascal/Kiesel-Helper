@@ -25,6 +25,7 @@ object Einstellungen {
     private const val DATEI = "kiesel-einstellungen"
     private const val SCHLAF = "schlaf_ziel_min"
     private const val GRENZE = "tagesgrenze_stunde"
+    private const val FUEHRT = "kartenlink_fuehrt"
 
     /** Acht Stunden, bis jemand etwas anderes sagt. */
     const val SCHLAF_VORGABE = 8 * 60
@@ -87,5 +88,26 @@ object Einstellungen {
         val grenze = tagesgrenze(context)
         return if (jetzt.hour >= grenze) jetzt.toLocalDate()
                else jetzt.toLocalDate().minusDays(1)
+    }
+
+    // --- Was ein Kartenlink ausloest ---
+
+    /**
+     * Ort zeigen oder gleich losfahren.
+     *
+     * ZEIGEN IST DIE VORGABE. Eine Fuehrung, die von selbst anspringt, nimmt
+     * eine Entscheidung vorweg: welche Route, welches Profil, und ueberhaupt -
+     * ob jetzt gefahren wird. Wer auf einen Link tippt, will meistens erst
+     * sehen, wo das ist. Der Weg dahin ist danach ein Tipp entfernt.
+     */
+    const val FUEHRT_VORGABE = false
+
+    fun kartenlinkFuehrt(context: Context): Boolean =
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
+            .getBoolean(FUEHRT, FUEHRT_VORGABE)
+
+    fun setzeKartenlinkFuehrt(context: Context, fuehrt: Boolean) {
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
+            .edit().putBoolean(FUEHRT, fuehrt).apply()
     }
 }

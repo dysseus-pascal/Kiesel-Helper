@@ -215,23 +215,31 @@ object OsmandNavigation {
         lat: Double?,
         lon: Double?,
         name: String?,
+        fuehren: Boolean,
         profil: String = "car",
     ): String? {
         val paket = osmandPaket(context) ?: return null
 
         if (lat != null && lon != null) {
-            val titel = URLEncoder.encode(name ?: "Ziel", "UTF-8")
-            val fuehrung = "osmand.api://navigate" +
-                "?dest_lat=" + lat + "&dest_lon=" + lon +
-                "&dest_title=" + titel +
-                "&profile=" + profil + "&force=true"
-            if (starte(context, paket, fuehrung)) return "Führung gestartet"
+            val titelRoh = name ?: "Ziel"
+            val titel = URLEncoder.encode(titelRoh, "UTF-8")
 
-            // Zweiter Anlauf: den Ort wenigstens zeigen. Ein Tipp auf
-            // "Navigieren" fehlt dann noch, aber der Ort ist da.
+            // NUR AUF WUNSCH LOSFAHREN. Eine Fuehrung, die von selbst
+            // anspringt, nimmt eine Entscheidung vorweg - welche Route,
+            // welches Profil, und ob ueberhaupt jetzt gefahren wird.
+            if (fuehren) {
+                val fuehrung = "osmand.api://navigate" +
+                    "?dest_lat=" + lat + "&dest_lon=" + lon +
+                    "&dest_title=" + titel +
+                    "&profile=" + profil + "&force=true"
+                if (starte(context, paket, fuehrung)) return "Führung gestartet"
+            }
+
+            // Den Ort zeigen: die Vorgabe, und zugleich der zweite Anlauf,
+            // wenn OsmAnd die Fuehrungsform nicht kennt.
             val zeigen = "geo:" + lat + "," + lon +
                 "?q=" + lat + "," + lon + "(" + titel + ")"
-            if (starte(context, paket, zeigen)) return "Ort als geo: gezeigt"
+            if (starte(context, paket, zeigen)) return "Ort gezeigt"
             return null
         }
 

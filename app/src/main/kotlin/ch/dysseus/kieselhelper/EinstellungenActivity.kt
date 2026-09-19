@@ -2,6 +2,7 @@ package ch.dysseus.kieselhelper
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -275,8 +276,45 @@ class EinstellungenActivity : ComponentActivity() {
         zeile.addView(knopfLeise("Nur prüfen") { pruefeLink(false) })
         k.addView(zeile)
         k.addView(knopfHaupt("An OsmAnd geben", breit = true) { pruefeLink(true) })
+
+        k.addView(strich())
+        k.addView(kartentitel("Was ein Link auslöst"))
+        val wahl = reihe()
+        listOf("Ort zeigen" to false, "Führung starten" to true).forEach { (name, fuehrt) ->
+            val gewaehlt = Einstellungen.kartenlinkFuehrt(this) == fuehrt
+            wahl.addView(TextView(this).apply {
+                text = name
+                gravity = android.view.Gravity.CENTER
+                maxLines = 1
+                setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14f)
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setPadding(dp(8f), dp(11f), dp(8f), dp(11f))
+                setTextColor(farbe(
+                    if (gewaehlt) R.color.akzent_schrift else R.color.schrift_zart
+                ))
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    setColor(farbe(if (gewaehlt) R.color.akzent else R.color.karte))
+                    cornerRadius = dp(10f).toFloat()
+                    if (!gewaehlt) setStroke(dp(1f), farbe(R.color.linie))
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+                ).apply { marginEnd = dp(6f) }
+                setOnClickListener {
+                    Einstellungen.setzeKartenlinkFuehrt(this@EinstellungenActivity, fuehrt)
+                    setContentView(baueAnsicht())
+                }
+            })
+        }
+        k.addView(wahl)
+        k.addView(zart(
+            "»Ort zeigen« setzt den Punkt auf die Karte und überlässt dir den " +
+                "Start. Eine Führung, die von selbst anspringt, entscheidet " +
+                "sonst mit, ob jetzt überhaupt gefahren wird."
+        ))
         return k
     }
+
 
     private fun pruefeLink(weitergeben: Boolean) {
         val roh = linkfeld.text?.toString()?.trim().orEmpty()

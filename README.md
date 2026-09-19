@@ -472,10 +472,17 @@ niemand ihn annimmt, fliegt eine Ausnahme, die man sieht. Er braucht ausserdem
 keine Freischaltung unter *Plugins* — für Kartenlinks fällt diese Hürde damit
 ganz weg. Zwei Formen, in dieser Reihenfolge:
 
-1. `osmand.api://navigate?dest_lat=…&dest_lon=…&force=true` — startet die
-   Führung sofort.
-2. `geo:lat,lon?q=…` — zeigt den Ort auf der Karte. Ohne Koordinate wird daraus
+1. `geo:lat,lon?q=…` — **die Vorgabe**: setzt den Punkt auf die Karte und
+   überlässt den Start dem Menschen. Ohne Koordinate wird daraus
    `geo:0,0?q=<Name>`, und OsmAnd sucht selbst.
+2. `osmand.api://navigate?dest_lat=…&force=true` — startet die Führung sofort.
+   Nur, wenn es in den Einstellungen so gewählt ist.
+
+**Zeigen ist die Vorgabe, und das ist eine Haltung.** Eine Führung, die von
+selbst anspringt, nimmt eine Entscheidung vorweg: welche Route, welches
+Profil, und überhaupt — ob jetzt gefahren wird. Wer auf einen Link tippt, will
+meistens erst sehen, wo das ist; der Weg dahin ist danach ein Tipp entfernt.
+Umstellen lässt es sich in den Einstellungen unter *Kartenlinks*.
 
 **Zwei Intent-Filter, nicht einer** — und das ist kein Schönheitsfehler. Alle
 `<data>`-Zeilen *innerhalb* eines Filters verschmilzt Android zu **einer**

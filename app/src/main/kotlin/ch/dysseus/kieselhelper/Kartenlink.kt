@@ -183,9 +183,10 @@ object Kartenlink {
      */
     suspend fun uebergib(context: Context, ziel: Ziel): Uebergabe =
         withContext(Dispatchers.IO) {
+            val fuehren = Einstellungen.kartenlinkFuehrt(context)
             if (ziel.lat != null && ziel.lon != null) {
                 val weg = OsmandNavigation.oeffneZiel(
-                    context, ziel.lat, ziel.lon, ziel.text
+                    context, ziel.lat, ziel.lon, ziel.text, fuehren
                 )
                 return@withContext Uebergabe(
                     weg != null,
@@ -197,13 +198,13 @@ object Kartenlink {
             if (name.isNullOrBlank()) return@withContext Uebergabe(false, "kein Ziel")
 
             Ortsuche.finde(context, name)?.let { (lat, lon) ->
-                val weg = OsmandNavigation.oeffneZiel(context, lat, lon, name)
+                val weg = OsmandNavigation.oeffneZiel(context, lat, lon, name, fuehren)
                 return@withContext Uebergabe(
                     weg != null, (weg ?: "abgelehnt") + ", Adresse umgesetzt", lat, lon
                 )
             }
             // Letzter Ausweg: OsmAnd selbst suchen lassen.
-            val weg = OsmandNavigation.oeffneZiel(context, null, null, name)
+            val weg = OsmandNavigation.oeffneZiel(context, null, null, name, fuehren)
             Uebergabe(weg != null, weg ?: "abgelehnt")
         }
 
