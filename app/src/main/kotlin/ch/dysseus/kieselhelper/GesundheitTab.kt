@@ -81,6 +81,10 @@ object GesundheitTab {
             ctx.wert(stand.ruhepuls, Zahlen.ganz(stand.ruhepuls.zahl), "bpm"),
             ctx.wert(stand.hrv, Zahlen.ganz(stand.hrv.zahl), "ms"),
         ))
+        herz.addView(ctx.messreihe(
+            ctx.wert(stand.pulsTief, Zahlen.ganz(stand.pulsTief.zahl), "bpm"),
+            ctx.wert(stand.pulsHoch, Zahlen.ganz(stand.pulsHoch.zahl), "bpm"),
+        ))
         herz.addView(ctx.zart("Puls heute, gestrichelt der Ruhepuls"))
         herz.addView(ctx.pulsbild(stand.pulsverlauf, stand.ruhepuls.zahl))
         if (stand.ruhepuls.geschaetzt) {

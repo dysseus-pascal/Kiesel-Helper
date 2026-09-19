@@ -36,7 +36,7 @@ Zustand, Aufgaben und Verlauf.
 |---|---|
 | Bewegung | Schritte, Aktiv, Distanz, Kalorien |
 | Schlaf | Schlaf, Tiefschlaf |
-| Herz | Ruhepuls, HRV |
+| Herz | Ruhepuls, HRV, Puls tief, Puls hoch |
 | Wasser | Wasser |
 
 Einen Balken bekommt nur, was ein Ziel hat. Für einen Ruhepuls gibt es keins,
@@ -131,11 +131,21 @@ Die Frage, die ein Tageswert nicht beantwortet: *7985 Schritte — ist das viel?
 | **Typische Woche** | sieben Balken, einer je Wochentag, im Mittel über alles Gespeicherte |
 | **Verlauf** | acht Kalenderwochen, dazu die Veränderung der letzten vier gegenüber den vier davor |
 
+**Gruppen statt Einzelwerte.** Schlaf ohne Tiefschlaf daneben sagt wenig, ein
+Ruhepuls ohne die Spanne des Tages noch weniger:
+
+| Gruppe | Form |
+|---|---|
+| Schritte, Wasser, Aktiv | ein Balken je Tag |
+| Schlaf | ein Balken, der Tiefschlaf dunkel **darin** — er steckt im Schlaf, zwei Balken nebeneinander behaupteten zwei Dinge |
+| Herz | eine **Spanne** vom Tagestief zum Tageshoch, der Ruhepuls als heller Strich darin; die HRV daneben, weil Millisekunden nicht auf eine bpm-Achse gehören |
+
 Die gestrichelte Linie ist in beiden Bildern **dasselbe**: der Schnitt über
 alle Tage. So heisst »über der Linie« überall dasselbe.
 
-Wählbar sind sieben Grössen: Schritte, Schlaf, Tiefschlaf, Wasser, Aktiv,
-Ruhepuls, HRV.
+Die Auswahlleiste wird **einmal** gebaut und danach nur umgefärbt — sonst
+stünde sie nach jedem Umschalten wieder ganz links, während man rechts aussen
+getippt hat.
 
 **Zwei Regeln, die das Bild ehrlich halten:**
 
@@ -150,6 +160,17 @@ Ruhepuls, HRV.
 Die Veränderung vergleicht **vier Wochen gegen vier Wochen**, nicht eine gegen
 eine: ein Feiertag, eine Erkältung, ein Wochenende weg, und eine Einzelwoche
 springt um dreissig Prozent.
+
+## Bedienung
+
+**Titel und Reiter stehen fest**, nur der Inhalt scrollt. Vorher lagen sie im
+Roller und waren nach der ersten Karte weg — man wusste dann nicht mehr, in
+welchem Reiter man steht.
+
+**Von oben ziehen holt alles neu.** Der Kreisel verschwindet erst, wenn
+wirklich nichts mehr nachkommt: die drei Reiter laden hintereinander, nicht
+nebeneinander. Nebenläufig wäre es schneller, aber dann müsste jemand zählen,
+wann der Letzte fertig ist.
 
 ## Was sie einträgt
 

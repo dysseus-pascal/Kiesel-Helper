@@ -42,6 +42,12 @@ data class Saeule(
     val wert: Double?,
     val hervor: Boolean = false,
     val oben: String? = null,
+    /**
+     * Ein Anteil INNERHALB des Wertes, von unten gemessen - Tiefschlaf im
+     * Schlaf. Zwei Balken nebeneinander waeren hier falsch: der eine steckt
+     * im anderen, und nebeneinander sieht es aus wie zwei Dinge.
+     */
+    val innen: Double? = null,
 )
 
 /**
@@ -117,6 +123,22 @@ class SaeulenView(
                     RectF(links, oben, links + balken, kopfHoehe + hoehe), ecke, ecke, stift
                 )
                 stift.alpha = 255
+
+                // Der Anteil sitzt IM Balken, von unten. Er wird dunkler
+                // gezeichnet, nicht schmaler - sonst waere es ein zweiter
+                // Balken, und der behauptete etwas anderes.
+                saeule.innen?.let { anteilswert ->
+                    if (anteilswert > 0) {
+                        val a = (anteilswert / spitze).coerceIn(0.0, 1.0).toFloat()
+                        stift.color = context.farbe(R.color.phase_tief)
+                        leinwand.drawRoundRect(
+                            RectF(
+                                links, kopfHoehe + hoehe * (1f - a),
+                                links + balken, kopfHoehe + hoehe
+                            ), ecke, ecke, stift
+                        )
+                    }
+                }
             }
 
             saeule.oben?.let { text ->
@@ -173,6 +195,110 @@ fun Context.wochenbild(
         ziel,
     )
 }
+
+
+// --- Spannen ----------------------------------------------------------------
+
+/**
+ * Eine Spanne: von tief bis hoch, mit einer Marke dazwischen.
+ *
+ * Fuer den Puls ist das die richtige Form. Ein Mittelwert je Tag verschweigt
+ * genau das Interessante - ob der Tag zwischen 55 und 60 lag oder zwischen 48
+ * und 160.
+ */
+data class Spanne(
+    val beschriftung: String,
+    val tief: Double?,
+    val hoch: Double?,
+    val marke: Double?,
+    val hervor: Boolean = false,
+)
+
+/**
+ * Senkrechte Spannen nebeneinander, mit einem Strich auf der Marke.
+ *
+ * Die Achse ist fuer alle Spalten DIESELBE - sonst waere die hoechste Saeule
+ * immer gleich hoch, egal was drinsteht.
+ */
+class SpannenView(
+    ctx: Context,
+    private val spannen: List<Spanne>,
+) : View(ctx) {
+
+    private val stift = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val schrift = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_SP, 10f, ctx.resources.displayMetrics
+        )
+        color = ctx.farbe(R.color.schrift_zart)
+    }
+
+    override fun onDraw(leinwand: Canvas) {
+        val gueltig = spannen.filter { it.tief != null && it.hoch != null }
+        if (gueltig.isEmpty()) {
+            schrift.textAlign = Paint.Align.LEFT
+            leinwand.drawText("Noch keine Pulswerte", 0f, height / 2f, schrift)
+            return
+        }
+
+        val fussHoehe = context.dp(16f).toFloat()
+        val randRechts = context.dp(24f).toFloat()
+        val boden = height - fussHoehe
+        val breite = width - randRechts
+        val oben = gueltig.maxOf { it.hoch!! } + 4
+        val unten = maxOf(gueltig.minOf { it.tief!! } - 4, 0.0)
+        val spanne = maxOf(oben - unten, 1.0)
+        fun y(wert: Double) = (boden - ((wert - unten) / spanne) * boden).toFloat()
+
+        val fach = breite / spannen.size
+        val balken = minOf(fach * 0.34f, context.dp(14f).toFloat())
+
+        spannen.forEachIndexed { i, s ->
+            val mitte = fach * i + fach / 2
+            schrift.textAlign = Paint.Align.CENTER
+            leinwand.drawText(
+                s.beschriftung, mitte, height - context.dp(3f).toFloat(), schrift
+            )
+            if (s.tief == null || s.hoch == null) return@forEachIndexed
+
+            stift.color = context.farbe(R.color.akzent)
+            stift.alpha = if (s.hervor) 255 else 130
+            leinwand.drawRoundRect(
+                RectF(mitte - balken / 2, y(s.hoch), mitte + balken / 2, y(s.tief)),
+                balken / 2, balken / 2, stift,
+            )
+            stift.alpha = 255
+
+            // Die Marke ist der Ruhepuls: ein heller Strich quer durch die
+            // Spanne. Ohne ihn saehe eine ruhige Nacht aus wie ein ruhiger Tag.
+            s.marke?.let { marke ->
+                stift.color = context.farbe(R.color.karte)
+                val my = y(marke)
+                leinwand.drawRect(
+                    mitte - balken / 2, my - context.dp(1f),
+                    mitte + balken / 2, my + context.dp(1f), stift,
+                )
+            }
+        }
+
+        schrift.textAlign = Paint.Align.LEFT
+        leinwand.drawText(
+            Zahlen.ganz(gueltig.maxOf { it.hoch!! }) ?: "",
+            breite + context.dp(3f), y(gueltig.maxOf { it.hoch!! }) + schrift.textSize / 3, schrift
+        )
+        leinwand.drawText(
+            Zahlen.ganz(gueltig.minOf { it.tief!! }) ?: "",
+            breite + context.dp(3f), y(gueltig.minOf { it.tief!! }) + schrift.textSize / 3, schrift
+        )
+    }
+}
+
+fun Context.spannenbild(spannen: List<Spanne>): View =
+    SpannenView(this, spannen).apply {
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(104f)
+        ).apply { topMargin = dp(10f) }
+    }
 
 // --- Schlafphasen -----------------------------------------------------------
 

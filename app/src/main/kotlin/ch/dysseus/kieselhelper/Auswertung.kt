@@ -49,10 +49,19 @@ object Auswertung {
     /** Wie viele Wochen der Verlauf zeigt. */
     const val WOCHEN = 8
 
+    /**
+     * Die Wochentage in der Reihenfolge, in der sie ueberall stehen.
+     *
+     * Montag zuerst - das ist hier die Woche, und ein Bild, dessen
+     * Reihenfolge von der Spracheinstellung abhaengt, laesst sich mit einem
+     * zweiten nicht vergleichen.
+     */
+    val WOCHENTAGE: List<DayOfWeek> = DayOfWeek.values().toList()
+
     fun bild(reihe: List<Pair<LocalDate, Double>>, heute: LocalDate): Bild {
         val tage = reihe.filter { it.first < heute }
 
-        val profil = DayOfWeek.values().map { wochentag ->
+        val profil = WOCHENTAGE.map { wochentag ->
             val treffer = tage.filter { it.first.dayOfWeek == wochentag }
             Profilwert(
                 wochentag,

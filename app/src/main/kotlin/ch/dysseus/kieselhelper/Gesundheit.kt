@@ -103,6 +103,8 @@ class Gesundheit(private val context: Context) {
         val schlaf: Wert,
         val ruhepuls: Wert,
         val puls: Wert,
+        val pulsHoch: Wert,
+        val pulsTief: Wert,
         val hrv: Wert,
         val phasen: Phasen?,
         val wocheSchritte: List<Tageswert>,
@@ -180,6 +182,12 @@ class Gesundheit(private val context: Context) {
                         ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL,
                         ExerciseSessionRecord.EXERCISE_DURATION_TOTAL,
                         HydrationRecord.VOLUME_TOTAL,
+                        // Tageshoch und Tagestief des Pulses. Sie kosten hier
+                        // nichts extra - dieselbe Abfrage, zwei Kennzahlen
+                        // mehr - und beantworten, was ein Mittelwert nie sagt:
+                        // wie weit der Tag ausgeschlagen hat.
+                        HeartRateRecord.BPM_MAX,
+                        HeartRateRecord.BPM_MIN,
                     ),
                     timeRangeFilter = tag,
                 )
@@ -216,6 +224,8 @@ class Gesundheit(private val context: Context) {
             schlaf = Wert("Schlaf", schlafMin, "min", ZIEL_SCHLAF_H * 60),
             ruhepuls = ruhepuls(klient, nacht),
             puls = Wert("Puls", letzterPuls(klient, tag), "bpm"),
+            pulsHoch = Wert("Puls hoch", summen?.get(HeartRateRecord.BPM_MAX)?.toDouble(), "bpm"),
+            pulsTief = Wert("Puls tief", summen?.get(HeartRateRecord.BPM_MIN)?.toDouble(), "bpm"),
             hrv = Wert("HRV", letzteHrv(klient), "ms"),
             phasen = phasenAus(sitzungen),
             wocheSchritte = wocheSchritteWasser(klient, StepsRecord.COUNT_TOTAL),
@@ -251,6 +261,8 @@ class Gesundheit(private val context: Context) {
             // ihm nicht mehr an, woher er kam.
             "ruhepuls" to stand.ruhepuls.zahl.takeUnless { stand.ruhepuls.geschaetzt },
             "puls_min" to stand.ruhepuls.zahl.takeIf { stand.ruhepuls.geschaetzt },
+            "puls_hoch" to stand.pulsHoch.zahl,
+            "puls_tief" to stand.pulsTief.zahl,
             "hrv" to stand.hrv.zahl,
         ))
     }
@@ -290,6 +302,7 @@ class Gesundheit(private val context: Context) {
                         HydrationRecord.VOLUME_TOTAL,
                         RestingHeartRateRecord.BPM_AVG,
                         HeartRateRecord.BPM_MIN,
+                        HeartRateRecord.BPM_MAX,
                     ),
                     timeRangeFilter = TimeRangeFilter.between(von.atStartOfDay(), jetzt),
                     timeRangeSlicer = Period.ofDays(1),
@@ -357,7 +370,13 @@ class Gesundheit(private val context: Context) {
                     "leicht" to phasen?.leicht,
                     "wach" to phasen?.wach,
                     "ruhepuls" to e.result[RestingHeartRateRecord.BPM_AVG]?.toDouble(),
+                    // Beim Nachtragen ist das Tagestief zugleich die beste
+                    // Schaetzung fuer einen fehlenden Ruhepuls - ein
+                    // eigenes Nachtfenster je Tag waere dreissig Abfragen
+                    // fuer eine Zahl, die sich kaum unterscheidet.
                     "puls_min" to e.result[HeartRateRecord.BPM_MIN]?.toDouble(),
+                    "puls_tief" to e.result[HeartRateRecord.BPM_MIN]?.toDouble(),
+                    "puls_hoch" to e.result[HeartRateRecord.BPM_MAX]?.toDouble(),
                     "hrv" to hrvNachTag[tag],
                 ))
             }

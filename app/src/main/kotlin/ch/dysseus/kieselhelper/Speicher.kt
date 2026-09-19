@@ -32,14 +32,17 @@ class Speicher(context: Context) : SQLiteOpenHelper(context, NAME, null, FASSUNG
 
     companion object {
         private const val NAME = "gesundheit.db"
-        private const val FASSUNG = 1
+        private const val FASSUNG = 2
 
         /** Die Spalten, die einen Messwert tragen - in der Reihenfolge der Tabelle. */
         val SPALTEN = listOf(
             "schritte", "distanz", "kalorien", "aktiv", "wasser",
             "schlaf", "tief", "rem", "leicht", "wach",
-            "ruhepuls", "puls_min", "hrv",
+            "ruhepuls", "puls_min", "puls_hoch", "puls_tief", "hrv",
         )
+
+        /** Was seit Fassung 1 dazugekommen ist - fuer [onUpgrade]. */
+        private val NACHGEWACHSEN = mapOf(2 to listOf("puls_hoch", "puls_tief"))
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -51,10 +54,23 @@ class Speicher(context: Context) : SQLiteOpenHelper(context, NAME, null, FASSUNG
         )
     }
 
+    /**
+     * Spalten nachziehen - mit ALTER TABLE und NIEMALS mit DROP.
+     *
+     * Die Zeilen sind der ganze Wert dieser Datei: was die Akte laengst
+     * vergessen hat, steht nur noch hier. Eine Tabelle neu anzulegen ist in
+     * jeder anderen App eine Lappalie und hier ein Datenverlust.
+     */
     override fun onUpgrade(db: SQLiteDatabase, alt: Int, neu: Int) {
-        // Noch nichts zu tun - die erste Fassung. Wenn hier je etwas steht,
-        // dann ein ALTER TABLE und kein DROP: die Zeilen sind der ganze Wert
-        // dieser Datei, sie lassen sich nicht neu beschaffen.
+        ((alt + 1)..neu).forEach { fassung ->
+            NACHGEWACHSEN[fassung]?.forEach { spalte ->
+                try {
+                    db.execSQL("ALTER TABLE tag ADD COLUMN $spalte REAL")
+                } catch (e: Exception) {
+                    Log.w(PebbleEmpfaenger.TAG, "Spalte $spalte: " + e.message)
+                }
+            }
+        }
     }
 
     /**

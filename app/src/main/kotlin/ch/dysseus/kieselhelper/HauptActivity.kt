@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.widget.LinearLayout
+import android.view.ViewGroup
 import android.widget.ScrollView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -14,6 +15,7 @@ import androidx.activity.result.contract.ActivityResultContract
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.lifecycleScope
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -43,6 +45,9 @@ class HauptActivity : ComponentActivity() {
     private lateinit var gesundheit: LinearLayout
     private lateinit var technik: LinearLayout
     private lateinit var trend: LinearLayout
+    private lateinit var trendLeiste: TrendTab.Leiste
+    private lateinit var trendInhalt: LinearLayout
+    private lateinit var wischer: SwipeRefreshLayout
     /** Welche Groesse der Trend-Schirm gerade auswertet. */
     private var trendWahl = 0
     private var erlaubnisStarter: ActivityResultLauncher<Set<String>>? = null
@@ -72,7 +77,7 @@ class HauptActivity : ComponentActivity() {
         // zwischen "in drei Wochen sagt dir die App etwas" und "jetzt".
         lifecycleScope.launch {
             Gesundheit(this@HauptActivity).nachtragen()
-            auffrischenTrend()
+            trendLaden()
         }
     }
 
@@ -84,25 +89,54 @@ class HauptActivity : ComponentActivity() {
         auffrischen()
     }
 
-    private fun baueAnsicht(): ScrollView {
+    /**
+     * Kopf fest, Inhalt beweglich.
+     *
+     * DER TITEL UND DIE REITER SCROLLEN NICHT MIT. Vorher lagen sie im Roller
+     * und waren nach der ersten Karte weg - man wusste dann nicht mehr, in
+     * welchem Reiter man steht, und kam nur durch Hochscrollen zurueck.
+     *
+     * Darunter ein Wischer: von oben ziehen holt alles neu. Das ist die Geste,
+     * die jeder kennt, und sie ersetzt die Frage, wann die App von selbst
+     * nachsieht.
+     */
+    private fun baueAnsicht(): View {
         wurzel = spalte()
         zustand = spalte()
         gesundheit = spalte()
         trend = spalte()
         technik = spalte()
 
-        wurzel.addView(kopf(getString(R.string.app_name)))
-        wurzel.addView(reiterleiste(listOf("Gesundheit", "Trend", "Technik")) { welcher ->
+        val aussen = spalte()
+        aussen.layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+        )
+        aussen.addView(kopf(getString(R.string.app_name)))
+        aussen.addView(reiterleiste(listOf("Gesundheit", "Trend", "Technik")) { welcher ->
             gesundheit.visibility = if (welcher == 0) View.VISIBLE else View.GONE
             trend.visibility = if (welcher == 1) View.VISIBLE else View.GONE
             technik.visibility = if (welcher == 2) View.VISIBLE else View.GONE
         })
+
         wurzel.luft(10f)
         wurzel.addView(gesundheit)
         wurzel.addView(trend)
         wurzel.addView(technik)
         trend.visibility = View.GONE
         technik.visibility = View.GONE
+
+        // Die Auswahlleiste des Trends wird EINMAL gebaut und danach nur noch
+        // umgefaerbt - sonst stuende sie nach jedem Umschalten wieder ganz
+        // links, waehrend man rechts aussen getippt hat.
+        trendLeiste = TrendTab.leiste(this) { gewaehlt ->
+            trendWahl = gewaehlt
+            trendLeiste.male(gewaehlt)
+            lifecycleScope.launch { trendLaden() }
+        }
+        trendLeiste.male(trendWahl)
+        trendInhalt = spalte()
+        trend.addView(trendLeiste.sicht)
+        trend.addView(trendInhalt)
 
         technik.addView(fliesstext(
             "Nimmt entgegen, was die Uhr meldet, und holt bei OsmAnd, was für " +
@@ -139,8 +173,19 @@ class HauptActivity : ComponentActivity() {
 
         val roller = ScrollView(this)
         roller.addView(wurzel)
-        roller.randUmSystemleisten()
-        return roller
+
+        wischer = SwipeRefreshLayout(this).apply {
+            addView(roller)
+            setOnRefreshListener { auffrischen() }
+            setColorSchemeColors(farbe(R.color.akzent))
+            setProgressBackgroundColorSchemeColor(farbe(R.color.karte))
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
+            )
+        }
+        aussen.addView(wischer)
+        aussen.randUmSystemleisten()
+        return aussen
     }
 
     private fun aufgabenKarte(titel: String, text: String): LinearLayout {
@@ -150,10 +195,23 @@ class HauptActivity : ComponentActivity() {
         return k
     }
 
+    /**
+     * Alles neu holen - der Reihe nach, damit der Wischer die Wahrheit sagt.
+     *
+     * Nebenlaeufig waere es schneller, aber dann muesste jemand zaehlen, wann
+     * der Letzte fertig ist. Hintereinander dauert es zwei Sekunden und der
+     * Kreisel verschwindet genau dann, wenn nichts mehr nachkommt.
+     */
     private fun auffrischen() {
-        auffrischenGesundheit()
-        auffrischenTrend()
-        auffrischenTechnik()
+        lifecycleScope.launch {
+            try {
+                gesundheitLaden()
+                trendLaden()
+                technikLaden()
+            } finally {
+                wischer.isRefreshing = false
+            }
+        }
     }
 
     /**
@@ -162,22 +220,18 @@ class HauptActivity : ComponentActivity() {
      * DIE TABELLE WIRD IM HINTERGRUND GELESEN. Ein Jahr sind dreihundert
      * Zeilen - das ist schnell, aber SQLite auf dem Hauptfaden ist es nie,
      * und der Fehler faellt erst auf, wenn die Tabelle gross genug ist.
+     *
+     * Getauscht wird NUR der Inhalt unter der Auswahlleiste. Die Leiste selbst
+     * bleibt stehen, samt ihrer Schiebestellung.
      */
-    private fun auffrischenTrend() {
-        lifecycleScope.launch {
-            val groesse = TrendTab.GROESSEN[trendWahl]
-            val (reihe, umfang) = withContext(Dispatchers.IO) {
-                val speicher = Speicher(this@HauptActivity)
-                speicher.reihe(groesse.spalte) to speicher.umfang()
-            }
-            trend.removeAllViews()
-            trend.addView(TrendTab.baue(
-                this@HauptActivity, trendWahl, reihe, umfang
-            ) { gewaehlt ->
-                trendWahl = gewaehlt
-                auffrischenTrend()
-            })
+    private suspend fun trendLaden() {
+        val gruppe = TrendTab.GRUPPEN[trendWahl]
+        val (daten, umfang) = withContext(Dispatchers.IO) {
+            val speicher = Speicher(this@HauptActivity)
+            gruppe.spalten.associateWith { speicher.reihe(it) } to speicher.umfang()
         }
+        trendInhalt.removeAllViews()
+        trendInhalt.addView(TrendTab.inhalt(this@HauptActivity, trendWahl, daten, umfang))
     }
 
     /**
@@ -187,8 +241,8 @@ class HauptActivity : ComponentActivity() {
      * waehrend die App im Hintergrund liegt - ein gemerkter Stand von heute
      * Morgen saehe genauso aus wie einer von eben.
      */
-    private fun auffrischenGesundheit() {
-        lifecycleScope.launch {
+    private suspend fun gesundheitLaden() {
+        run {
             val stand = Gesundheit(this@HauptActivity).lies()
             val fehlt =
                 if (stand == null) emptySet()
@@ -223,7 +277,7 @@ class HauptActivity : ComponentActivity() {
         }
     }
 
-    private fun auffrischenTechnik() {
+    private suspend fun technikLaden() {
         zustand.removeAllViews()
 
         val k = karte()
@@ -265,7 +319,7 @@ class HauptActivity : ComponentActivity() {
         }
         zustand.addView(ko)
 
-        lifecycleScope.launch {
+        run {
             val kk = karte()
             when (HealthConnectClient.getSdkStatus(this@HauptActivity)) {
                 HealthConnectClient.SDK_UNAVAILABLE -> {

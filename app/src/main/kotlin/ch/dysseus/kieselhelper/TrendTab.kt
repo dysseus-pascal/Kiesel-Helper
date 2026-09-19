@@ -8,10 +8,14 @@ import android.view.ViewGroup
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.TextView
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.time.temporal.WeekFields
 import java.util.Locale
+
+/** Was der Trend-Schirm braucht: je Spalte die Tage aus dem Speicher. */
+typealias Trenddaten = Map<String, List<Pair<LocalDate, Double>>>
 
 /**
  * Der Trend-Schirm: der typische Mittwoch, und wohin es geht.
@@ -21,179 +25,346 @@ import java.util.Locale
  * Seite rechnet das aus den eigenen Aufzeichnungen aus, nicht aus der Akte:
  * Health Connect vergisst, [Speicher] nicht.
  *
- * ZWEI BILDER, MEHR NICHT. Das Wochenprofil beantwortet "welcher Tag ist mein
- * schwacher", der Verlauf "wird es besser". Alles Weitere waere Statistik um
- * ihrer selbst willen.
+ * GRUPPEN STATT EINZELWERTE. Schlaf ohne Tiefschlaf daneben sagt wenig, und
+ * ein Ruhepuls ohne die Spanne des Tages noch weniger. Was zusammen gelesen
+ * wird, steht zusammen in einem Bild - nicht hintereinander auf zwei.
  *
- * Die gestrichelte Linie ist in beiden Bildern DASSELBE: der Mittelwert ueber
- * alle Tage. So heisst "ueber der Linie" ueberall dasselbe.
+ * Die gestrichelte Linie ist ueberall DASSELBE: der Mittelwert ueber alle
+ * Tage. So heisst "ueber der Linie" auf jedem Bild dasselbe.
  */
 object TrendTab {
 
-    /** Eine auswertbare Groesse: Spalte im Speicher, Ziel, Darstellung. */
-    data class Groesse(
-        val name: String,
-        val spalte: String,
-        val einheit: String,
-        val form: (Double) -> String,
+    /** Eine Gruppe zusammengehoerender Groessen, mit ihren Spalten im Speicher. */
+    data class Gruppe(val name: String, val spalten: List<String>)
+
+    val GRUPPEN = listOf(
+        Gruppe("Schritte", listOf("schritte")),
+        Gruppe("Schlaf", listOf("schlaf", "tief")),
+        Gruppe("Herz", listOf("ruhepuls", "puls_min", "puls_hoch", "puls_tief", "hrv")),
+        Gruppe("Wasser", listOf("wasser")),
+        Gruppe("Aktiv", listOf("aktiv")),
     )
 
-    val GROESSEN = listOf(
-        Groesse("Schritte", "schritte", "") { Zahlen.ganz(it) ?: "" },
-        Groesse("Schlaf", "schlaf", "") { Zahlen.dauer(it) ?: "" },
-        Groesse("Tiefschlaf", "tief", "") { Zahlen.dauer(it) ?: "" },
-        Groesse("Wasser", "wasser", "ml") { Zahlen.ganz(it) ?: "" },
-        Groesse("Aktiv", "aktiv", "min") { Zahlen.ganz(it) ?: "" },
-        Groesse("Ruhepuls", "ruhepuls", "bpm") { Zahlen.ganz(it) ?: "" },
-        Groesse("HRV", "hrv", "ms") { Zahlen.ganz(it) ?: "" },
-    )
-
-    fun baue(
-        ctx: Context,
-        gewaehlt: Int,
-        reihe: List<Pair<LocalDate, Double>>,
-        umfang: Pair<Int, LocalDate?>,
-        waehle: (Int) -> Unit,
-    ): LinearLayout {
-        val s = ctx.spalte()
-        val groesse = GROESSEN[gewaehlt]
-        s.addView(auswahl(ctx, gewaehlt, waehle))
-
-        val (tage, seit) = umfang
-        if (reihe.size < 2) {
-            val k = ctx.karte()
-            k.addView(ctx.kartentitel("Noch zu wenig ${groesse.name}"))
-            k.addView(ctx.zart(
-                "Die App schreibt jeden gelesenen Tag in ihre eigene Tabelle und " +
-                    "hat beim ersten Start geholt, was Health Connect noch hatte. " +
-                    "Findet sich dort nichts für diese Grösse, füllt sie sich ab " +
-                    "jetzt — ein Tag je Tag."
-            ))
-            if (tage > 0) k.addView(ctx.zart("Gespeichert: $tage Tage, seit $seit."))
-            s.addView(k)
-            return s
-        }
-
-        val bild = Auswertung.bild(reihe, LocalDate.now())
-        val mittel = bild.gesamt
-        val heute = LocalDate.now().dayOfWeek
-
-        // --- Die typische Woche ---
-        s.addView(ctx.abschnitt("TYPISCHE WOCHE"))
-        val woche = ctx.karte()
-        woche.addView(ctx.saeulenbild(
-            bild.profil.map { p ->
-                Saeule(
-                    p.tag.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
-                    p.mittel,
-                    hervor = p.tag == heute,
-                    oben = p.mittel?.let { if (p.tag == heute) groesse.form(it) else null },
-                )
-            },
-            ziel = mittel,
-        ))
-        woche.addView(ctx.zart(
-            if (mittel != null)
-                "Gestrichelt: der Schnitt über alle Tage, " +
-                    groesse.form(mittel) + einheit(groesse) + "."
-            else "Noch kein Schnitt."
-        ))
-        val stark = bild.staerkster
-        val schwach = bild.schwaechster
-        if (stark != null && schwach != null && stark.tag != schwach.tag) {
-            woche.addView(ctx.fliesstext(
-                "Am meisten am " + lang(stark.tag) + " (" + groesse.form(stark.mittel!!) +
-                    einheit(groesse) + "), am wenigsten am " + lang(schwach.tag) +
-                    " (" + groesse.form(schwach.mittel!!) + einheit(groesse) + ")."
-            ))
-        }
-        val duenn = bild.profil.filter { it.mittel == null && it.anzahl > 0 }
-        if (duenn.isNotEmpty() || bild.profil.any { it.anzahl < Auswertung.MINDESTENS }) {
-            woche.addView(ctx.zart(
-                "Ein Wochentag bleibt leer, solange er weniger als " +
-                    "${Auswertung.MINDESTENS} Mal aufgezeichnet ist. Aus einem " +
-                    "einzigen Mittwoch ein Muster zu lesen wäre keine Auswertung, " +
-                    "sondern eine Erinnerung."
-            ))
-        }
-        s.addView(woche)
-
-        // --- Der Verlauf ---
-        s.addView(ctx.abschnitt("VERLAUF"))
-        val verlauf = ctx.karte()
-        val kw = WeekFields.ISO.weekOfWeekBasedYear()
-        verlauf.addView(ctx.saeulenbild(
-            bild.wochen.map { w ->
-                Saeule(w.montag.get(kw).toString(), w.mittel,
-                       hervor = w.montag == LocalDate.now().with(java.time.DayOfWeek.MONDAY))
-            },
-            ziel = mittel,
-        ))
-        verlauf.addView(ctx.zart("Kalenderwochen, je der Schnitt eines Tages"))
-        verlauf.addView(ctx.fliesstext(
-            bild.veraenderung?.let { v ->
-                val richtung = if (v >= 0) "+" else ""
-                "Die letzten vier Wochen liegen $richtung${Zahlen.ganz(v)} % über " +
-                    "den vier davor."
-            } ?: "Für einen Vergleich über acht Wochen fehlen noch Tage."
-        ))
-        s.addView(verlauf)
-
-        // --- Was dahintersteht ---
-        s.addView(ctx.zart(
-            "$tage Tage im Speicher, seit $seit. Gerechnet wird über " +
-                "${bild.anzahl} Tage mit ${groesse.name}. Heute zählt nicht mit " +
-                "— ein angefangener Tag hat immer zu wenig, und der heutige " +
-                "Wochentag wäre sonst für immer der schwächste."
-        ))
-        return s
-    }
-
-    private fun einheit(g: Groesse) = if (g.einheit.isEmpty()) "" else " " + g.einheit
-
-    private fun lang(tag: java.time.DayOfWeek) =
-        tag.getDisplayName(TextStyle.FULL, Locale.getDefault())
+    // --- Die Auswahlleiste ---------------------------------------------------
 
     /**
-     * Die Auswahl der Groesse - eine Reihe zum Schieben.
+     * Die Leiste ueberlebt den Wechsel.
      *
-     * Keine gleich breiten Reiter wie oben: sieben Namen nebeneinander waeren
-     * je vierzig Punkte breit. Was nicht hinpasst, schiebt man heran.
+     * SIE WIRD NICHT NEU GEBAUT, nur neu eingefaerbt. Vorher entstand bei jedem
+     * Umschalten eine neue Leiste - und die stand wieder ganz links, waehrend
+     * man gerade rechts aussen auf "Aktiv" getippt hatte. Wer schiebt, will
+     * dort bleiben, wo er geschoben hat.
      */
-    private fun auswahl(ctx: Context, gewaehlt: Int, waehle: (Int) -> Unit): HorizontalScrollView {
-        val reihe = ctx.reihe()
-        // WRAP_CONTENT, nicht MATCH_PARENT: in einem Schieber bedeutet
-        // "so breit wie der Platz", dass nichts hinausragt - und damit
-        // schiebt sich auch nichts.
-        reihe.layoutParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
-        )
-        GROESSEN.forEachIndexed { i, g ->
-            reihe.addView(TextView(ctx).apply {
-                text = g.name
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-                setTypeface(typeface, Typeface.BOLD)
-                setPadding(ctx.dp(14f), ctx.dp(8f), ctx.dp(14f), ctx.dp(8f))
-                setTextColor(ctx.farbe(
+    class Leiste(val sicht: HorizontalScrollView, private val felder: List<TextView>) {
+        fun male(gewaehlt: Int) {
+            val ctx = sicht.context
+            felder.forEachIndexed { i, feld ->
+                feld.setTextColor(ctx.farbe(
                     if (i == gewaehlt) R.color.akzent_schrift else R.color.schrift_zart
                 ))
-                background = GradientDrawable().apply {
+                feld.background = GradientDrawable().apply {
                     setColor(ctx.farbe(if (i == gewaehlt) R.color.akzent else R.color.karte))
                     cornerRadius = ctx.dp(16f).toFloat()
                     if (i != gewaehlt) setStroke(ctx.dp(1f), ctx.farbe(R.color.linie))
                 }
+            }
+        }
+    }
+
+    fun leiste(ctx: Context, waehle: (Int) -> Unit): Leiste {
+        val reihe = ctx.reihe()
+        // WRAP_CONTENT, nicht MATCH_PARENT: in einem Schieber hiesse "so breit
+        // wie der Platz", dass nichts hinausragt - und damit schoebe sich auch
+        // nichts.
+        reihe.layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        val felder = GRUPPEN.mapIndexed { i, gruppe ->
+            TextView(ctx).apply {
+                text = gruppe.name
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                setTypeface(typeface, Typeface.BOLD)
+                setPadding(ctx.dp(14f), ctx.dp(8f), ctx.dp(14f), ctx.dp(8f))
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
                 ).apply { marginEnd = ctx.dp(8f) }
                 setOnClickListener { waehle(i) }
-            })
+                reihe.addView(this)
+            }
         }
-        return HorizontalScrollView(ctx).apply {
+        val schieber = HorizontalScrollView(ctx).apply {
             isHorizontalScrollBarEnabled = false
             addView(reihe)
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { bottomMargin = ctx.dp(4f) }
         }
+        return Leiste(schieber, felder).also { it.male(0) }
     }
+
+    // --- Der Inhalt ----------------------------------------------------------
+
+    fun inhalt(
+        ctx: Context,
+        gewaehlt: Int,
+        daten: Trenddaten,
+        umfang: Pair<Int, LocalDate?>,
+    ): LinearLayout {
+        val s = ctx.spalte()
+        val gruppe = GRUPPEN[gewaehlt]
+        val heute = LocalDate.now()
+        val (tage, seit) = umfang
+
+        val genug = gruppe.spalten.any { (daten[it]?.size ?: 0) >= 2 }
+        if (!genug) {
+            val k = ctx.karte()
+            k.addView(ctx.kartentitel("Noch zu wenig ${gruppe.name}"))
+            k.addView(ctx.zart(
+                "Die App schreibt jeden gelesenen Tag in ihre eigene Tabelle und " +
+                    "hat beim ersten Start geholt, was Health Connect noch hatte. " +
+                    "Findet sich dort nichts dazu, füllt sie sich ab jetzt — ein " +
+                    "Tag je Tag."
+            ))
+            if (tage > 0) k.addView(ctx.zart("Gespeichert: $tage Tage, seit $seit."))
+            s.addView(k)
+            return s
+        }
+
+        when (gruppe.name) {
+            "Schlaf" -> schlaf(ctx, s, daten, heute)
+            "Herz" -> herz(ctx, s, daten, heute)
+            else -> einfach(ctx, s, gruppe, daten, heute)
+        }
+
+        s.addView(ctx.zart(
+            "$tage Tage im Speicher, seit $seit. Heute zählt nicht mit — ein " +
+                "angefangener Tag hat immer zu wenig, und der heutige Wochentag " +
+                "wäre sonst für immer der schwächste. Ein Wochentag bleibt leer, " +
+                "bis er ${Auswertung.MINDESTENS} Mal aufgezeichnet ist."
+        ))
+        return s
+    }
+
+    // --- Die drei Formen -----------------------------------------------------
+
+    /** Eine einzelne Groesse: Wochenprofil und Verlauf. */
+    private fun einfach(
+        ctx: Context,
+        s: LinearLayout,
+        gruppe: Gruppe,
+        daten: Trenddaten,
+        heute: LocalDate,
+    ) {
+        val bild = Auswertung.bild(daten[gruppe.spalten.first()].orEmpty(), heute)
+        val form: (Double) -> String = { Zahlen.ganz(it) ?: "" }
+        val einheit = when (gruppe.name) {
+            "Wasser" -> " ml"; "Aktiv" -> " min"; else -> ""
+        }
+
+        s.addView(ctx.abschnitt("TYPISCHE WOCHE"))
+        val woche = ctx.karte()
+        woche.addView(ctx.saeulenbild(
+            bild.profil.map { p ->
+                Saeule(kurz(p.tag), p.mittel, hervor = p.tag == heute.dayOfWeek)
+            },
+            ziel = bild.gesamt,
+        ))
+        woche.addView(ctx.zart(schnittzeile(bild, form, einheit)))
+        extreme(ctx, woche, bild, form, einheit)
+        s.addView(woche)
+
+        s.addView(ctx.abschnitt("VERLAUF"))
+        val verlauf = ctx.karte()
+        verlauf.addView(ctx.saeulenbild(wochensaeulen(bild), ziel = bild.gesamt))
+        verlauf.addView(ctx.zart("Kalenderwochen, je der Schnitt eines Tages"))
+        verlauf.addView(ctx.fliesstext(richtung(bild)))
+        s.addView(verlauf)
+    }
+
+    /**
+     * Schlaf und Tiefschlaf in EINEM Balken.
+     *
+     * Der Tiefschlaf steckt im Schlaf; zwei Balken nebeneinander behaupteten
+     * zwei Dinge. Dunkel im Hellen ist die Form, die das Verhaeltnis zeigt.
+     */
+    private fun schlaf(ctx: Context, s: LinearLayout, daten: Trenddaten, heute: LocalDate) {
+        val gesamt = Auswertung.bild(daten["schlaf"].orEmpty(), heute)
+        val tief = Auswertung.bild(daten["tief"].orEmpty(), heute)
+        val tiefNachTag = tief.profil.associate { it.tag to it.mittel }
+        val form: (Double) -> String = { Zahlen.dauer(it) ?: "" }
+
+        s.addView(ctx.abschnitt("TYPISCHE WOCHE"))
+        val woche = ctx.karte()
+        woche.addView(ctx.saeulenbild(
+            gesamt.profil.map { p ->
+                Saeule(kurz(p.tag), p.mittel, hervor = p.tag == heute.dayOfWeek,
+                       innen = tiefNachTag[p.tag])
+            },
+            ziel = gesamt.gesamt,
+        ))
+        woche.addView(ctx.zart("Heller Balken: Schlaf gesamt. Dunkel: Tiefschlaf."))
+        woche.addView(ctx.fliesstext(
+            buildString {
+                gesamt.gesamt?.let { append("Im Schnitt " + form(it)) }
+                tief.gesamt?.let { append(", davon " + form(it) + " tief") }
+                if (isNotEmpty()) append(".")
+            }
+        ))
+        extreme(ctx, woche, gesamt, form, "")
+        s.addView(woche)
+
+        s.addView(ctx.abschnitt("VERLAUF"))
+        val verlauf = ctx.karte()
+        val tiefWochen = tief.wochen.associate { it.montag to it.mittel }
+        verlauf.addView(ctx.saeulenbild(
+            gesamt.wochen.map { w ->
+                Saeule(kw(w.montag), w.mittel,
+                       hervor = w.montag == heute.with(DayOfWeek.MONDAY),
+                       innen = tiefWochen[w.montag])
+            },
+            ziel = gesamt.gesamt,
+        ))
+        verlauf.addView(ctx.zart("Kalenderwochen, je der Schnitt einer Nacht"))
+        verlauf.addView(ctx.fliesstext(richtung(gesamt)))
+        s.addView(verlauf)
+    }
+
+    /**
+     * Herz: die Spanne des Tages, der Ruhepuls darin, die HRV daneben.
+     *
+     * DREI DINGE, ZWEI BILDER. Puls tief, hoch und Ruhepuls teilen sich eine
+     * Achse in Schlaegen je Minute und gehoeren in ein Bild. Die HRV wird in
+     * Millisekunden gemessen; sie in dieselbe Achse zu zwingen hiesse, zwei
+     * Einheiten uebereinanderzulegen und zu hoffen, dass es niemand liest.
+     */
+    private fun herz(ctx: Context, s: LinearLayout, daten: Trenddaten, heute: LocalDate) {
+        val ruhe = Auswertung.bild(
+            verschmelze(daten["ruhepuls"].orEmpty(), daten["puls_min"].orEmpty()), heute
+        )
+        val hoch = Auswertung.bild(daten["puls_hoch"].orEmpty(), heute)
+        val tief = Auswertung.bild(daten["puls_tief"].orEmpty(), heute)
+        val hrv = Auswertung.bild(daten["hrv"].orEmpty(), heute)
+
+        val hochTag = hoch.profil.associate { it.tag to it.mittel }
+        val tiefTag = tief.profil.associate { it.tag to it.mittel }
+        val ruheTag = ruhe.profil.associate { it.tag to it.mittel }
+
+        s.addView(ctx.abschnitt("TYPISCHE WOCHE"))
+        val woche = ctx.karte()
+        woche.addView(ctx.spannenbild(
+            Auswertung.WOCHENTAGE.map { tag ->
+                Spanne(kurz(tag), tiefTag[tag], hochTag[tag], ruheTag[tag],
+                       hervor = tag == heute.dayOfWeek)
+            }
+        ))
+        woche.addView(ctx.zart("Vom Tagestief zum Tageshoch; der helle Strich ist der Ruhepuls."))
+        woche.addView(ctx.fliesstext(
+            buildString {
+                ruhe.gesamt?.let { append("Ruhepuls im Schnitt " + (Zahlen.ganz(it) ?: "") + " bpm") }
+                val t = tief.gesamt; val h = hoch.gesamt
+                if (t != null && h != null) {
+                    if (isNotEmpty()) append(", ")
+                    append("der Tag typischerweise zwischen " + (Zahlen.ganz(t) ?: "") +
+                           " und " + (Zahlen.ganz(h) ?: ""))
+                }
+                if (isNotEmpty()) append(".")
+            }
+        ))
+        s.addView(woche)
+
+        s.addView(ctx.abschnitt("HRV"))
+        val hrvKarte = ctx.karte()
+        hrvKarte.addView(ctx.saeulenbild(
+            hrv.profil.map { p ->
+                Saeule(kurz(p.tag), p.mittel, hervor = p.tag == heute.dayOfWeek)
+            },
+            ziel = hrv.gesamt,
+        ))
+        hrvKarte.addView(ctx.zart(schnittzeile(hrv, { Zahlen.ganz(it) ?: "" }, " ms")))
+        s.addView(hrvKarte)
+
+        s.addView(ctx.abschnitt("VERLAUF"))
+        val verlauf = ctx.karte()
+        val hochW = hoch.wochen.associate { it.montag to it.mittel }
+        val tiefW = tief.wochen.associate { it.montag to it.mittel }
+        val ruheW = ruhe.wochen.associate { it.montag to it.mittel }
+        val montage = (hochW.keys + tiefW.keys + ruheW.keys).sorted().takeLast(Auswertung.WOCHEN)
+        verlauf.addView(ctx.spannenbild(
+            montage.map { m ->
+                Spanne(kw(m), tiefW[m], hochW[m], ruheW[m],
+                       hervor = m == heute.with(DayOfWeek.MONDAY))
+            }
+        ))
+        verlauf.addView(ctx.zart("Kalenderwochen"))
+        verlauf.addView(ctx.fliesstext(richtung(ruhe, "Ruhepuls, letzte vier Wochen")))
+        s.addView(verlauf)
+    }
+
+    // --- Kleinkram -----------------------------------------------------------
+
+    /**
+     * Gemessener Ruhepuls schlaegt geschaetzten.
+     *
+     * Beide in einer Reihe, aber nie beide fuer denselben Tag: wo ein
+     * eingetragener Wert steht, hat das Nachttief nichts zu suchen.
+     */
+    private fun verschmelze(
+        echt: List<Pair<LocalDate, Double>>,
+        ersatz: List<Pair<LocalDate, Double>>,
+    ): List<Pair<LocalDate, Double>> {
+        val karte = ersatz.toMap().toMutableMap()
+        echt.forEach { karte[it.first] = it.second }
+        return karte.entries.sortedBy { it.key }.map { it.key to it.value }
+    }
+
+    private fun wochensaeulen(bild: Auswertung.Bild): List<Saeule> {
+        val diese = LocalDate.now().with(DayOfWeek.MONDAY)
+        return bild.wochen.map { w -> Saeule(kw(w.montag), w.mittel, hervor = w.montag == diese) }
+    }
+
+    private fun schnittzeile(
+        bild: Auswertung.Bild,
+        form: (Double) -> String,
+        einheit: String,
+    ) = bild.gesamt?.let { "Gestrichelt: der Schnitt über alle Tage, " + form(it) + einheit + "." }
+        ?: "Noch kein Schnitt."
+
+    private fun extreme(
+        ctx: Context,
+        karte: LinearLayout,
+        bild: Auswertung.Bild,
+        form: (Double) -> String,
+        einheit: String,
+    ) {
+        val stark = bild.staerkster ?: return
+        val schwach = bild.schwaechster ?: return
+        if (stark.tag == schwach.tag) return
+        karte.addView(ctx.fliesstext(
+            "Am meisten am " + lang(stark.tag) + " (" + form(stark.mittel!!) + einheit +
+                "), am wenigsten am " + lang(schwach.tag) + " (" +
+                form(schwach.mittel!!) + einheit + ")."
+        ))
+    }
+
+    /**
+     * Die Richtung als Doppelpunktsatz.
+     *
+     * Kein Verb: "der Ruhepuls liegen" und "die vier Wochen liegt" sind beide
+     * falsch, und die Zahl kann in beide Richtungen zeigen. Ein Doppelpunkt
+     * stimmt immer.
+     */
+    private fun richtung(bild: Auswertung.Bild, was: String = "Letzte vier Wochen") =
+        bild.veraenderung?.let { v ->
+            val vorzeichen = if (v >= 0) "+" else ""
+            "$was: $vorzeichen${Zahlen.ganz(v)} % gegenüber den vier davor."
+        } ?: "Für einen Vergleich über acht Wochen fehlen noch Tage."
+
+    private fun kurz(tag: DayOfWeek) =
+        tag.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+
+    private fun lang(tag: DayOfWeek) =
+        tag.getDisplayName(TextStyle.FULL, Locale.getDefault())
+
+    private fun kw(montag: LocalDate) =
+        montag.get(WeekFields.ISO.weekOfWeekBasedYear()).toString()
 }

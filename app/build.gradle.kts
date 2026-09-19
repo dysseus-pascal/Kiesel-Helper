@@ -17,8 +17,8 @@ android {
         // und deckt jedes Telefon ab, das die Pebble-App ueberhaupt betreibt.
         minSdk = 28
         targetSdk = 36
-        versionCode = 9
-        versionName = "0.7.0"
+        versionCode = 10
+        versionName = "0.8.0"
     }
 
     buildTypes {
@@ -66,6 +66,11 @@ dependencies {
     // ueber alle Fassungen.
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    // Ziehen zum Auffrischen. Die einzige Stelle, an der eine Bibliothek
+    // billiger ist als die eigene Fassung: die Geste hat Schwellen,
+    // Abbruchbedingungen und ein Zusammenspiel mit dem Roller, das man
+    // nicht nachbaut, sondern nachbaut und dann falsch hat.
+    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
     // Der Zettelleser ist reine Logik und laesst sich ohne Telefon pruefen.
