@@ -28,9 +28,14 @@ Zweite gilt.
 
 ### Der Schirm
 
-Drei Reiter. **Gesundheit** steht vorne, weil man deswegen die App öffnet;
-**Trend** rechnet aus dem eigenen Speicher; **Technik** ist der alte Schirm mit
-Zustand, Aufgaben und Verlauf.
+**Zwei Reiter, unten.** Weil der Daumen dort ist — oben wären sie näher am
+Titel, aber weiter weg von der Hand.
+
+**Gesundheit** zeigt heute, **Trend** rechnet aus dem eigenen Speicher. Die
+Technik — Zustand, Erlaubnisse, Aufgabenliste, Verlauf — liegt hinter dem
+**Zahnrad** oben rechts. Sie war einmal ein dritter Reiter, und das war eine
+Fehleinschätzung: ein Reiter ist eine Behauptung darüber, wie oft man etwas
+anschaut, und das hier schaut man an, wenn etwas nicht geht. Zweimal im Jahr.
 
 | Karte | Werte |
 |---|---|
@@ -163,9 +168,16 @@ springt um dreissig Prozent.
 
 ## Bedienung
 
-**Titel und Reiter stehen fest**, nur der Inhalt scrollt. Vorher lagen sie im
-Roller und waren nach der ersten Karte weg — man wusste dann nicht mehr, in
-welchem Reiter man steht.
+**Nur die Mitte scrollt.** Oben der Name mit dem Zahnrad, unten die Reiter,
+dazwischen der Inhalt. Vorher lag beides im Roller und war nach der ersten
+Karte weg — man wusste dann nicht mehr, in welchem Reiter man steht.
+
+Das **Zahnrad ist gezeichnet, nicht geladen**: dreissig Zeilen statt eines
+Satzes Bilddateien in fünf Auflösungen, und es nimmt die Schriftfarbe an, stimmt
+also bei Tag wie bei Nacht. Die Zähne entstehen mit `Path.op` als Vereinigung,
+das Loch als Differenz — mit einer Even-Odd-Füllung wäre es kürzer und falsch:
+überlappende Flächen löschten sich dort gegenseitig aus, und jeder Zahn risse
+ein Loch in den Körper.
 
 **Von oben ziehen holt alles neu.** Der Kreisel verschwindet erst, wenn
 wirklich nichts mehr nachkommt: die drei Reiter laden hintereinander, nicht

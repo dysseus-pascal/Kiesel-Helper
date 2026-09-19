@@ -106,6 +106,14 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- Die Technik, aus dem Weg geraeumt. Sie war ein Reiter und stand
+             damit jeden Tag daneben, obwohl man sie zweimal im Jahr
+             braucht. -->
+        <activity
+            android:name=".EinstellungenActivity"
+            android:exported="false"
+            android:parentActivityName=".HauptActivity" />
+
         <!-- Was die App getan hat, als niemand hinsah. -->
         <activity
             android:name=".VerlaufActivity"

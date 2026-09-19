@@ -2,6 +2,11 @@ package ch.dysseus.kieselhelper
 
 import android.content.Context
 import android.content.res.ColorStateList
+import android.graphics.Canvas
+import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
@@ -333,51 +338,152 @@ fun Context.messreihe(links: View, rechts: View): LinearLayout =
     }
 
 /**
- * Zwei Reiter in einem Streifen.
+ * Die Reiter sitzen unten.
  *
- * KEIN TabLayout. Das zoege Material samt Abhaengigkeiten herein, fuer zwei
- * Woerter und einen Umschalter. Der gewaehlte Reiter steht auf hellem Grund,
- * der andere bleibt im Streifen - das genuegt, um zu sagen, wo man ist.
+ * WEIL DER DAUMEN DORT IST. Oben waren sie zwar naeher am Titel, aber weiter
+ * weg von der Hand - und auf einem Telefon dieser Groesse heisst "oben"
+ * umgreifen. Unten ist ausserdem die Stelle, an der jede andere App ihre
+ * Reiter hat; eine eigene Ordnung waere hier nur eine Huerde.
  *
- * Die Leiste merkt sich ihre Wahl selbst und meldet sie nur weiter; wer sie
- * benutzt, blendet daraufhin um.
+ * Die Leiste liegt AUSSERHALB des Rollers und traegt eine Haarlinie nach oben,
+ * damit sie sich von durchlaufendem Inhalt abhebt, ohne einen Schatten zu
+ * brauchen.
  */
-fun Context.reiterleiste(namen: List<String>, waehle: (Int) -> Unit): LinearLayout {
-    val leiste = reihe()
-    leiste.setPadding(dp(4f), dp(4f), dp(4f), dp(4f))
-    leiste.background = GradientDrawable().apply {
-        setColor(farbe(R.color.linie))
-        cornerRadius = dp(12f).toFloat()
-    }
+fun Context.fussleiste(namen: List<String>, waehle: (Int) -> Unit): LinearLayout {
+    val kasten = spalte()
+    kasten.addView(View(this).apply {
+        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1f))
+        setBackgroundColor(farbe(R.color.linie))
+    })
 
+    val reihe = reihe()
+    reihe.setBackgroundColor(farbe(R.color.karte))
+
+    val marken = mutableListOf<View>()
     val felder = mutableListOf<TextView>()
+
     fun male(gewaehlt: Int) {
         felder.forEachIndexed { i, feld ->
-            feld.background = if (i == gewaehlt) GradientDrawable().apply {
-                setColor(farbe(R.color.karte))
-                cornerRadius = dp(9f).toFloat()
-            } else null
-            feld.setTextColor(
-                farbe(if (i == gewaehlt) R.color.schrift else R.color.schrift_zart)
-            )
+            feld.setTextColor(farbe(if (i == gewaehlt) R.color.akzent else R.color.schrift_zart))
+        }
+        marken.forEachIndexed { i, marke ->
+            marke.visibility = if (i == gewaehlt) View.VISIBLE else View.INVISIBLE
         }
     }
 
     namen.forEachIndexed { i, name ->
-        val feld = TextView(this).apply {
-            text = name
-            gravity = Gravity.CENTER
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
-            setTypeface(typeface, Typeface.BOLD)
-            setPadding(dp(10f), dp(9f), dp(10f), dp(9f))
+        val fach = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
             layoutParams = LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
             )
+            setPadding(0, dp(8f), 0, dp(10f))
             setOnClickListener { male(i); waehle(i) }
         }
+        // Ein kurzer Strich ueber dem gewaehlten Namen. Farbe allein traegt
+        // die Aussage nicht - wer sie schlecht unterscheidet, sieht sonst
+        // zwei gleich aussehende Woerter.
+        val marke = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(26f), dp(3f)).apply {
+                bottomMargin = dp(5f)
+            }
+            background = GradientDrawable().apply {
+                setColor(farbe(R.color.akzent))
+                cornerRadius = dp(2f).toFloat()
+            }
+        }
+        val feld = TextView(this).apply {
+            text = name
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            setTypeface(typeface, Typeface.BOLD)
+            gravity = Gravity.CENTER
+        }
+        marken += marke
         felder += feld
-        leiste.addView(feld)
+        fach.addView(marke)
+        fach.addView(feld)
+        reihe.addView(fach)
     }
+
+    kasten.addView(reihe)
     male(0)
-    return leiste
+    return kasten
+}
+
+/**
+ * Ein Zahnrad - gezeichnet, nicht geladen.
+ *
+ * Dreissig Zeilen statt eines Satzes Bilddateien in fuenf Aufloesungen. Es
+ * nimmt die Schriftfarbe an und stimmt damit bei Tag wie bei Nacht; ein
+ * mitgeliefertes PNG haette eine feste Farbe und muesste eingefaerbt werden.
+ *
+ * Die Zaehne entstehen mit [Path.op] als VEREINIGUNG, das Loch als DIFFERENZ.
+ * Mit einer Even-Odd-Fuellung waere es kuerzer und falsch: ueberlappende
+ * Flaechen loeschten sich dort gegenseitig aus, und jeder Zahn risse ein Loch
+ * in den Koerper.
+ */
+class ZahnradView(ctx: Context) : View(ctx) {
+
+    private val stift = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = ctx.farbe(R.color.schrift_zart)
+    }
+
+    override fun onDraw(leinwand: Canvas) {
+        val mx = width / 2f
+        val my = height / 2f
+        val spitze = minOf(width, height) / 2f * 0.60f
+        val koerper = spitze * 0.74f
+        val breite = spitze * 0.38f
+
+        val weg = Path().apply { addCircle(mx, my, koerper, Path.Direction.CW) }
+        val zahn = Path()
+        val dreh = Matrix()
+        for (i in 0 until 8) {
+            zahn.reset()
+            zahn.addRoundRect(
+                RectF(mx - breite / 2, my - spitze, mx + breite / 2, my - koerper * 0.86f),
+                breite * 0.3f, breite * 0.3f, Path.Direction.CW,
+            )
+            dreh.setRotate(i * 45f, mx, my)
+            zahn.transform(dreh)
+            weg.op(zahn, Path.Op.UNION)
+        }
+        weg.op(
+            Path().apply { addCircle(mx, my, koerper * 0.40f, Path.Direction.CW) },
+            Path.Op.DIFFERENCE,
+        )
+        leinwand.drawPath(weg, stift)
+    }
+}
+
+/** Das Zahnrad als Schaltflaeche, mit rundem Druckschatten. */
+fun Context.zahnradknopf(tue: () -> Unit): View = ZahnradView(this).apply {
+    layoutParams = LinearLayout.LayoutParams(dp(44f), dp(44f))
+    background = RippleDrawable(
+        ColorStateList.valueOf(farbe(R.color.linie)),
+        null,
+        GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(android.graphics.Color.WHITE)
+        },
+    )
+    setOnClickListener { tue() }
+}
+
+/**
+ * Die Kopfzeile: Name links, Zahnrad rechts.
+ *
+ * Sie scrollt NICHT mit. Wer die Einstellungen sucht, soll nicht erst
+ * zurueckscrollen muessen, um sie zu finden.
+ */
+fun Context.kopfleiste(titel: String, zahnrad: () -> Unit): LinearLayout = reihe().apply {
+    gravity = Gravity.CENTER_VERTICAL
+    setPadding(dp(16f), dp(18f), dp(10f), dp(6f))
+    addView(kopf(titel).apply {
+        layoutParams = LinearLayout.LayoutParams(
+            0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+        )
+    })
+    addView(zahnradknopf(zahnrad))
 }
