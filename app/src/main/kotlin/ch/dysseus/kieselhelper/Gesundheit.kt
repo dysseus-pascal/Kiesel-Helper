@@ -152,6 +152,9 @@ class Gesundheit(private val context: Context) {
         /** Sieben Tage im Wochenbild - eine Woche liest man auf einen Blick. */
         const val TAGE = 7
 
+        /** So viele Pulspunkte passen auf einen Telefonschirm, ohne zu kleben. */
+        const val PUNKTE_MAX = 400
+
         /**
          * Ab wann eine Nacht zaehlt.
          *
@@ -547,12 +550,19 @@ class Gesundheit(private val context: Context) {
     }
 
     /**
-     * Der Pulsverlauf des Tages, auf Fuenfminutenmittel gedampft.
+     * Alle Pulsmessungen des Tages - als EINZELNE Punkte.
      *
-     * Eine Uhr misst im Minutentakt; tausend Punkte auf zweihundert Bildpunkte
-     * zu zeichnen ergibt einen Tintenfleck, keine Linie. Gemittelt statt
-     * ausgeduennt, sonst haengt die Form davon ab, welcher Punkt zufaellig
-     * ueberlebt.
+     * VORHER WAREN ES FUENFMINUTENMITTEL, und die logen durch Weglassen: eine
+     * Uhr misst alle zehn Minuten und waehrend einer Anstrengung dauernd. Eine
+     * geglaettete Linie machte daraus einen ruhigen Verlauf und verschwieg
+     * genau die Ausschlaege, deretwegen man hinschaut.
+     *
+     * Die Wolke zeigt die Streuung, die Trendlinie im Bild zieht den Mittelweg
+     * hindurch - beides nebeneinander, statt eines davon statt des anderen.
+     *
+     * Gedeckelt bei [PUNKTE_MAX]: mehr Punkte als Bildpunkte ergeben keine
+     * Wolke, sondern einen Balken. Ausgeduennt wird gleichmaessig, damit die
+     * Form erhalten bleibt.
      */
     private suspend fun pulsverlauf(
         klient: HealthConnectClient,
@@ -562,17 +572,16 @@ class Gesundheit(private val context: Context) {
             klient.readRecords(ReadRecordsRequest(HeartRateRecord::class, tag)).records
         } ?: return emptyList()
 
-        val eimer = HashMap<Int, MutableList<Double>>()
-        saetze.forEach { satz ->
-            satz.samples.forEach { probe ->
+        val alle = saetze.flatMap { satz ->
+            satz.samples.map { probe ->
                 val z = LocalDateTime.ofInstant(probe.time, zone)
-                val fach = (z.hour * 60 + z.minute) / 5
-                eimer.getOrPut(fach) { mutableListOf() }
-                    .add(probe.beatsPerMinute.toDouble())
+                Punkt(z.hour * 60 + z.minute, probe.beatsPerMinute.toDouble())
             }
-        }
-        return eimer.entries.sortedBy { it.key }
-            .map { (fach, werte) -> Punkt(fach * 5, werte.average()) }
+        }.sortedBy { it.minute }
+
+        if (alle.size <= PUNKTE_MAX) return alle
+        val schritt = alle.size.toDouble() / PUNKTE_MAX
+        return (0 until PUNKTE_MAX).map { i -> alle[(i * schritt).toInt()] }
     }
 
     /**

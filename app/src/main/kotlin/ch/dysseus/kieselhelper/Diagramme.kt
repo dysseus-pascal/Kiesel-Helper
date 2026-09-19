@@ -401,12 +401,20 @@ private fun Context.phasenschild(name: String, minuten: Double, farbId: Int): Li
         })
     }
 
-// --- Pulsverlauf ------------------------------------------------------------
+// --- Pulswolke ---------------------------------------------------------------
 
 /**
- * Der Puls ueber den Tag.
+ * Der Puls ueber den Tag - als Wolke mit einem Faden hindurch.
  *
- * Der Tag steht IMMER ganz da, von null bis vierundzwanzig Uhr - eine Linie,
+ * JEDER PUNKT IST EINE MESSUNG. Die Uhr misst alle zehn Minuten und waehrend
+ * einer Anstrengung dauernd; eine geglaettete Linie machte daraus einen ruhigen
+ * Verlauf und verschwiege genau die Ausschlaege, deretwegen man hinschaut.
+ *
+ * DIE TRENDLINIE IST EIN GLEITENDER MEDIAN, kein Mittel. Ein Mittel zoege eine
+ * halbe Stunde Sport eine Stunde lang mit sich; der Median haelt die Linie
+ * dort, wo die meisten Punkte liegen, und laesst die Spitzen Spitzen sein.
+ *
+ * Der Tag steht IMMER ganz da, von null bis vierundzwanzig Uhr - eine Wolke,
  * die sich auf die gemessene Spanne streckt, sieht um acht Uhr morgens aus wie
  * ein ganzer Tag. Die Stundenstriche bei 6, 12 und 18 Uhr sind das Gegenmittel.
  */
@@ -416,17 +424,20 @@ class PulsView(
     private val ruhe: Double?,
 ) : View(ctx) {
 
+    /** Halbe Fensterbreite des gleitenden Medians, in Minuten. */
+    private val fenster = 30
+
+    private val tupfen = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = context.farbe(R.color.akzent)
+        alpha = 110
+    }
     private val linie = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = context.dp(2f).toFloat()
         strokeJoin = Paint.Join.ROUND
         strokeCap = Paint.Cap.ROUND
         color = context.farbe(R.color.akzent)
-    }
-    private val fuellung = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-        color = context.farbe(R.color.akzent)
-        alpha = 40
     }
     private val gitter = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -475,18 +486,28 @@ class PulsView(
             leinwand.drawText("$stunde", sx, height - context.dp(2f).toFloat(), schrift)
         }
 
-        val weg = Path()
-        val flaeche = Path()
-        punkte.forEachIndexed { i, p ->
-            val px = x(p.minute)
-            val py = y(p.wert)
-            if (i == 0) { weg.moveTo(px, py); flaeche.moveTo(px, boden); flaeche.lineTo(px, py) }
-            else { weg.lineTo(px, py); flaeche.lineTo(px, py) }
+        val punktgroesse = context.dp(1.7f).toFloat()
+        punkte.forEach { p ->
+            leinwand.drawCircle(x(p.minute), y(p.wert), punktgroesse, tupfen)
         }
-        flaeche.lineTo(x(punkte.last().minute), boden)
-        flaeche.close()
-        leinwand.drawPath(flaeche, fuellung)
-        leinwand.drawPath(weg, linie)
+
+        val faden = Path()
+        var erster = true
+        var minute = punkte.first().minute
+        while (minute <= punkte.last().minute) {
+            val imFenster = punkte.filter { it.minute >= minute - fenster && it.minute <= minute + fenster }
+            // WENIGER ALS DREI PUNKTE SIND KEIN TREND. Eine Linie ueber eine
+            // Luecke hinweg behauptete Messungen, die es nicht gibt.
+            if (imFenster.size >= 3) {
+                val my = y(median(imFenster.map { it.wert }))
+                val mx = x(minute)
+                if (erster) { faden.moveTo(mx, my); erster = false } else faden.lineTo(mx, my)
+            } else {
+                erster = true
+            }
+            minute += 15
+        }
+        leinwand.drawPath(faden, linie)
 
         schrift.textAlign = Paint.Align.LEFT
         leinwand.drawText(
@@ -503,11 +524,18 @@ class PulsView(
             )
         }
     }
+
+    private fun median(werte: List<Double>): Double {
+        val sortiert = werte.sorted()
+        val m = sortiert.size / 2
+        return if (sortiert.size % 2 == 1) sortiert[m]
+               else (sortiert[m - 1] + sortiert[m]) / 2
+    }
 }
 
 fun Context.pulsbild(punkte: List<Gesundheit.Punkt>, ruhe: Double?): View =
     PulsView(this, punkte, ruhe).apply {
         layoutParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(110f)
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(124f)
         ).apply { topMargin = dp(10f) }
     }

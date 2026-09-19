@@ -55,7 +55,7 @@ Zu jeder Karte ein Bild - eine Zahl allein sagt nicht, ob sie hoch ist.
 |---|---|
 | Bewegung | Schritte der letzten sieben Tage, mit Ziellinie |
 | Schlaf | die Nacht in Phasen (tief, REM, leicht, wach) + sieben Nächte |
-| Herz | Pulsverlauf des Tages, gestrichelt der Ruhepuls |
+| Herz | Punktewolke aller Pulsmessungen des Tages, mit gleitendem Median als Trendlinie |
 | Ernährung | Wasser über sieben Tage, dazu die Supplemente: hell geplant, dunkel genommen |
 
 Selbst gezeichnet, ohne Diagramm-Bibliothek: die drei Bilder zusammen sind

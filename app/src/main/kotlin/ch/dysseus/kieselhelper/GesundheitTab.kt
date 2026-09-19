@@ -85,7 +85,7 @@ object GesundheitTab {
             ctx.wert(stand.pulsTief, Zahlen.ganz(stand.pulsTief.zahl), "bpm"),
             ctx.wert(stand.pulsHoch, Zahlen.ganz(stand.pulsHoch.zahl), "bpm"),
         ))
-        herz.addView(ctx.zart("Puls heute, gestrichelt der Ruhepuls"))
+        herz.addView(ctx.zart("Jeder Punkt eine Messung; die Linie ist der gleitende Median, gestrichelt der Ruhepuls"))
         herz.addView(ctx.pulsbild(stand.pulsverlauf, stand.ruhepuls.zahl))
         if (stand.ruhepuls.geschaetzt) {
             herz.addView(ctx.zart(
