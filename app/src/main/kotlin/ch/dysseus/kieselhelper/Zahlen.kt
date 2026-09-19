@@ -33,6 +33,12 @@ object Zahlen {
         return if (m < 60) "$m min" else "${m / 60} h ${m % 60}"
     }
 
+    /** Minuten seit Mitternacht als Uhrzeit. */
+    fun uhrzeit(minuten: Double?): String? {
+        val m = minuten?.toInt() ?: return null
+        return String.format("%02d:%02d", (m / 60) % 24, m % 60)
+    }
+
     /**
      * Minuten seit achtzehn Uhr zurueck in eine Uhrzeit.
      *

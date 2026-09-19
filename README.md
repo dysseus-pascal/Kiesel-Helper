@@ -329,6 +329,53 @@ Tag.
 der Tag beginnt: beides zu vermischen hiesse, bei einer Grenze um sechs die
 halbe Nacht auf zwei Tage zu verteilen.
 
+### Selbst eintragen
+
+Zwei Dinge, die kein Sensor weiss, unten im Gesundheits-Reiter:
+
+**»Wie war der Tag?«** — eine Zahl von 1 bis 5. Eine Uhr misst, wie lange man
+geschlafen hat; ob man sich ausgeruht *fühlt*, weiss nur der Mensch.
+
+**Koffein** — ein Tipp je Getränk (Kaffee 80 mg, Espresso 60, Tee 40). Die
+Milligramm sind Hausnummern; die interessante Hälfte ist der **Zeitpunkt des
+letzten**, denn der erklärt die Nacht, über die man sich wundert.
+
+Ein Tipp je Sache, nicht mehr. Was mehr kostet, trägt niemand drei Wochen lang
+ein — und drei Wochen sind die Untergrenze, ab der sich etwas ablesen lässt.
+Dafür stehen zwei neue Paare unter *Zusammenhänge*: **Schlaf ↔ Energie** und
+**Koffein ↔ Tiefschlaf**.
+
+### Kartenlinks nach OsmAnd
+
+Ein Google-Maps-Link öffnet OsmAnd mit gesetztem Ziel. Die App zerlegt dabei
+ein halbes Dutzend Linkformen — `dir/?destination=`, `search/?query=`,
+`place/Name/@lat,lon`, das alte `daddr=`, und `geo:`.
+
+**Ein Name im Link schlägt die Koordinate.** Das `@lat,lon` in einem
+`place`-Link ist die Bildmitte, nicht der Eingang; steht ein Name daneben, geht
+der an OsmAnds eigene Suche.
+
+**Kurzlinks** (`maps.app.goo.gl`) werden erst aufgelöst — nur der Kopf der
+Antwort, höchstens fünf Sprünge. Eine Google-Maps-Seite ist ein Megabyte
+JavaScript, und gesucht ist nur das Ziel der Umleitung.
+
+**Android gibt diese Links nicht von selbst her.** Seit Android 12 muss eine
+App den Besitz einer Adresse nachweisen, um sie zu beanspruchen, und für
+google.com kann das niemand ausser Google. Einmal von Hand erlauben:
+
+> Einstellungen → Apps → Kiesel-Helper → Standardmässig öffnen → Links
+> hinzufügen → Haken bei den Google-Maps-Adressen
+
+Das ist richtig so: eine App, die sich unbemerkt vor fremde Links setzen
+könnte, wäre ein Angriffswerkzeug. `geo:` gehört dagegen niemandem und
+funktioniert sofort.
+
+Die Zerlegung ist **reine Zeichenkettenarbeit ohne Android** und damit ohne
+Telefon prüfbar — 11 Prüfungen. Der erste Entwurf nahm `android.net.Uri`; die
+ist im Test eine Attrappe, die null zurückgibt. Eine der Prüfungen hat prompt
+einen Fehler gefunden: ein `q=` gibt es auch in einer gewöhnlichen
+Google-Suche, und daraus ein Navigationsziel zu machen wäre eine Anmassung.
+
 ## Was sie einträgt
 
 Drei feste Aufgaben, **im Code**, nicht in einer Datei aus dem Netz:

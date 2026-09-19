@@ -37,6 +37,9 @@ import java.util.UUID
  * Aufruferliste; jede App darf sich anbinden. Nachgesehen im Manifest von
  * OsmAnd, nicht angenommen.
  */
+private typealias NavigateParams = net.osmand.aidlapi.navigation.NavigateParams
+private typealias NavigateSearchParams = net.osmand.aidlapi.navigation.NavigateSearchParams
+
 object OsmandNavigation {
 
     private const val TAG = PebbleEmpfaenger.TAG
@@ -186,6 +189,64 @@ object OsmandNavigation {
         navigiert = false
         stoppeTakt()
     }
+
+
+    /**
+     * OsmAnd ein Ziel geben und die Fuehrung starten.
+     *
+     * KEIN START MITGEGEBEN. Mit `startLat = 0.0` nimmt OsmAnd die eigene
+     * Position - das ist fast immer gemeint, und es erspart dieser App eine
+     * Standortberechtigung, die sie sonst nirgends braucht.
+     *
+     * `force = true`, weil hier jemand gerade aktiv auf einen Link getippt
+     * hat: eine schon laufende Fuehrung soll dann weichen, nicht eine
+     * Rueckfrage erzeugen, die im Auto niemand beantwortet.
+     *
+     * Rueckgabe false heisst: OsmAnd ist nicht verbunden oder hat abgelehnt -
+     * typischerweise, weil die App dort unter Plugins noch nicht
+     * freigeschaltet ist.
+     */
+    fun navigiere(name: String?, lat: Double, lon: Double, profil: String = "car"): Boolean =
+        try {
+            api?.navigate(
+                NavigateParams(
+                    null, 0.0, 0.0,
+                    name ?: "Ziel", lat, lon,
+                    profil, true, false,
+                )
+            ) ?: false
+        } catch (e: Exception) {
+            Log.w(PebbleEmpfaenger.TAG, "navigate: " + e.message)
+            false
+        }
+
+    /**
+     * Dasselbe fuer einen Link, der nur einen Namen traegt.
+     *
+     * Ein Google-Maps-Link auf ein Lokal enthaelt oft keine Koordinate,
+     * sondern nur dessen Namen. Dann sucht OsmAnd selbst - besser, als dem
+     * Menschen zu sagen, sein Link sei ungeeignet.
+     */
+    fun sucheUndNavigiere(
+        text: String,
+        naheLat: Double,
+        naheLon: Double,
+        profil: String = "car",
+    ): Boolean = try {
+        api?.navigateSearch(
+            NavigateSearchParams(
+                null, 0.0, 0.0,
+                text, naheLat, naheLon,
+                profil, true, false,
+            )
+        ) ?: false
+    } catch (e: Exception) {
+        Log.w(PebbleEmpfaenger.TAG, "navigateSearch: " + e.message)
+        false
+    }
+
+    /** Ob gerade eine Verbindung zu OsmAnd steht. */
+    val verbunden: Boolean get() = api != null
 
     private fun abonniere(ctx: Context) {
         val schnitt = api ?: return

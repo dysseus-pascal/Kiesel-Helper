@@ -106,6 +106,44 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- KARTENLINKS NACH OSMAND.
+             ========================
+             Android gibt uns diese Links NICHT von selbst: seit Android 12
+             muss eine App den Besitz einer Adresse nachweisen, um sie zu
+             beanspruchen, und fuer google.com kann das niemand ausser Google.
+             Der Mensch muss die Verknuepfung deshalb einmal von Hand
+             erlauben, unter "Standardmaessig oeffnen -> Links hinzufuegen".
+
+             Das ist richtig so. Eine App, die sich unbemerkt vor fremde Links
+             setzen koennte, waere ein Angriffswerkzeug. -->
+        <activity
+            android:name=".KartenlinkActivity"
+            android:exported="true"
+            android:label="Nach OsmAnd"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true">
+
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="maps.google.com" />
+                <data android:scheme="https" android:host="www.google.com" android:pathPrefix="/maps" />
+                <data android:scheme="https" android:host="google.com" android:pathPrefix="/maps" />
+                <data android:scheme="https" android:host="maps.app.goo.gl" />
+                <data android:scheme="https" android:host="goo.gl" android:pathPrefix="/maps" />
+            </intent-filter>
+
+            <!-- geo: gehoert niemandem und braucht keine Freigabe. Darueber
+                 reichen andere Apps Orte weiter - das geht sofort. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="geo" />
+            </intent-filter>
+        </activity>
+
         <!-- Die Technik, aus dem Weg geraeumt. Sie war ein Reiter und stand
              damit jeden Tag daneben, obwohl man sie zweimal im Jahr
              braucht. -->

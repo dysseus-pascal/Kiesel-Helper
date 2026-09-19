@@ -32,7 +32,7 @@ class Speicher(context: Context) : SQLiteOpenHelper(context, NAME, null, FASSUNG
 
     companion object {
         private const val NAME = "gesundheit.db"
-        private const val FASSUNG = 4
+        private const val FASSUNG = 5
 
         /** Die Spalten, die einen Messwert tragen - in der Reihenfolge der Tabelle. */
         val SPALTEN = listOf(
@@ -41,6 +41,7 @@ class Speicher(context: Context) : SQLiteOpenHelper(context, NAME, null, FASSUNG
             "ruhepuls", "puls_min", "puls_hoch", "puls_tief", "hrv",
             "supp_faellig", "supp_genommen",
             "schlaf_von", "schlaf_bis", "schlaf_mitte",
+            "energie", "koffein_mg", "koffein_letzt",
         )
 
         /** Was seit Fassung 1 dazugekommen ist - fuer [onUpgrade]. */
@@ -48,6 +49,7 @@ class Speicher(context: Context) : SQLiteOpenHelper(context, NAME, null, FASSUNG
             2 to listOf("puls_hoch", "puls_tief"),
             3 to listOf("supp_faellig", "supp_genommen"),
             4 to listOf("schlaf_von", "schlaf_bis", "schlaf_mitte"),
+            5 to listOf("energie", "koffein_mg", "koffein_letzt"),
         )
     }
 
@@ -106,6 +108,18 @@ class Speicher(context: Context) : SQLiteOpenHelper(context, NAME, null, FASSUNG
         } catch (e: Exception) {
             Log.w(PebbleEmpfaenger.TAG, "Speicher schreiben: " + e.message)
         }
+    }
+
+    /**
+     * Einen Wert dazuzaehlen statt ihn zu setzen.
+     *
+     * Fuer das, was im Lauf des Tages mehrfach kommt: drei Kaffee sind drei
+     * Eintraege und eine Summe. Ein blosses [merke] ueberschriebe den zweiten
+     * mit dem dritten.
+     */
+    fun zaehleDazu(tag: LocalDate, spalte: String, wieviel: Double) {
+        val bisher = wert(tag, spalte) ?: 0.0
+        merke(tag, mapOf(spalte to bisher + wieviel))
     }
 
     /** Welche Tage schon eine Zeile haben - um nur die Luecken nachzutragen. */

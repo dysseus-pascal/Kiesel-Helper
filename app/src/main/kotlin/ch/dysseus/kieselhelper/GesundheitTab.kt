@@ -1,7 +1,12 @@
 package ch.dysseus.kieselhelper
 
 import android.content.Context
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
+import android.util.TypedValue
+import android.view.ViewGroup
 import android.widget.LinearLayout
+import android.widget.TextView
 
 /**
  * Der Gesundheits-Schirm: vier Karten, vier Bilder.
@@ -19,6 +24,12 @@ import android.widget.LinearLayout
  * Gebaut, nicht gezeichnet: die Werte kommen aus [Gesundheit], und fehlt einer,
  * steht ein Strich statt einer Null.
  */
+/** Was der Schirm zurueckmeldet, wenn jemand etwas eintraegt. */
+interface Eingaben {
+    fun setzeEnergie(wert: Int)
+    fun fuegeKoffein(mg: Int)
+}
+
 object GesundheitTab {
 
     fun baue(
@@ -26,6 +37,7 @@ object GesundheitTab {
         stand: Gesundheit.Stand?,
         profilHeute: List<Gesundheit.Punkt> = emptyList(),
         profilTypisch: List<Gesundheit.Punkt> = emptyList(),
+        eingaben: Eingaben? = null,
     ): LinearLayout {
         val s = ctx.spalte()
 
@@ -196,6 +208,11 @@ object GesundheitTab {
         }
         s.addView(ernaehrung)
 
+        if (eingaben != null) {
+            s.addView(ctx.abschnitt("SELBST EINTRAGEN"))
+            s.addView(eingabekarte(ctx, stand, eingaben))
+        }
+
         // Woher die Zahlen kommen - und warum manche fehlen. Ohne diese Zeile
         // haelt man ein leeres Feld fuer einen Fehler der App.
         s.addView(ctx.zart(
@@ -205,6 +222,80 @@ object GesundheitTab {
                 "dort wirklich steht, sagt der Technik-Reiter."
         ))
         return s
+    }
+
+
+    /**
+     * Was kein Sensor weiss.
+     *
+     * DIE ZWEI DINGE, DIE ERST DIE ZUSAMMENHAENGE INTERESSANT MACHEN. Eine Uhr
+     * misst, wie lange man geschlafen hat; ob man sich ausgeruht FUEHLT, weiss
+     * nur der Mensch. Und Koffein steht in keiner Akte, obwohl es die Nacht
+     * erklaert, an der man sich wundert.
+     *
+     * Ein Tipp je Sache, nicht mehr. Was mehr kostet, traegt niemand drei
+     * Wochen lang ein - und drei Wochen sind die Untergrenze, ab der sich
+     * etwas ablesen laesst.
+     */
+    private fun eingabekarte(
+        ctx: Context,
+        stand: Gesundheit.Stand,
+        eingaben: Eingaben,
+    ): LinearLayout {
+        val k = ctx.karte()
+        k.addView(ctx.kartentitel("Wie war der Tag?"))
+
+        val reihe = ctx.reihe()
+        (1..5).forEach { stufe ->
+            val gewaehlt = stand.energie == stufe
+            reihe.addView(TextView(ctx).apply {
+                text = stufe.toString()
+                gravity = android.view.Gravity.CENTER
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f)
+                setTypeface(typeface, Typeface.BOLD)
+                setTextColor(ctx.farbe(
+                    if (gewaehlt) R.color.akzent_schrift else R.color.schrift_zart
+                ))
+                background = GradientDrawable().apply {
+                    setColor(ctx.farbe(if (gewaehlt) R.color.akzent else R.color.karte))
+                    cornerRadius = ctx.dp(10f).toFloat()
+                    if (!gewaehlt) setStroke(ctx.dp(1f), ctx.farbe(R.color.linie))
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    0, ctx.dp(44f), 1f
+                ).apply { marginEnd = ctx.dp(6f) }
+                setOnClickListener { eingaben.setzeEnergie(stufe) }
+            })
+        }
+        k.addView(reihe)
+        k.addView(ctx.zart(
+            if (stand.energie == null)
+                "1 heisst erschöpft, 5 heisst frisch. Eine Zahl am Tag, und in " +
+                    "drei Wochen sieht man, woran sie hängt."
+            else "Eingetragen. Ein Tippen ändert sie."
+        ))
+
+        k.addView(ctx.strich())
+        k.addView(ctx.kartentitel("Koffein"))
+        k.addView(ctx.fliesstext(
+            if (stand.koffeinMg == null || stand.koffeinMg <= 0) "Heute noch keines."
+            else (Zahlen.ganz(stand.koffeinMg) ?: "") + " mg" +
+                (Zahlen.uhrzeit(stand.koffeinLetzt)?.let { ", zuletzt um $it" } ?: "")
+        ))
+        val getraenke = ctx.reihe()
+        listOf("Kaffee" to 80, "Espresso" to 60, "Tee" to 40).forEach { (name, mg) ->
+            getraenke.addView(ctx.knopfLeise("+ $name") { eingaben.fuegeKoffein(mg) }.apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+                ).apply { marginEnd = ctx.dp(6f) }
+            })
+        }
+        k.addView(getraenke)
+        k.addView(ctx.zart(
+            "Die Milligramm sind Hausnummern — für die Frage »Kaffee nach 16 " +
+                "Uhr gegen Tiefschlaf« zählt vor allem der Zeitpunkt."
+        ))
+        return k
     }
 
     /**

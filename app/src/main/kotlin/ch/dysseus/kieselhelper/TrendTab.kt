@@ -44,7 +44,8 @@ object TrendTab {
         Gruppe("Ernährung", listOf("wasser", "supp_faellig", "supp_genommen")),
         Gruppe("Aktiv", listOf("aktiv")),
         Gruppe("Zusammenhänge", listOf(
-            "schlaf", "tief", "ruhepuls", "puls_min", "hrv", "schritte", "aktiv"
+            "schlaf", "tief", "ruhepuls", "puls_min", "hrv", "schritte", "aktiv",
+            "energie", "koffein_mg", "koffein_letzt",
         )),
     )
 
@@ -453,6 +454,9 @@ object TrendTab {
         listOf("Tiefschlaf", "tief", "HRV", "hrv"),
         listOf("Schritte", "schritte", "Schlaf", "schlaf"),
         listOf("Aktiv", "aktiv", "Ruhepuls", "ruhepuls"),
+        // Die beiden, fuer die es das Eintragen von Hand ueberhaupt gibt.
+        listOf("Schlaf", "schlaf", "Energie", "energie"),
+        listOf("Koffein", "koffein_mg", "Tiefschlaf", "tief"),
     )
 
     private fun zusammenhaenge(

@@ -32,7 +32,7 @@ import kotlinx.coroutines.withContext
  * Zahnrad steht fest, dazwischen scrollt der Inhalt und laesst sich von oben
  * zum Auffrischen ziehen.
  */
-class HauptActivity : ComponentActivity() {
+class HauptActivity : ComponentActivity(), Eingaben {
 
     private lateinit var wurzel: LinearLayout
     private lateinit var gesundheit: LinearLayout
@@ -233,12 +233,55 @@ class HauptActivity : ComponentActivity() {
         val profilHeute = Gesundheit(ich).bewegungsprofil(1)
         val profilTypisch = Gesundheit(ich).bewegungsprofil(14)
         gesundheit.addView(
-            GesundheitTab.baue(ich, stand, profilHeute, profilTypisch)
+            GesundheitTab.baue(ich, stand, profilHeute, profilTypisch, this@HauptActivity)
         )
 
         // Die Zahlen sind eben gelesen; das Widget soll nicht aelteres zeigen
         // als der Schirm daneben.
         GesundheitWidget.stosseAn(this@HauptActivity)
+    }
+
+    // --- Was kein Sensor weiss ---
+
+    /**
+     * Sofort schreiben, dann den Schirm neu bauen.
+     *
+     * Kein Zwischenzustand im Speicher der Activity: der Schirm liest, was in
+     * der Tabelle steht. Ein Knopf, der sich faerbt, bevor der Wert
+     * angekommen ist, luegt in genau dem Fall, in dem das Schreiben scheitert.
+     */
+    override fun setzeEnergie(wert: Int) {
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                Speicher(this@HauptActivity).merke(
+                    Einstellungen.heute(this@HauptActivity),
+                    mapOf("energie" to wert.toDouble()),
+                )
+            }
+            gesundheitLaden()
+        }
+    }
+
+    /**
+     * Koffein dazuzaehlen - und den Zeitpunkt merken.
+     *
+     * DER ZEITPUNKT IST DIE INTERESSANTE HAELFTE. Wie viel Koffein ein Tag
+     * hatte, sagt wenig; wann das letzte kam, erklaert die Nacht.
+     */
+    override fun fuegeKoffein(mg: Int) {
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                val heute = Einstellungen.heute(this@HauptActivity)
+                val jetzt = java.time.LocalTime.now()
+                val speicher = Speicher(this@HauptActivity)
+                speicher.zaehleDazu(heute, "koffein_mg", mg.toDouble())
+                speicher.merke(
+                    heute,
+                    mapOf("koffein_letzt" to (jetzt.hour * 60 + jetzt.minute).toDouble()),
+                )
+            }
+            gesundheitLaden()
+        }
     }
 
     private fun melde(text: String) {
