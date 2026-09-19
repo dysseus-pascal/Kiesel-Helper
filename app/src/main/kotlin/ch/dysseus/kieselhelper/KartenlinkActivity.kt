@@ -52,21 +52,15 @@ class KartenlinkActivity : ComponentActivity() {
                 fertig("Aus diesem Link liess sich kein Ziel lesen.")
                 return@launch
             }
-            if (!OsmandNavigation.verbunden) {
-                // Der Dienst haelt die Verbindung; laeuft er gerade nicht,
-                // einmal anstossen und einen Augenblick geben.
-                EmpfangsDienst.starte(this@KartenlinkActivity)
-                OsmandNavigation.versucheErneut(this@KartenlinkActivity)
-                kotlinx.coroutines.delay(1200)
-            }
-
+            // KEIN WARTEN AUF DIE AIDL-VERBINDUNG MEHR. Uebergeben wird per
+            // Intent; der startet OsmAnd selbst und braucht weder einen
+            // gebundenen Dienst noch die Freischaltung unter Plugins.
             val aus = Kartenlink.uebergib(this@KartenlinkActivity, ziel)
 
             if (aus.geschafft) {
                 Verlauf(this@KartenlinkActivity).merkeMeldung(
                     "Kartenlink an OsmAnd (" + aus.beschreibung + ")"
                 )
-                OsmandNavigation.holeNachVorn(this@KartenlinkActivity)
                 finish()
             } else {
                 fertig(

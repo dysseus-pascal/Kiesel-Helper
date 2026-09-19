@@ -309,18 +309,9 @@ class EinstellungenActivity : ComponentActivity() {
                 linkbefund.text = gefunden
                 return@launch
             }
-            if (!OsmandNavigation.verbunden) {
-                EmpfangsDienst.starte(this@EinstellungenActivity)
-                OsmandNavigation.versucheErneut(this@EinstellungenActivity)
-                kotlinx.coroutines.delay(1200)
-            }
-
             linkbefund.text = gefunden + "\n\nWird übergeben …"
             val aus = Kartenlink.uebergib(this@EinstellungenActivity, ziel)
             linkbefund.text = gefunden + "\n\n" + if (aus.geschafft) {
-                // NACH VORNE HOLEN, nicht nur uebergeben: die Fuehrung
-                // laeuft sonst im Hintergrund, und man sucht OsmAnd selbst.
-                OsmandNavigation.holeNachVorn(this@EinstellungenActivity)
                 "Übergeben — " + aus.beschreibung
             } else {
                 "OsmAnd hat abgelehnt (" + aus.weg + "). Meist fehlt dort " +

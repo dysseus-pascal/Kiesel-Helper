@@ -461,6 +461,22 @@ läuft sonst im Hintergrund, und man sucht die Karte selbst.
 Antwort, höchstens fünf Sprünge. Eine Google-Maps-Seite ist ein Megabyte
 JavaScript, und gesucht ist nur das Ziel der Umleitung.
 
+**Übergeben wird per Intent, nicht über die AIDL-Schnittstelle.** Deren
+`navigate()` lieferte `true` und OsmAnd tat nichts: der Aufruf kommt an,
+solange der Dienst gebunden ist — ob die Karte dahinter ihn *ausführen* kann,
+sagt die Rückgabe nicht. Bei einer App, die gerade erst startet, verfällt er
+still.
+
+Ein Intent hat diese Lücke nicht: er startet OsmAnd **mit** dem Ziel, und wenn
+niemand ihn annimmt, fliegt eine Ausnahme, die man sieht. Er braucht ausserdem
+keine Freischaltung unter *Plugins* — für Kartenlinks fällt diese Hürde damit
+ganz weg. Zwei Formen, in dieser Reihenfolge:
+
+1. `osmand.api://navigate?dest_lat=…&dest_lon=…&force=true` — startet die
+   Führung sofort.
+2. `geo:lat,lon?q=…` — zeigt den Ort auf der Karte. Ohne Koordinate wird daraus
+   `geo:0,0?q=<Name>`, und OsmAnd sucht selbst.
+
 **Zwei Intent-Filter, nicht einer** — und das ist kein Schönheitsfehler. Alle
 `<data>`-Zeilen *innerhalb* eines Filters verschmilzt Android zu **einer**
 Bedingung: jedes Schema mal jeden Host mal jeden Pfad. Stand irgendwo ein

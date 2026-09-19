@@ -169,31 +169,42 @@ object Kartenlink {
      * war: der Name trifft den Eingang, das @lat,lon in einem Google-Link ist
      * nur die Bildmitte. Stimmt - aber OsmAnds Suche ist offline und findet
      * nur, was in der geladenen Karte steht und dort auch so heisst. Im
-     * Versuch fand sie eine ganz gewoehnliche Adresse nicht, und ein Ziel, das
+     * Versuch fand sie eine gewoehnliche Adresse nicht, und ein Ziel, das
      * nicht ankommt, ist schlechter als eins, das zwanzig Meter danebenliegt.
      *
      * Bleibt nur ein Name, wird er ZUERST in eine Koordinate umgesetzt
-     * ([Ortsuche]) und erst dann uebergeben. OsmAnds eigene Suche ist der
-     * letzte Ausweg, nicht der erste.
+     * ([Ortsuche]) und erst dann uebergeben.
      *
-     * Laeuft im Hintergrund: die Ortsuche fragt womoeglich uebers Netz.
+     * UEBERGEBEN WIRD PER INTENT, nicht ueber die AIDL-Schnittstelle: deren
+     * `navigate()` lieferte `true` und OsmAnd tat nichts - der Aufruf kommt
+     * an, solange der Dienst gebunden ist, aber ob die Karte dahinter ihn
+     * ausfuehren kann, sagt die Rueckgabe nicht. Siehe
+     * [OsmandNavigation.oeffneZiel].
      */
-    suspend fun uebergib(context: Context, ziel: Kartenlink.Ziel): Uebergabe =
+    suspend fun uebergib(context: Context, ziel: Ziel): Uebergabe =
         withContext(Dispatchers.IO) {
             if (ziel.lat != null && ziel.lon != null) {
-                val gut = OsmandNavigation.navigiere(ziel.text, ziel.lat, ziel.lon)
-                return@withContext Uebergabe(gut, "Koordinate aus dem Link", ziel.lat, ziel.lon)
+                val weg = OsmandNavigation.oeffneZiel(
+                    context, ziel.lat, ziel.lon, ziel.text
+                )
+                return@withContext Uebergabe(
+                    weg != null,
+                    (weg ?: "abgelehnt") + ", Koordinate aus dem Link",
+                    ziel.lat, ziel.lon,
+                )
             }
             val name = ziel.text
             if (name.isNullOrBlank()) return@withContext Uebergabe(false, "kein Ziel")
 
             Ortsuche.finde(context, name)?.let { (lat, lon) ->
-                val gut = OsmandNavigation.navigiere(name, lat, lon)
-                return@withContext Uebergabe(gut, "Adresse umgesetzt", lat, lon)
+                val weg = OsmandNavigation.oeffneZiel(context, lat, lon, name)
+                return@withContext Uebergabe(
+                    weg != null, (weg ?: "abgelehnt") + ", Adresse umgesetzt", lat, lon
+                )
             }
             // Letzter Ausweg: OsmAnd selbst suchen lassen.
-            val gut = OsmandNavigation.sucheUndNavigiere(name, 0.0, 0.0)
-            Uebergabe(gut, "an OsmAnds Suche gegeben")
+            val weg = OsmandNavigation.oeffneZiel(context, null, null, name)
+            Uebergabe(weg != null, weg ?: "abgelehnt")
         }
 
     /** Was bei der Uebergabe herauskam - fuer den Verlauf und den Pruefstand. */

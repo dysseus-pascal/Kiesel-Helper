@@ -7,6 +7,7 @@ import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
+import java.net.URLEncoder
 import android.view.KeyEvent
 import net.osmand.aidlapi.IOsmAndAidlCallback
 import net.osmand.aidlapi.IOsmAndAidlInterface
@@ -37,9 +38,6 @@ import java.util.UUID
  * Aufruferliste; jede App darf sich anbinden. Nachgesehen im Manifest von
  * OsmAnd, nicht angenommen.
  */
-private typealias NavigateParams = net.osmand.aidlapi.navigation.NavigateParams
-private typealias NavigateSearchParams = net.osmand.aidlapi.navigation.NavigateSearchParams
-
 object OsmandNavigation {
 
     private const val TAG = PebbleEmpfaenger.TAG
@@ -192,75 +190,77 @@ object OsmandNavigation {
 
 
     /**
-     * OsmAnd ein Ziel geben und die Fuehrung starten.
+     * Ein Ziel an OsmAnd geben - ueber einen INTENT, nicht ueber die
+     * Schnittstelle.
      *
-     * KEIN START MITGEGEBEN. Mit `startLat = 0.0` nimmt OsmAnd die eigene
-     * Position - das ist fast immer gemeint, und es erspart dieser App eine
-     * Standortberechtigung, die sie sonst nirgends braucht.
+     * WARUM NICHT MEHR PER AIDL: `navigate()` lieferte `true` und OsmAnd tat
+     * nichts. Der Aufruf kommt an, solange der Dienst gebunden ist - ob die
+     * Karte dahinter schon laeuft und ihn ausfuehren kann, sagt die Rueckgabe
+     * nicht. Bei einer App, die gerade erst startet, verfaellt er still.
      *
-     * `force = true`, weil hier jemand gerade aktiv auf einen Link getippt
-     * hat: eine schon laufende Fuehrung soll dann weichen, nicht eine
-     * Rueckfrage erzeugen, die im Auto niemand beantwortet.
+     * Ein Intent hat diese Luecke nicht: er startet OsmAnd MIT dem Ziel, und
+     * wenn niemand ihn annimmt, fliegt eine Ausnahme, die man sieht. Er
+     * braucht ausserdem KEINE Freischaltung unter Plugins - die Huerde faellt
+     * fuer Kartenlinks damit ganz weg.
      *
-     * Rueckgabe false heisst: OsmAnd ist nicht verbunden oder hat abgelehnt -
-     * typischerweise, weil die App dort unter Plugins noch nicht
-     * freigeschaltet ist.
+     * ZWEI FORMEN, in dieser Reihenfolge:
+     *  1. `osmand.api://navigate` - startet die Fuehrung sofort.
+     *  2. `geo:` - zeigt den Ort auf der Karte. Das kann jede Karten-App, und
+     *     OsmAnd versteht darin auch eine Suchanfrage (`geo:0,0?q=...`).
+     *
+     * Rueckgabe ist der Weg, der genommen wurde, oder null.
      */
-    fun navigiere(name: String?, lat: Double, lon: Double, profil: String = "car"): Boolean =
-        try {
-            api?.navigate(
-                NavigateParams(
-                    null, 0.0, 0.0,
-                    name ?: "Ziel", lat, lon,
-                    profil, true, false,
-                )
-            ) ?: false
-        } catch (e: Exception) {
-            Log.w(PebbleEmpfaenger.TAG, "navigate: " + e.message)
-            false
+    fun oeffneZiel(
+        context: Context,
+        lat: Double?,
+        lon: Double?,
+        name: String?,
+        profil: String = "car",
+    ): String? {
+        val paket = osmandPaket(context) ?: return null
+
+        if (lat != null && lon != null) {
+            val titel = URLEncoder.encode(name ?: "Ziel", "UTF-8")
+            val fuehrung = "osmand.api://navigate" +
+                "?dest_lat=" + lat + "&dest_lon=" + lon +
+                "&dest_title=" + titel +
+                "&profile=" + profil + "&force=true"
+            if (starte(context, paket, fuehrung)) return "Führung gestartet"
+
+            // Zweiter Anlauf: den Ort wenigstens zeigen. Ein Tipp auf
+            // "Navigieren" fehlt dann noch, aber der Ort ist da.
+            val zeigen = "geo:" + lat + "," + lon +
+                "?q=" + lat + "," + lon + "(" + titel + ")"
+            if (starte(context, paket, zeigen)) return "Ort als geo: gezeigt"
+            return null
         }
 
-    /**
-     * Dasselbe fuer einen Link, der nur einen Namen traegt.
-     *
-     * Ein Google-Maps-Link auf ein Lokal enthaelt oft keine Koordinate,
-     * sondern nur dessen Namen. Dann sucht OsmAnd selbst - besser, als dem
-     * Menschen zu sagen, sein Link sei ungeeignet.
-     */
-    fun sucheUndNavigiere(
-        text: String,
-        naheLat: Double,
-        naheLon: Double,
-        profil: String = "car",
-    ): Boolean = try {
-        api?.navigateSearch(
-            NavigateSearchParams(
-                null, 0.0, 0.0,
-                text, naheLat, naheLon,
-                profil, true, false,
-            )
-        ) ?: false
+        // Ohne Koordinate: OsmAnd selbst suchen lassen. "geo:0,0?q=..." ist
+        // die uebliche Form dafuer und braucht keine eigene Schnittstelle.
+        if (name.isNullOrBlank()) return null
+        val suche = "geo:0,0?q=" + URLEncoder.encode(name, "UTF-8")
+        return if (starte(context, paket, suche)) "Suche an OsmAnd gegeben" else null
+    }
+
+    private fun starte(context: Context, paket: String, uri: String): Boolean = try {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW, android.net.Uri.parse(uri)).apply {
+                setPackage(paket)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        )
+        true
     } catch (e: Exception) {
-        Log.w(PebbleEmpfaenger.TAG, "navigateSearch: " + e.message)
+        // ActivityNotFoundException heisst: diese Form kennt OsmAnd nicht.
+        Log.i(PebbleEmpfaenger.TAG, "OsmAnd nimmt nicht: " + uri.take(40) + " - " + e.message)
         false
     }
 
-    /**
-     * OsmAnd nach vorne holen.
-     *
-     * Die Fuehrung laeuft nach [navigiere] schon - aber im Hintergrund. Wer
-     * eben ein Ziel uebergeben hat, will die Karte sehen und nicht selbst
-     * suchen gehen.
-     */
-    fun holeNachVorn(context: Context): Boolean {
-        val start = context.packageManager.getLaunchIntentForPackage("net.osmand.plus")
-            ?: context.packageManager.getLaunchIntentForPackage("net.osmand")
-            ?: context.packageManager.getLaunchIntentForPackage("net.osmand.dev")
-            ?: return false
-        start.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(start)
-        return true
-    }
+    /** Welche der drei OsmAnd-Fassungen installiert ist. */
+    private fun osmandPaket(context: Context): String? =
+        listOf("net.osmand.plus", "net.osmand", "net.osmand.dev").firstOrNull {
+            context.packageManager.getLaunchIntentForPackage(it) != null
+        }
 
     /** Ob gerade eine Verbindung zu OsmAnd steht. */
     val verbunden: Boolean get() = api != null
