@@ -107,6 +107,18 @@ object GesundheitTab {
                 stand.suppGenommen.da && stand.suppFaellig.da,
             ),
         ))
+        // WAS HEUTE ANSTEHT, namentlich. Eine Quote sagt, wie viel fehlt;
+        // sie sagt nicht, WAS fehlt - und danach greift man, wenn man vor dem
+        // Schrank steht.
+        if (stand.suppListe.isNotEmpty()) {
+            val liste = ctx.spalte()
+            stand.suppListe.forEach { eintrag ->
+                liste.addView(ctx.zart(
+                    (if (eintrag.genommen) "✓ " else "○ ") + eintrag.name
+                ))
+            }
+            ernaehrung.addView(liste)
+        }
         ernaehrung.addView(ctx.zart("Wasser, sieben Tage"))
         ernaehrung.addView(ctx.wochenbild(stand.wocheWasser, 8 * 300.0))
 

@@ -66,13 +66,18 @@ class PebbleEmpfaenger : BroadcastReceiver() {
         val ergebnis = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // Nur die Zahlen. Beide Aufgaben tragen Messwerte ein, und ein
-                // Messwert ist eine Zahl - Text kaeme hier nie vor.
+                // Zahlen UND Texte. Lange kamen nur Zahlen - ein Messwert ist
+                // eine Zahl. Seit SupCycle die Namen seiner Praeparate
+                // mitschickt, ist das nicht mehr wahr.
                 val zahlen = mutableMapOf<Int, Long>()
+                val texte = mutableMapOf<Int, String>()
                 for ((nummer, wert) in nachNummer) {
-                    (wert as? Wert.Zahl)?.let { zahlen[nummer] = it.zahl }
+                    when (wert) {
+                        is Wert.Zahl -> zahlen[nummer] = wert.zahl
+                        is Wert.Text -> texte[nummer] = wert.text
+                    }
                 }
-                Aufgaben.verarbeite(context, uuid, zahlen)?.let {
+                Aufgaben.verarbeite(context, uuid, zahlen, texte)?.let {
                     Verlauf(context).merkeMeldung(it)
                     Log.i(TAG, it)
                 }

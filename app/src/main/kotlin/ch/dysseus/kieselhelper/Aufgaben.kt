@@ -75,6 +75,13 @@ object Aufgaben {
     private const val SC_DUE = 10040
     private const val SC_TAKEN = 10041
 
+    /**
+     * Die Namen, seit SupCycle 0.10.0. Der Schluessel steht am ENDE der
+     * messageKeys - haette er irgendwo dazwischen gestanden, waeren alle
+     * folgenden Nummern verrutscht, und diese App traege still Unsinn ein.
+     */
+    private const val SC_NAMES = 10044
+
     /** Alle Uhr-Apps, von denen diese App ueberhaupt etwas annimmt. */
     val BEKANNTE_UHREN = setOf(DRINKTERVALL, HERZINTERVALL, SUPCYCLE)
 
@@ -91,11 +98,16 @@ object Aufgaben {
      * Kein Fehlercode: die App besteht im Kern aus einem Empfaenger, und ohne
      * diese Zeile saehe man ihr von aussen nie an, ob sie etwas tut.
      */
-    suspend fun verarbeite(context: Context, von: UUID, felder: Map<Int, Long>): String? =
+    suspend fun verarbeite(
+        context: Context,
+        von: UUID,
+        felder: Map<Int, Long>,
+        texte: Map<Int, String> = emptyMap(),
+    ): String? =
         when (von) {
             DRINKTERVALL -> wasser(context, felder)
             HERZINTERVALL -> herz(context, felder)
-            SUPCYCLE -> supplemente(context, felder)
+            SUPCYCLE -> supplemente(context, felder, texte)
             else -> null
         }
 
@@ -111,7 +123,11 @@ object Aufgaben {
      * Gezaehlt wird, was FAELLIG war und davon genommen wurde. Ein Praeparat,
      * das heute pausiert, gehoert in keine Quote.
      */
-    private suspend fun supplemente(context: Context, felder: Map<Int, Long>): String? {
+    private suspend fun supplemente(
+        context: Context,
+        felder: Map<Int, Long>,
+        texte: Map<Int, String>,
+    ): String? {
         val ymd = felder[SC_TODAY] ?: return null
         val faellig = felder[SC_DUE] ?: return null
         val genommen = felder[SC_TAKEN] ?: 0L
@@ -131,6 +147,16 @@ object Aufgaben {
         val davon = java.lang.Long.bitCount(genommen and faellig)
 
         if (!Riegel.neu(context, "supcycle", "$ymd:$faellig:$genommen")) return null
+
+        // Die Namen samt Bitmasken fuer die Liste von HEUTE. Sie stehen
+        // nicht im Tagesspeicher: dort gehoert je Tag eine Zahl hin, und
+        // eine Liste abgehakter Praeparate von vorletztem Dienstag hat
+        // niemand je gebraucht.
+        Supplemente.merke(
+            context, tag,
+            texte[SC_NAMES]?.split("\n").orEmpty(),
+            faellig, genommen,
+        )
 
         withContext(Dispatchers.IO) {
             Speicher(context).merke(tag, mapOf(

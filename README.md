@@ -180,7 +180,7 @@ Drei feste Aufgaben, **im Code**, nicht in einer Datei aus dem Netz:
 |---|---|---|
 | Drinktervall | Gesundheitsakte | jedes getrunkene Glas als Wassermenge, mit dem Zeitpunkt von der Uhr |
 | Herzintervall | Gesundheitsakte | die nächtliche RMSSD-Messung als Herzratenvariabilität |
-| SupCycle | **eigener Speicher** | wie viele Präparate heute anstanden und wie viele davon genommen sind |
+| SupCycle | **eigener Speicher** | wie viele Präparate heute anstanden, wie viele davon genommen sind — und seit SupCycle 0.10.0 ihre Namen |
 | OsmAnd | Kieselstrasse | Abbiegeart, Entfernung, Strasse, Ankunftszeit |
 
 **SupCycle geht nicht in die Akte, und das ist kein Versehen.** Health Connect
@@ -192,8 +192,14 @@ fremde Tabelle passt, wäre der schlechteste aller Wege.
 Geschickt wird nichts Neues: SupCycle meldet Tag, Fälligkeits- und
 Abhak-Bitmaske ohnehin nach jeder Einnahme, für seine eigenen Timeline-Pins.
 Gezählt wird, was **fällig war** und davon genommen wurde — ein Präparat, das
-heute pausiert, gehört in keine Quote. Namen kommen nicht mit; die kennt nur
-SupCycles Konfigseite.
+heute pausiert, gehört in keine Quote.
+
+**Die Namen kommen seit SupCycle 0.10.0 mit**, alle sechs Plätze durch
+Zeilenumbruch getrennt, auch die leeren: die Bitmasken zählen Plätze, nicht
+Einträge, und wer die leeren wegliesse, verschöbe jeden Namen dahinter. Damit
+steht unter der Quote, *was* heute noch offen ist — danach greift man, wenn man
+vor dem Schrank steht. Mit einer älteren Fassung von SupCycle bleibt es bei den
+Zahlen; die zuletzt bekannten Namen werden dann nicht gelöscht.
 
 Auf jedem Eintrag liegt ein **Riegel** gegen Doppelte: die Uhr schickt ihren
 Stand bei jeder Gelegenheit mit, nicht nur beim Trinken. Ohne ihn stünde
