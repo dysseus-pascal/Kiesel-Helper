@@ -46,8 +46,13 @@ object GesundheitTab {
             ctx.wert(stand.distanz, Zahlen.eine(stand.distanz.zahl), "km"),
             ctx.wert(stand.kalorien, Zahlen.ganz(stand.kalorien.zahl), "kcal"),
         ))
-        bewegung.addView(ctx.zart("Schritte, sieben Tage"))
-        bewegung.addView(ctx.wochenbild(stand.wocheSchritte, Gesundheit.ZIEL_SCHRITTE))
+        // OHNE HEUTE. Ein halber Tag neben ganzen liest sich wie ein
+        // schwacher Tag; oben steht der laufende Stand ohnehin, und zwar
+        // als das, was er ist.
+        bewegung.addView(ctx.zart("Schritte, die sieben Tage davor"))
+        bewegung.addView(ctx.wochenbild(
+            stand.wocheSchritte.dropLast(1), Gesundheit.ZIEL_SCHRITTE
+        ))
         s.addView(bewegung)
 
         // --- Schlaf ---
@@ -70,11 +75,12 @@ object GesundheitTab {
         }
         val ideal = Einstellungen.schlafziel(ctx).toDouble()
         schlaf.addView(ctx.zart(
-            "Sieben Nächte; die farbige Linie ist dein Ideal von " +
-                (Zahlen.dauer(ideal) ?: "") + "."
+            "Sieben Nächte. Die Linie ist dein Ideal von " +
+                (Zahlen.dauer(ideal) ?: "") + "; was darüber liegt, steht " +
+                "in eigener Farbe."
         ))
         schlaf.addView(ctx.wochenbild(
-            stand.wocheSchlaf, ziel = ideal, marke = ideal
+            stand.wocheSchlaf.takeLast(Gesundheit.TAGE), ziel = ideal, marke = ideal
         ) { Zahlen.dauer(it) ?: "" })
         s.addView(schlaf)
 
@@ -89,8 +95,14 @@ object GesundheitTab {
             ctx.wert(stand.pulsTief, Zahlen.ganz(stand.pulsTief.zahl), "bpm"),
             ctx.wert(stand.pulsHoch, Zahlen.ganz(stand.pulsHoch.zahl), "bpm"),
         ))
-        herz.addView(ctx.zart("Jeder Punkt eine Messung; die Linie ist der gleitende Median, gestrichelt der Ruhepuls"))
-        herz.addView(ctx.pulsbild(stand.pulsverlauf, stand.ruhepuls.zahl))
+        herz.addView(ctx.zart(
+            "Die letzten 24 Stunden — die Tagesgrenze ist eine Zählgrenze, " +
+                "kein Sichtschutz. Jeder Punkt eine Messung, die Linie der " +
+                "gleitende Median, gestrichelt der Ruhepuls."
+        ))
+        herz.addView(ctx.pulsbild(
+            stand.pulsverlauf, stand.ruhepuls.zahl, beginnMinute = stand.pulsBeginn
+        ))
         if (stand.ruhepuls.geschaetzt) {
             herz.addView(ctx.zart(
                 "Das ≈ beim Ruhepuls heisst: niemand hat einen eingetragen. " +
@@ -124,7 +136,7 @@ object GesundheitTab {
             ernaehrung.addView(liste)
         }
         ernaehrung.addView(ctx.zart("Wasser, sieben Tage"))
-        ernaehrung.addView(ctx.wochenbild(stand.wocheWasser, 8 * 300.0))
+        ernaehrung.addView(ctx.wochenbild(stand.wocheWasser.takeLast(Gesundheit.TAGE), 8 * 300.0))
 
         if (stand.wocheSuppFaellig.any { it.zahl != null }) {
             ernaehrung.addView(ctx.zart("Supplemente: hell geplant, dunkel genommen"))
@@ -132,7 +144,7 @@ object GesundheitTab {
             // liessen offen, ob "3 genommen" von drei oder von acht war.
             val genommen = stand.wocheSuppGenommen.associate { it.tag to it.zahl }
             ernaehrung.addView(ctx.saeulenbild(
-                stand.wocheSuppFaellig.map { t ->
+                stand.wocheSuppFaellig.takeLast(Gesundheit.TAGE).map { t ->
                     Saeule(
                         t.tag.dayOfWeek.getDisplayName(
                             java.time.format.TextStyle.SHORT, java.util.Locale.getDefault()

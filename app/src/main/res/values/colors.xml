@@ -27,4 +27,8 @@
     <color name="phase_rem">#7A6FA8</color>
     <color name="phase_leicht">#8FBECB</color>
     <color name="phase_wach">#C98A5E</color>
+
+    <!-- Was ueber dem selbst gesetzten Ideal liegt. Gruenlich, aber leise:
+         es ist eine Auskunft, kein Lob. -->
+    <color name="ueber_ziel">#6FA88C</color>
 </resources>

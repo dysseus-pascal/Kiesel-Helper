@@ -25,4 +25,7 @@
     <color name="phase_rem">#9B8ED0</color>
     <color name="phase_leicht">#A7D2DD</color>
     <color name="phase_wach">#DDA06F</color>
+
+    <!-- Bei Nacht heller, sonst verschwindet es im dunklen Balken. -->
+    <color name="ueber_ziel">#84C4A4</color>
 </resources>

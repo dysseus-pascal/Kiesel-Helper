@@ -116,6 +116,8 @@ class Gesundheit(private val context: Context) {
         val wocheSuppFaellig: List<Tageswert>,
         val wocheSuppGenommen: List<Tageswert>,
         val pulsverlauf: List<Punkt>,
+        /** Uhrzeit des linken Rands im Pulsbild, als Minute des Tages. */
+        val pulsBeginn: Int,
         val gelesen: Instant,
     )
 
@@ -157,6 +159,18 @@ class Gesundheit(private val context: Context) {
 
         /** Sieben Tage im Wochenbild - eine Woche liest man auf einen Blick. */
         const val TAGE = 7
+
+        /**
+         * Geholt wird ein Tag mehr, als ein Bild zeigt.
+         *
+         * WER DEN HEUTIGEN BALKEN ZEIGT, ZEIGT EINEN HALBEN TAG neben ganzen.
+         * Um zehn Uhr morgens steht er auf einem Drittel, und das Bild sagt
+         * "heute war schwach", wo "heute ist noch nicht vorbei" gilt. Manche
+         * Bilder brauchen ihn trotzdem - Wasser und Supplemente etwa, wo man
+         * genau wissen will, was heute noch fehlt. Deshalb kommt der Tag mit
+         * und jedes Bild entscheidet selbst.
+         */
+        const val TAGE_GEHOLT = TAGE + 1
 
         /** So viele Pulspunkte passen auf einen Telefonschirm, ohne zu kleben. */
         const val PUNKTE_MAX = 400
@@ -291,7 +305,8 @@ class Gesundheit(private val context: Context) {
             wocheSchlaf = wocheSchlaf(klient, heute),
             wocheSuppFaellig = suppWocheF,
             wocheSuppGenommen = suppWocheG,
-            pulsverlauf = pulsverlauf(klient, tag),
+            pulsverlauf = pulsverlauf(klient),
+            pulsBeginn = pulsBeginn(),
             gelesen = Instant.now(),
         )
 
@@ -572,7 +587,7 @@ class Gesundheit(private val context: Context) {
                         StepsRecord.COUNT_TOTAL, HydrationRecord.VOLUME_TOTAL
                     ),
                     timeRangeFilter = TimeRangeFilter.between(
-                        tagBeginn(heute.minusDays((TAGE - 1).toLong())),
+                        tagBeginn(heute.minusDays((TAGE_GEHOLT - 1).toLong())),
                         LocalDateTime.now(zone),
                     ),
                     timeRangeSlicer = Period.ofDays(1),
@@ -587,8 +602,8 @@ class Gesundheit(private val context: Context) {
                 else -> e.result[HydrationRecord.VOLUME_TOTAL]?.inMilliliters
             }
         }
-        return (0 until TAGE).map { i ->
-            val t = heute.minusDays((TAGE - 1 - i).toLong())
+        return (0 until TAGE_GEHOLT).map { i ->
+            val t = heute.minusDays((TAGE_GEHOLT - 1 - i).toLong())
             Tageswert(t, nach[t])
         }
     }
@@ -604,7 +619,7 @@ class Gesundheit(private val context: Context) {
     private suspend fun wocheSchlaf(
         klient: HealthConnectClient,
         heute: LocalDate,
-    ): List<Tageswert> = (0 until TAGE).map { i ->
+    ): List<Tageswert> = (0 until TAGE_GEHOLT).map { i ->
         val tag = heute.minusDays((TAGE - 1 - i).toLong())
         Tageswert(tag, fange("Schlafwoche") {
             klient.aggregate(
@@ -631,18 +646,26 @@ class Gesundheit(private val context: Context) {
      * Wolke, sondern einen Balken. Ausgeduennt wird gleichmaessig, damit die
      * Form erhalten bleibt.
      */
-    private suspend fun pulsverlauf(
-        klient: HealthConnectClient,
-        tag: TimeRangeFilter,
-    ): List<Punkt> {
+    private suspend fun pulsverlauf(klient: HealthConnectClient): List<Punkt> {
+        val jetzt = Instant.now()
+        val beginn = jetzt.minus(Duration.ofHours(24))
         val saetze = fange("Pulsverlauf") {
-            klient.readRecords(ReadRecordsRequest(HeartRateRecord::class, tag)).records
+            klient.readRecords(
+                ReadRecordsRequest(
+                    HeartRateRecord::class, TimeRangeFilter.between(beginn, jetzt)
+                )
+            ).records
         } ?: return emptyList()
 
         val alle = saetze.flatMap { satz ->
             satz.samples.map { probe ->
-                val z = LocalDateTime.ofInstant(probe.time, zone)
-                Punkt(z.hour * 60 + z.minute, probe.beatsPerMinute.toDouble())
+                // Minuten SEIT FENSTERBEGINN, nicht seit Mitternacht: das
+                // Fenster laeuft ueber die Tagesgrenze hinweg.
+                Punkt(
+                    (Duration.between(beginn, probe.time).toMinutes()).toInt()
+                        .coerceIn(0, 1440),
+                    probe.beatsPerMinute.toDouble(),
+                )
             }
         }.sortedBy { it.minute }
 
@@ -747,6 +770,19 @@ class Gesundheit(private val context: Context) {
         )
     }
 
+    /**
+     * Wo das Pulsfenster anfaengt - als Minute des Tages.
+     *
+     * DIE TAGESGRENZE IST NUR EINE ZAEHLGRENZE. Wer sie auf sechs Uhr setzt,
+     * will trotzdem den Verlauf der letzten Nacht sehen; ein Bild, das um
+     * sechs anfaengt, verschweigt ihn. Deshalb zeigt das Pulsbild die letzten
+     * vierundzwanzig Stunden, egal wo der Tag beginnt.
+     */
+    private fun pulsBeginn(): Int {
+        val z = LocalDateTime.now(zone).minusHours(24)
+        return z.hour * 60 + z.minute
+    }
+
     /** Sieben Tage einer Spalte aus dem eigenen Speicher. */
     private fun wocheAusSpeicher(
         speicher: Speicher,
@@ -754,8 +790,8 @@ class Gesundheit(private val context: Context) {
         heute: LocalDate,
     ): List<Tageswert> {
         val nach = speicher.reihe(spalte).toMap()
-        return (0 until TAGE).map { i ->
-            val t = heute.minusDays((TAGE - 1 - i).toLong())
+        return (0 until TAGE_GEHOLT).map { i ->
+            val t = heute.minusDays((TAGE_GEHOLT - 1 - i).toLong())
             Tageswert(t, nach[t])
         }
     }

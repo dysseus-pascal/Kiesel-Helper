@@ -53,9 +53,9 @@ Zu jeder Karte ein Bild - eine Zahl allein sagt nicht, ob sie hoch ist.
 
 | Karte | Bild |
 |---|---|
-| Bewegung | Schritte der letzten sieben Tage, mit Ziellinie |
+| Bewegung | Schritte der sieben Tage **vor** heute, mit Ziellinie |
 | Schlaf | die Nacht in Phasen (tief, REM, leicht, wach) + sieben Nächte |
-| Herz | Punktewolke aller Pulsmessungen des Tages, mit gleitendem Median als Trendlinie; im Trend dieselbe Wolke über 14 Tage |
+| Herz | Punktewolke der letzten **24 Stunden**, mit gleitendem Median; im Trend dieselbe Wolke über 14 Tage |
 | Ernährung | Wasser über sieben Tage, dazu die Supplemente: hell geplant, dunkel genommen |
 
 Selbst gezeichnet, ohne Diagramm-Bibliothek: die drei Bilder zusammen sind
@@ -66,6 +66,17 @@ rosa gemacht hat.
 **Ein Bild behauptet schnell mehr, als es weiss.** Ein Tag ohne Eintrag
 bekommt darum keinen Balken der Höhe null, sondern gar keinen, und eine Nacht
 ohne Phasen keinen geviertelten Balken.
+
+**Der laufende Tag steht nicht im Schrittebild.** Um zehn Uhr morgens stünde er
+auf einem Drittel neben ganzen Tagen, und das Bild sagte »heute war schwach«,
+wo »heute ist noch nicht vorbei« gilt. Oben steht er ohnehin, und zwar als das,
+was er ist. Wasser und Supplemente behalten ihn: dort will man genau wissen,
+was heute noch fehlt.
+
+**Das Pulsbild zeigt die letzten 24 Stunden**, nicht den laufenden Tag. Die
+Tagesgrenze ist eine Zählgrenze, kein Sichtschutz — wer sie auf sechs Uhr
+setzt, will morgens trotzdem den Verlauf der Nacht sehen. Die Stundenstriche
+nennen deshalb die echte Uhrzeit, nicht die Stunde seit Bildanfang.
 
 ### Der Ruhepuls kommt in drei Anläufen
 
@@ -259,7 +270,9 @@ bedeutet; wer neun braucht, sähe eine erfüllte Vorgabe, wo eine kurze Nacht
 war.
 
 Der gesetzte Wert steht als **farbige Linie** im Nachtbild und im
-Wochenprofil — abgesetzt von der gestrichelten grauen Linie, die den *Schnitt*
+Wochenprofil, und **was darüber hinausgeht, steht in eigener Farbe** — leise,
+denn es ist eine Auskunft und kein Lob. Ohne sie müsste man jede Balkenspitze
+mit der Linie vergleichen; mit ihr sieht man es im Vorbeigehen — abgesetzt von der gestrichelten grauen Linie, die den *Schnitt*
 zeigt: die eine ist gerechnet, die andere gesetzt. Und der Trend zählt, **in
 wie vielen Nächten** er erreicht wurde und wie weit der Schnitt darüber oder
 darunter liegt.

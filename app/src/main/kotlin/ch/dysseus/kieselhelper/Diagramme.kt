@@ -144,6 +144,21 @@ class SaeulenView(
                 )
                 stift.alpha = 255
 
+                // WAS UEBER DEM EIGENEN IDEAL LIEGT, bekommt eine eigene
+                // Farbe - leise, denn es ist eine Auskunft und kein Lob. Ohne
+                // sie muesste man die Balkenspitze mit der Linie vergleichen;
+                // mit ihr sieht man es im Vorbeigehen.
+                if (marke != null && marke > 0 && zahl > marke) {
+                    val markenY = kopfHoehe + hoehe *
+                        (1f - (marke / spitze).coerceIn(0.0, 1.0).toFloat())
+                    stift.color = context.farbe(R.color.ueber_ziel)
+                    stift.alpha = if (saeule.hervor) 255 else 170
+                    leinwand.drawRoundRect(
+                        RectF(links, oben, links + balken, markenY), ecke, ecke, stift
+                    )
+                    stift.alpha = 255
+                }
+
                 // Der Anteil sitzt IM Balken, von unten. Er wird dunkler
                 // gezeichnet, nicht schmaler - sonst waere es ein zweiter
                 // Balken, und der behauptete etwas anderes.
@@ -470,6 +485,14 @@ class PulsView(
     private val punkte: List<Gesundheit.Punkt>,
     private val ruhe: Double?,
     /**
+     * Welche Uhrzeit am linken Rand steht, als Minute des Tages.
+     *
+     * Das Bild zeigt nicht "den Tag", sondern ein Fenster von
+     * vierundzwanzig Stunden - die Tagesgrenze ist eine Zaehlgrenze und
+     * kein Sichtschutz. Die Stundenstriche nennen deshalb die echte Uhrzeit.
+     */
+    private val beginnMinute: Int = 0,
+    /**
      * Fruehere Tage, blass dahinter - der "typische Tag".
      *
      * Ist etwas da, zieht die Trendlinie durch die FRUEHEREN Punkte, nicht
@@ -540,11 +563,17 @@ class PulsView(
         fun y(wert: Double) = (boden - ((wert - unten) / spanne) * boden).toFloat()
         fun x(minute: Int) = breite * (minute / 1440f)
 
-        listOf(6, 12, 18).forEach { stunde ->
-            val sx = x(stunde * 60)
+        // Alle sechs Stunden ein Strich, beschriftet mit der Uhrzeit, die
+        // dort wirklich war.
+        listOf(360, 720, 1080).forEach { versatz ->
+            val sx = x(versatz)
             leinwand.drawLine(sx, 0f, sx, boden, gitter)
             schrift.textAlign = Paint.Align.CENTER
-            leinwand.drawText("$stunde", sx, height - context.dp(2f).toFloat(), schrift)
+            val stunde = ((beginnMinute + versatz) / 60) % 24
+            leinwand.drawText(
+                String.format("%02d", stunde), sx,
+                height - context.dp(2f).toFloat(), schrift,
+            )
         }
 
         val punktgroesse = context.dp(1.7f).toFloat()
@@ -604,8 +633,9 @@ fun Context.pulsbild(
     punkte: List<Gesundheit.Punkt>,
     ruhe: Double?,
     frueher: List<Gesundheit.Punkt> = emptyList(),
+    beginnMinute: Int = 0,
 ): View =
-    PulsView(this, punkte, ruhe, frueher).apply {
+    PulsView(this, punkte, ruhe, beginnMinute, frueher).apply {
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(124f)
         ).apply { topMargin = dp(10f) }
