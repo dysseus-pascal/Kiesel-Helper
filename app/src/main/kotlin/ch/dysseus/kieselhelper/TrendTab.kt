@@ -116,7 +116,7 @@ object TrendTab {
     ): LinearLayout {
         val s = ctx.spalte()
         val gruppe = GRUPPEN[gewaehlt]
-        val heute = LocalDate.now()
+        val heute = Einstellungen.heute(ctx)
         val (tage, seit) = umfang
 
         val genug = gruppe.spalten.any { (daten[it]?.size ?: 0) >= 2 }
@@ -184,7 +184,7 @@ object TrendTab {
 
         s.addView(ctx.abschnitt("VERLAUF"))
         val verlauf = ctx.karte()
-        verlauf.addView(ctx.saeulenbild(wochensaeulen(bild), ziel = bild.gesamt))
+        verlauf.addView(ctx.saeulenbild(wochensaeulen(ctx, bild), ziel = bild.gesamt))
         verlauf.addView(ctx.zart("Kalenderwochen, je der Schnitt eines Tages"))
         verlauf.addView(ctx.fliesstext(richtung(bild)))
         s.addView(verlauf)
@@ -201,6 +201,7 @@ object TrendTab {
         val tief = Auswertung.bild(daten["tief"].orEmpty(), heute)
         val tiefNachTag = tief.profil.associate { it.tag to it.mittel }
         val form: (Double) -> String = { Zahlen.dauer(it) ?: "" }
+        val ideal = Einstellungen.schlafziel(ctx).toDouble()
 
         s.addView(ctx.abschnitt("TYPISCHE WOCHE"))
         val woche = ctx.karte()
@@ -210,8 +211,13 @@ object TrendTab {
                        innen = tiefNachTag[p.tag])
             },
             ziel = gesamt.gesamt,
+            marke = ideal,
         ))
-        woche.addView(ctx.zart("Heller Balken: Schlaf gesamt. Dunkel: Tiefschlaf."))
+        woche.addView(ctx.zart(
+            "Heller Balken: Schlaf gesamt, dunkel der Tiefschlaf. Gestrichelt " +
+                "dein Schnitt, farbig dein Ideal."
+        ))
+        erreicht(ctx, woche, daten["schlaf"].orEmpty(), ideal, heute)
         woche.addView(ctx.fliesstext(
             buildString {
                 gesamt.gesamt?.let { append("Im Schnitt " + form(it)) }
@@ -234,6 +240,7 @@ object TrendTab {
                        innen = tiefWochen[w.montag])
             },
             ziel = gesamt.gesamt,
+            marke = ideal,
         ))
         verlauf.addView(ctx.zart("Kalenderwochen, je der Schnitt einer Nacht"))
         verlauf.addView(ctx.fliesstext(richtung(gesamt)))
@@ -360,7 +367,7 @@ object TrendTab {
 
         s.addView(ctx.abschnitt("WASSER, VERLAUF"))
         val verlauf = ctx.karte()
-        verlauf.addView(ctx.saeulenbild(wochensaeulen(wasser), ziel = wasser.gesamt))
+        verlauf.addView(ctx.saeulenbild(wochensaeulen(ctx, wasser), ziel = wasser.gesamt))
         verlauf.addView(ctx.zart("Kalenderwochen, je der Schnitt eines Tages"))
         verlauf.addView(ctx.fliesstext(richtung(wasser)))
         s.addView(verlauf)
@@ -507,6 +514,33 @@ object TrendTab {
         ))
     }
 
+    /**
+     * Die Bilanz gegen das eigene Ideal.
+     *
+     * DAS IST DER ZWECK DES IDEALWERTS: nicht ein Strich im Bild, sondern die
+     * Frage "wie oft habe ich ihn erreicht". Gezaehlt werden ganze Naechte,
+     * nicht Anteile - halb erreicht gibt es beim Schlafen nicht.
+     */
+    private fun erreicht(
+        ctx: Context,
+        karte: LinearLayout,
+        reihe: List<Pair<LocalDate, Double>>,
+        ideal: Double,
+        heute: LocalDate,
+    ) {
+        val naechte = reihe.filter { it.first < heute }
+        if (naechte.isEmpty()) return
+        val gut = naechte.count { it.second >= ideal }
+        val schnitt = naechte.map { it.second }.average()
+        val unterschied = schnitt - ideal
+        karte.addView(ctx.fliesstext(
+            "Dein Ideal " + (Zahlen.dauer(ideal) ?: "") + " — erreicht in " +
+                gut + " von " + naechte.size + " Nächten. Im Schnitt " +
+                (Zahlen.dauer(kotlin.math.abs(unterschied)) ?: "") +
+                (if (unterschied >= 0) " darüber." else " darunter.")
+        ))
+    }
+
     // --- Kleinkram -----------------------------------------------------------
 
     /**
@@ -524,8 +558,8 @@ object TrendTab {
         return karte.entries.sortedBy { it.key }.map { it.key to it.value }
     }
 
-    private fun wochensaeulen(bild: Auswertung.Bild): List<Saeule> {
-        val diese = LocalDate.now().with(DayOfWeek.MONDAY)
+    private fun wochensaeulen(ctx: Context, bild: Auswertung.Bild): List<Saeule> {
+        val diese = Einstellungen.heute(ctx).with(DayOfWeek.MONDAY)
         return bild.wochen.map { w -> Saeule(kw(w.montag), w.mittel, hervor = w.montag == diese) }
     }
 

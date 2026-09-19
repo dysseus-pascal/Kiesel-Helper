@@ -75,8 +75,14 @@ Anzeige aus. Deshalb der Weg von hinten:
 
 1. der eingetragene Ruhepuls von heute oder gestern;
 2. sonst der jüngste eingetragene aus einer Woche;
-3. sonst der **tiefste gemessene Puls der Nacht** — und der steht dann mit
-   einem **≈** da. Das ist nicht dasselbe, und es wird auch nicht so getan.
+3. sonst der **Durchschnitt der zehn tiefsten Messungen der Nacht** — und der
+   steht dann mit einem **≈** da. Das ist nicht dasselbe, und es wird auch
+   nicht so getan.
+
+Zehn und nicht eine: ein einzelner Tiefstwert ist kein Ruhepuls. Ein
+verrutschter Sensor, eine schlechte Auflage, und es steht 41 da, wo 54 wäre.
+Ein einfacher Durchschnitt genügt — die Auswahl der zehn tiefsten *ist* schon
+die Filterung.
 
 ### Das Widget
 
@@ -84,10 +90,20 @@ Vier Kacheln mit Balken — Schritte, Aktiv, Schlaf, Wasser — und darunter lei
 Ruhepuls, HRV und Distanz. Vier und nicht acht: auf dem Startbildschirm liest
 man im Vorbeigehen, und nur was ein Ziel hat, lohnt dort den Blick.
 
-Es frischt sich **alle 30 Minuten** auf; kürzer lässt Android nicht zu. Dazu
-nach jedem eigenen Eintrag (Wasser, HRV) und immer dann, wenn der
-Gesundheits-Schirm gerade gelesen hat — ein Widget, das älter ist als die App,
-die eben daneben offen war, sieht nach Fehler aus.
+Oben rechts steht, **wie alt** der Stand ist — »vor 4 min«, in ganzen Minuten.
+Nicht die Uhrzeit: »21:12« beantwortet die Frage nicht, die man am Widget hat.
+Daneben ein Zeichen, das sofort neu liest.
+
+Aufgefrischt wird, sobald etwas eingetragen wird (Wasser, HRV, Supplemente),
+sobald der Gesundheits-Schirm gelesen hat — und **spätestens alle zehn
+Minuten**. Androids eigener Takt kann nicht unter eine halbe Stunde; die
+Zehn-Minuten-Grenze zieht deshalb der Minutentakt des laufenden Dienstes.
+
+**Der Takt kostet nichts.** ACTION_TIME_TICK schickt das System jede Minute an
+angemeldete Empfänger, aber nur bei eingeschaltetem Bildschirm — also genau
+dann, wenn jemand hinschauen könnte. Ein eigener Wecker im Minutentakt wäre
+1440 Weckrufe am Tag für eine Textzeile. Zwischendurch wird nur der Text
+nachgezogen, nicht das ganze Widget.
 
 ### Die Ziele
 
@@ -96,11 +112,11 @@ die eben daneben offen war, sieht nach Fehler aus.
 | Wasser | 8 × 300 ml | kommt aus Drinktervall |
 | Schritte | 10 000 | Hausnummer |
 | Aktiv | 30 min | Hausnummer |
-| Schlaf | 8 h | Hausnummer |
+| Schlaf | **einstellbar** | dein Idealwert, siehe unten |
 
-Nur das Wasserziel ist echt. Die anderen drei stehen als Konstanten in
-`Gesundheit.kt`; wer andere will, ändert sie dort. Eine Einstellung dafür wäre
-ein Bildschirm mehr für eine Zahl, die man einmal im Leben setzt.
+Wasser kommt aus Drinktervall, der Schlaf aus den Einstellungen. Schritte und
+Aktiv bleiben Konstanten in `Gesundheit.kt`: zehntausend und dreissig Minuten
+sind Hausnummern, an denen sich ohnehin niemand misst.
 
 ## Der eigene Speicher
 
@@ -230,6 +246,43 @@ ein Loch in den Körper.
 wirklich nichts mehr nachkommt: die drei Reiter laden hintereinander, nicht
 nebeneinander. Nebenläufig wäre es schneller, aber dann müsste jemand zählen,
 wann der Letzte fertig ist.
+
+## Einstellungen
+
+Hinter dem Zahnrad, und bewusst **zwei** Werte — nicht sieben.
+
+### Mein Idealwert für den Schlaf
+
+Acht Stunden sind ein Mittelwert über Menschen, keine Vorgabe für einen. Wer
+mit sieben auskommt, bekäme jede Nacht einen Balken vorgehalten, der nichts
+bedeutet; wer neun braucht, sähe eine erfüllte Vorgabe, wo eine kurze Nacht
+war.
+
+Der gesetzte Wert steht als **farbige Linie** im Nachtbild und im
+Wochenprofil — abgesetzt von der gestrichelten grauen Linie, die den *Schnitt*
+zeigt: die eine ist gerechnet, die andere gesetzt. Und der Trend zählt, **in
+wie vielen Nächten** er erreicht wurde und wie weit der Schnitt darüber oder
+darunter liegt.
+
+Gestellt wird er in Viertelstunden mit zwei Knöpfen. Wer sein Schlafbedürfnis
+auf fünf Minuten genau kennt, misst es nicht mit einer Uhr am Handgelenk.
+
+### Wann ein Tag beginnt
+
+Wer um zwei Uhr noch wach ist, hat seine Schritte am Vortag gemacht — der
+Kalender sieht das anders. Mit einer Grenze um sechs zählt die Nacht zu dem
+Tag, an dem sie begann, und das Widget zeigt um fünf Uhr morgens nicht einen
+frisch begonnenen, leeren Tag.
+
+Die Grenze gilt für **alles**, was »heute« heisst: Tageswerte, Wochenbilder,
+Trend, Supplementliste, Widget. Entschieden wird sie an **einer** Stelle
+(`Einstellungen.heute`) — hätte jede Rechnung ihr eigenes `LocalDate.now()`,
+stünde um halb sechs morgens in einem Bild der eine und im nächsten der andere
+Tag.
+
+**Der Schlaf hat sein eigenes Fenster.** Eine Nacht beginnt um 18 Uhr, egal wo
+der Tag beginnt: beides zu vermischen hiesse, bei einer Grenze um sechs die
+halbe Nacht auf zwei Tage zu verteilen.
 
 ## Was sie einträgt
 

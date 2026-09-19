@@ -75,7 +75,10 @@ object Supplemente {
         } catch (e: Exception) {
             return null
         }
-        if (datum != LocalDate.now()) return null
+        // An der eingestellten Tagesgrenze gemessen: wer um fuenf Uhr
+        // morgens aufs Widget schaut, sieht sonst eine leere Liste, obwohl
+        // sein Tag noch laeuft.
+        if (datum != Einstellungen.heute(context)) return null
         return Stand(
             datum,
             laden.getString("namen", "")?.split("\n").orEmpty(),

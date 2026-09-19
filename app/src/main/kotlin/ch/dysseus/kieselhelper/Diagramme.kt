@@ -69,6 +69,14 @@ class SaeulenView(
     ctx: Context,
     private val saeulen: List<Saeule>,
     private val ziel: Double?,
+    /**
+     * Eine zweite Linie in der Akzentfarbe - der selbst gesetzte Wert.
+     *
+     * Sie ist absichtlich anders gefaerbt als die gestrichelte Ziellinie:
+     * die eine ist gerechnet (ein Schnitt), die andere gesetzt (ein Anspruch).
+     * Zwei graue Striche waeren zwei Aussagen in einer Farbe.
+     */
+    private val marke: Double? = null,
 ) : View(ctx) {
 
     private val stift = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -83,6 +91,11 @@ class SaeulenView(
         pathEffect = DashPathEffect(
             floatArrayOf(context.dp(3f).toFloat(), context.dp(3f).toFloat()), 0f
         )
+    }
+    private val markenstift = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = context.dp(1.5f).toFloat()
+        color = context.farbe(R.color.akzent)
     }
 
     private fun sp(wert: Float) = TypedValue.applyDimension(
@@ -181,12 +194,22 @@ class SaeulenView(
             val weg = Path().apply { moveTo(0f, y); lineTo(breite, y) }
             leinwand.drawPath(weg, zielstift)
         }
+
+        // Die eigene Marke zuletzt, damit sie oben liegt.
+        if (marke != null && marke > 0 && marke <= spitze) {
+            val y = kopfHoehe + hoehe * (1f - (marke / spitze).toFloat())
+            leinwand.drawLine(0f, y, breite, y, markenstift)
+        }
     }
 }
 
 /** Ein Saeulenbild, fertig eingehaengt. */
-fun Context.saeulenbild(saeulen: List<Saeule>, ziel: Double? = null): View =
-    SaeulenView(this, saeulen, ziel).apply {
+fun Context.saeulenbild(
+    saeulen: List<Saeule>,
+    ziel: Double? = null,
+    marke: Double? = null,
+): View =
+    SaeulenView(this, saeulen, ziel, marke).apply {
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(96f)
         ).apply { topMargin = dp(10f) }
@@ -202,9 +225,10 @@ fun Context.saeulenbild(saeulen: List<Saeule>, ziel: Double? = null): View =
 fun Context.wochenbild(
     werte: List<Gesundheit.Tageswert>,
     ziel: Double? = null,
+    marke: Double? = null,
     beschriftung: (Double) -> String = { Zahlen.ganz(it) ?: "" },
 ): View {
-    val heute = LocalDate.now()
+    val heute = Einstellungen.heute(this)
     return saeulenbild(
         werte.map { tag ->
             Saeule(
@@ -215,6 +239,7 @@ fun Context.wochenbild(
             )
         },
         ziel,
+        marke,
     )
 }
 

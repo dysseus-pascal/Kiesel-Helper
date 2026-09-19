@@ -147,7 +147,13 @@ class Gesundheit(private val context: Context) {
          */
         const val ZIEL_SCHRITTE = 10000.0
         const val ZIEL_AKTIV_MIN = 30.0
-        const val ZIEL_SCHLAF_H = 8.0
+        /**
+         * Das Schlafziel steht NICHT hier, sondern in [Einstellungen].
+         *
+         * Acht Stunden sind ein Mittelwert ueber Menschen, keine Vorgabe fuer
+         * einen. Wer mit sieben auskommt, bekaeme jede Nacht einen Balken
+         * vorgehalten, der nichts bedeutet.
+         */
 
         /** Sieben Tage im Wochenbild - eine Woche liest man auf einen Blick. */
         const val TAGE = 7
@@ -158,6 +164,20 @@ class Gesundheit(private val context: Context) {
         /** Punkte in der Wolke ueber mehrere Tage, und wie viele Seiten dafuer. */
         const val WOLKE_MAX = 1500
         const val SEITEN_MAX = 12
+
+        /**
+         * So viele der tiefsten Nachtmessungen bilden den geschaetzten
+         * Ruhepuls.
+         *
+         * EIN EINZELNER TIEFSTWERT IST KEIN RUHEPULS. Ein verrutschter
+         * Sensor, eine schlechte Auflage, und es steht 41 da, wo 54 waere.
+         * Zehn Messungen zu mitteln kostet nichts und faengt genau das ab -
+         * und es bleibt trotzdem die ruhigste Stelle der Nacht.
+         */
+        const val TIEFSTE = 10
+
+        /** So viele Naechte holt das Nachtragen den Schaetzwert nach. */
+        const val NAECHTE_NACH = 3
 
         /**
          * Ab wann eine Nacht zaehlt.
@@ -172,6 +192,19 @@ class Gesundheit(private val context: Context) {
     private val zone: ZoneId get() = ZoneId.systemDefault()
 
     /**
+     * Wann ein Tag anfaengt - und damit, welcher Tag gerade laeuft.
+     *
+     * NICHT MITTERNACHT, WENN JEMAND ES ANDERS WILL. Wer um zwei Uhr noch
+     * unterwegs ist, hat seine Schritte am Vortag gemacht; mit einer Grenze um
+     * sechs zaehlt die Nacht zu dem Tag, an dem sie begann. Steht die Grenze
+     * auf null, ist alles wie vorher.
+     */
+    private fun tagBeginn(tag: LocalDate): LocalDateTime =
+        tag.atTime(Einstellungen.tagesgrenze(context), 0)
+
+    private fun heute(): LocalDate = Einstellungen.heute(context)
+
+    /**
      * Alles auf einmal holen.
      *
      * Ein Aufruf je Kennzahl waere sauberer zu lesen, aber die Akte antwortet
@@ -180,9 +213,9 @@ class Gesundheit(private val context: Context) {
      */
     suspend fun lies(): Stand? {
         val klient = Akte(context).bereit() ?: return null
-        val heute = LocalDate.now(zone)
+        val heute = heute()
         val jetzt = LocalDateTime.now(zone)
-        val tag = TimeRangeFilter.between(heute.atStartOfDay(), jetzt)
+        val tag = TimeRangeFilter.between(tagBeginn(heute), jetzt)
         val nacht = nachtfenster(heute)
 
         val summen = fange("Tagessummen") {
@@ -243,7 +276,7 @@ class Gesundheit(private val context: Context) {
             wasser = Wert("Wasser",
                           summen?.get(HydrationRecord.VOLUME_TOTAL)?.inMilliliters,
                           "ml", wasserziel()),
-            schlaf = Wert("Schlaf", schlafMin, "min", ZIEL_SCHLAF_H * 60),
+            schlaf = Wert("Schlaf", schlafMin, "min", Einstellungen.schlafziel(context).toDouble()),
             ruhepuls = ruhepuls(klient, nacht),
             puls = Wert("Puls", letzterPuls(klient, tag), "bpm"),
             pulsHoch = Wert("Puls hoch", summen?.get(HeartRateRecord.BPM_MAX)?.toDouble(), "bpm"),
@@ -314,7 +347,7 @@ class Gesundheit(private val context: Context) {
      */
     suspend fun nachtragen(tage: Int = 30) {
         val klient = Akte(context).bereit() ?: return
-        val heute = LocalDate.now(zone)
+        val heute = heute()
         val von = heute.minusDays(tage.toLong())
         val jetzt = LocalDateTime.now(zone)
 
@@ -331,7 +364,10 @@ class Gesundheit(private val context: Context) {
                         HeartRateRecord.BPM_MIN,
                         HeartRateRecord.BPM_MAX,
                     ),
-                    timeRangeFilter = TimeRangeFilter.between(von.atStartOfDay(), jetzt),
+                    // Die Eimer beginnen an der Tagesgrenze, nicht um
+                    // Mitternacht: der Schnitt teilt die Reihe ab ihrem
+                    // Anfang, und der liegt jetzt dort, wo der Tag anfaengt.
+                    timeRangeFilter = TimeRangeFilter.between(tagBeginn(von), jetzt),
                     timeRangeSlicer = Period.ofDays(1),
                 )
             )
@@ -350,7 +386,7 @@ class Gesundheit(private val context: Context) {
             klient.readRecords(
                 ReadRecordsRequest(
                     HeartRateVariabilityRmssdRecord::class,
-                    TimeRangeFilter.between(von.atStartOfDay(), jetzt),
+                    TimeRangeFilter.between(tagBeginn(von), jetzt),
                 )
             ).records
         } ?: emptyList()
@@ -371,6 +407,16 @@ class Gesundheit(private val context: Context) {
         hrvSaetze.sortedBy { it.time }.forEach { satz ->
             hrvNachTag[LocalDateTime.ofInstant(satz.time, zone).toLocalDate()] =
                 satz.heartRateVariabilityMillis
+        }
+
+        // Die letzten Naechte einzeln: nur hier laesst sich das Mittel der
+        // zehn tiefsten Messungen bilden, und nur so steht in der Spalte
+        // ueberall dasselbe. Drei Naechte, weil jede ein eigener Lesevorgang
+        // ist - aeltere fuellen sich von selbst, sobald die App laeuft.
+        val geschaetzt = HashMap<LocalDate, Double>()
+        for (i in 1..NAECHTE_NACH) {
+            val nacht = heute.minusDays(i.toLong())
+            ruheAusNacht(klient, nachtfenster(nacht))?.let { geschaetzt[nacht] = it }
         }
 
         val speicher = Speicher(context)
@@ -397,13 +443,14 @@ class Gesundheit(private val context: Context) {
                     "leicht" to phasen?.leicht,
                     "wach" to phasen?.wach,
                     "ruhepuls" to e.result[RestingHeartRateRecord.BPM_AVG]?.toDouble(),
-                    // Beim Nachtragen ist das Tagestief zugleich die beste
-                    // Schaetzung fuer einen fehlenden Ruhepuls - ein
-                    // eigenes Nachtfenster je Tag waere dreissig Abfragen
-                    // fuer eine Zahl, die sich kaum unterscheidet.
-                    "puls_min" to e.result[HeartRateRecord.BPM_MIN]?.toDouble(),
+                    // KEIN "puls_min" HIER. Der Schaetzwert ist das Mittel der
+                    // zehn tiefsten Nachtmessungen; das Tagestief waere eine
+                    // andere Zahl unter demselben Namen, und im Verlauf saehe
+                    // man den Sprung an dem Tag, an dem die Rechnung wechselt.
+                    // Die letzten Naechte kommen weiter unten einzeln.
                     "puls_tief" to e.result[HeartRateRecord.BPM_MIN]?.toDouble(),
                     "puls_hoch" to e.result[HeartRateRecord.BPM_MAX]?.toDouble(),
+                    "puls_min" to geschaetzt[tag],
                     "hrv" to hrvNachTag[tag],
                 ))
             }
@@ -429,7 +476,7 @@ class Gesundheit(private val context: Context) {
         nacht: TimeRangeFilter,
     ): Wert {
         val jetzt = LocalDateTime.now(zone)
-        val gestern = LocalDate.now(zone).minusDays(1).atStartOfDay()
+        val gestern = tagBeginn(heute().minusDays(1))
 
         fange("Ruhepuls") {
             klient.aggregate(
@@ -451,16 +498,32 @@ class Gesundheit(private val context: Context) {
             ).records.maxByOrNull { it.time }?.beatsPerMinute
         }?.let { return Wert("Ruhepuls", it.toDouble(), "bpm") }
 
-        fange("Ruhepuls (aus Nachtpuls)") {
-            klient.aggregate(
-                AggregateRequest(
-                    metrics = setOf(HeartRateRecord.BPM_MIN),
-                    timeRangeFilter = nacht,
-                )
-            )[HeartRateRecord.BPM_MIN]
-        }?.let { return Wert("Ruhepuls", it.toDouble(), "bpm", geschaetzt = true) }
+        ruheAusNacht(klient, nacht)
+            ?.let { return Wert("Ruhepuls", it, "bpm", geschaetzt = true) }
 
         return Wert("Ruhepuls", null, "bpm")
+    }
+
+    /**
+     * Der geschaetzte Ruhepuls: Mittel der [TIEFSTE] tiefsten Messungen.
+     *
+     * Ein einfacher Durchschnitt, kein getrimmtes Mittel und keine Gewichtung.
+     * Die Auswahl der zehn tiefsten ist schon die Filterung; noch einmal zu
+     * rechnen machte die Zahl nicht richtiger, nur schwerer nachzuvollziehen.
+     *
+     * Unter drei Messungen gibt es nichts: aus zwei Werten einen Ruhepuls zu
+     * mitteln hiesse, die Nacht aus zwei Augenblicken zu beschreiben.
+     */
+    private suspend fun ruheAusNacht(
+        klient: HealthConnectClient,
+        nacht: TimeRangeFilter,
+    ): Double? {
+        val proben = fange("Nachtpuls") {
+            klient.readRecords(ReadRecordsRequest(HeartRateRecord::class, nacht))
+                .records.flatMap { it.samples }.map { it.beatsPerMinute.toDouble() }
+        } ?: return null
+        if (proben.size < 3) return null
+        return proben.sorted().take(TIEFSTE).average()
     }
 
     /**
@@ -501,7 +564,7 @@ class Gesundheit(private val context: Context) {
         klient: HealthConnectClient,
         metrik: androidx.health.connect.client.aggregate.AggregateMetric<*>,
     ): List<Tageswert> {
-        val heute = LocalDate.now(zone)
+        val heute = heute()
         val eimer = fange("Woche") {
             klient.aggregateGroupByPeriod(
                 AggregateGroupByPeriodRequest(
@@ -509,7 +572,7 @@ class Gesundheit(private val context: Context) {
                         StepsRecord.COUNT_TOTAL, HydrationRecord.VOLUME_TOTAL
                     ),
                     timeRangeFilter = TimeRangeFilter.between(
-                        heute.minusDays((TAGE - 1).toLong()).atStartOfDay(),
+                        tagBeginn(heute.minusDays((TAGE - 1).toLong())),
                         LocalDateTime.now(zone),
                     ),
                     timeRangeSlicer = Period.ofDays(1),
@@ -607,7 +670,7 @@ class Gesundheit(private val context: Context) {
      */
     suspend fun pulswolke(tage: Int = 14): List<Punkt> {
         val klient = Akte(context).bereit() ?: return emptyList()
-        val bis = LocalDate.now(zone).atStartOfDay()
+        val bis = tagBeginn(heute())
         val von = bis.minusDays(tage.toLong())
 
         val gesammelt = mutableListOf<Punkt>()

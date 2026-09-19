@@ -6,7 +6,6 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.os.SystemClock
 import android.util.Log
 import android.widget.RemoteViews
 import kotlinx.coroutines.CoroutineScope
@@ -58,6 +57,76 @@ class GesundheitWidget : AppWidgetProvider() {
     }
 
     companion object {
+
+        private const val DATEI = "kiesel-widget"
+        private const val SCHLUESSEL = "gelesen"
+
+        /**
+         * Spaetestens so alt darf der Stand werden.
+         *
+         * Androids eigener Takt kann nicht unter eine halbe Stunde. Diese
+         * Grenze zieht deshalb der Minutentakt des laufenden Dienstes: bei
+         * jedem Tick wird geschaut, ob zehn Minuten um sind.
+         */
+        private const val HOECHSTALTER_MIN = 10L
+
+        private fun merkeZeitpunkt(context: Context) {
+            context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
+                .edit().putLong(SCHLUESSEL, System.currentTimeMillis()).apply()
+        }
+
+        private fun alterMinuten(context: Context): Long {
+            val dann = context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
+                .getLong(SCHLUESSEL, 0L)
+            if (dann <= 0L) return -1L
+            return (System.currentTimeMillis() - dann) / 60000
+        }
+
+        /**
+         * Das Alter in Worten - in ganzen Minuten.
+         *
+         * "vor 0 min" waere richtig und liest sich falsch; in der ersten
+         * Minute heisst es deshalb "gerade eben".
+         */
+        private fun alter(context: Context): String {
+            val min = alterMinuten(context)
+            return when {
+                min < 0 -> ""
+                min < 1 -> "gerade eben"
+                min < 60 -> "vor $min min"
+                else -> "vor " + (min / 60) + " h"
+            }
+        }
+
+        /**
+         * Der Minutentakt: Text nachziehen, und alle zehn Minuten neu lesen.
+         *
+         * GERUFEN AUS DEM LAUFENDEN DIENST, nicht aus einem Wecker. Android
+         * schickt ACTION_TIME_TICK jede Minute an angemeldete Empfaenger -
+         * aber nur bei eingeschaltetem Bildschirm, also genau dann, wenn
+         * jemand hinschauen koennte. Ein eigener Wecker im Minutentakt waere
+         * 1440 Weckrufe am Tag fuer eine Textzeile.
+         *
+         * Nur der Text wird nachgezogen (partiallyUpdateAppWidget), nicht das
+         * ganze Widget: die Zahlen dafuer neu aus der Akte zu holen, waere
+         * sechzig Abfragen in der Stunde fuer eine Zeile, die sich um eine
+         * Minute geaendert hat.
+         */
+        fun taktet(context: Context) {
+            val manager = AppWidgetManager.getInstance(context) ?: return
+            val ids = manager.getAppWidgetIds(
+                ComponentName(context, GesundheitWidget::class.java)
+            )
+            if (ids == null || ids.isEmpty()) return
+
+            if (alterMinuten(context) >= HOECHSTALTER_MIN) {
+                stosseAn(context)
+                return
+            }
+            val nur = RemoteViews(context.packageName, R.layout.widget_gesundheit)
+            nur.setTextViewText(R.id.w_stand, alter(context))
+            manager.partiallyUpdateAppWidget(ids, nur)
+        }
 
         /**
          * Das Widget auffordern, neu zu lesen.
@@ -114,14 +183,11 @@ class GesundheitWidget : AppWidgetProvider() {
                 )
             )
 
-            // WIE ALT, NICHT WANN. "21:12" beantwortet die Frage nicht, die
-            // man am Widget hat; "vor 04:30" beantwortet sie. Der Chronometer
-            // zaehlt selbst weiter und braucht dafuer keinen Wecker - ein
-            // Dreiminutentakt aus einem Alarm waere vierhundertachtzig
-            // Weckrufe am Tag fuer eine Textzeile.
-            v.setChronometer(
-                R.id.w_stand, SystemClock.elapsedRealtime(), "vor %s", true
-            )
+            // Der Augenblick des Lesens wird festgehalten, nicht die Uhrzeit
+            // angezeigt: daraus wird gleich das Alter, und es uebersteht auch,
+            // dass der Prozess zwischendurch stirbt.
+            merkeZeitpunkt(context)
+            v.setTextViewText(R.id.w_stand, alter(context))
 
             if (stand == null) {
                 v.setTextViewText(R.id.w_fuss, "Keine Gesundheitsakte")

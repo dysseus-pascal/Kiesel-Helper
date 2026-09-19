@@ -68,9 +68,13 @@ object GesundheitTab {
                     "die Dauer."
             ))
         }
-        schlaf.addView(ctx.zart("Sieben Nächte"))
+        val ideal = Einstellungen.schlafziel(ctx).toDouble()
+        schlaf.addView(ctx.zart(
+            "Sieben Nächte; die farbige Linie ist dein Ideal von " +
+                (Zahlen.dauer(ideal) ?: "") + "."
+        ))
         schlaf.addView(ctx.wochenbild(
-            stand.wocheSchlaf, Gesundheit.ZIEL_SCHLAF_H * 60
+            stand.wocheSchlaf, ziel = ideal, marke = ideal
         ) { Zahlen.dauer(it) ?: "" })
         s.addView(schlaf)
 
@@ -90,8 +94,8 @@ object GesundheitTab {
         if (stand.ruhepuls.geschaetzt) {
             herz.addView(ctx.zart(
                 "Das ≈ beim Ruhepuls heisst: niemand hat einen eingetragen. " +
-                    "Gezeigt wird der tiefste gemessene Puls der Nacht — nah " +
-                    "dran, aber nicht dasselbe."
+                    "Gezeigt wird der Durchschnitt der zehn tiefsten Messungen " +
+                    "der Nacht — nah dran, aber nicht dasselbe."
             ))
         }
         s.addView(herz)
@@ -134,7 +138,7 @@ object GesundheitTab {
                             java.time.format.TextStyle.SHORT, java.util.Locale.getDefault()
                         ),
                         t.zahl,
-                        hervor = t.tag == java.time.LocalDate.now(),
+                        hervor = t.tag == Einstellungen.heute(ctx),
                         innen = genommen[t.tag],
                     )
                 }

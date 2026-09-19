@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
@@ -30,6 +31,8 @@ import java.util.Date
 class EinstellungenActivity : ComponentActivity() {
 
     private lateinit var zustand: LinearLayout
+    private lateinit var schlafwert: TextView
+    private lateinit var grenzwert: TextView
     private var erlaubnisStarter: ActivityResultLauncher<Set<String>>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,6 +65,14 @@ class EinstellungenActivity : ComponentActivity() {
             "Nimmt entgegen, was die Uhr meldet, und holt bei OsmAnd, was für " +
                 "die Navigation auf die Uhr gehört."
         ))
+
+        wurzel.luft(8f)
+        wurzel.addView(abschnitt("SCHLAF"))
+        wurzel.addView(schlafkarte())
+
+        wurzel.luft(8f)
+        wurzel.addView(abschnitt("DER TAG"))
+        wurzel.addView(grenzkarte())
 
         wurzel.luft(8f)
         wurzel.addView(abschnitt("ZUSTAND"))
@@ -101,6 +112,114 @@ class EinstellungenActivity : ComponentActivity() {
         roller.addView(wurzel)
         roller.randUmSystemleisten()
         return roller
+    }
+
+    /**
+     * Der persoenliche Idealwert fuer den Schlaf.
+     *
+     * KEIN EINGABEFELD, sondern zwei Knoepfe in Viertelstunden. Eine Tastatur
+     * fuer eine Zahl zwischen vier und zwoelf Stunden waere der umstaendlichere
+     * Weg, und sie liesse Eingaben zu, die niemand meint.
+     *
+     * Der Wert ist die EINZIGE Einstellung dieser Art. Schritte und Bewegung
+     * bleiben Konstanten: zehntausend und dreissig Minuten sind Hausnummern,
+     * an denen sich ohnehin niemand misst. Acht Stunden Schlaf dagegen sind
+     * ein Mittelwert ueber Menschen, keine Vorgabe fuer einen.
+     */
+    private fun schlafkarte(): LinearLayout {
+        val k = karte()
+        k.addView(kartentitel("Mein Idealwert"))
+        k.addView(zart(
+            "Er steht als farbige Linie im Schlafbild und im Wochenprofil — " +
+                "und der Trend zählt, in wie vielen Nächten du ihn erreicht hast."
+        ))
+
+        schlafwert = TextView(this).apply {
+            setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 30f)
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(farbe(R.color.schrift))
+            setPadding(0, dp(10f), 0, dp(6f))
+        }
+        k.addView(schlafwert)
+
+        val zeile = reihe()
+        zeile.addView(knopfLeise("− 15 min") { schiebe(-Einstellungen.SCHLAF_SCHRITT) })
+        zeile.addView(TextView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(10f), dp(1f))
+        })
+        zeile.addView(knopfLeise("+ 15 min") { schiebe(Einstellungen.SCHLAF_SCHRITT) })
+        k.addView(zeile)
+
+        zeigeSchlafziel()
+        return k
+    }
+
+    /**
+     * Wann ein Tag anfaengt.
+     *
+     * WER UM ZWEI UHR NOCH WACH IST, hat seine Schritte am Vortag gemacht -
+     * der Kalender sieht das anders. Mit einer Grenze um sechs zaehlt die
+     * Nacht zu dem Tag, an dem sie begann, und das Widget zeigt um fuenf Uhr
+     * morgens nicht einen frisch begonnenen, leeren Tag.
+     *
+     * Die Grenze gilt fuer ALLES, was "heute" heisst: Tageswerte,
+     * Wochenbilder, der Trend, die Supplementliste. Nur der Schlaf hat sein
+     * eigenes Fenster - eine Nacht faengt um achtzehn Uhr an, egal wo der Tag
+     * beginnt.
+     */
+    private fun grenzkarte(): LinearLayout {
+        val k = karte()
+        k.addView(kartentitel("Ein Tag beginnt um"))
+        k.addView(zart(
+            "Gilt für alles, was »heute« heisst. Der Schlaf hat sein eigenes " +
+                "Fenster: eine Nacht beginnt um 18 Uhr, egal wo der Tag beginnt."
+        ))
+
+        grenzwert = TextView(this).apply {
+            setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 30f)
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(farbe(R.color.schrift))
+            setPadding(0, dp(10f), 0, dp(6f))
+        }
+        k.addView(grenzwert)
+
+        val zeile = reihe()
+        zeile.addView(knopfLeise("− 1 h") { schiebeGrenze(-1) })
+        zeile.addView(TextView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(10f), dp(1f))
+        })
+        zeile.addView(knopfLeise("+ 1 h") { schiebeGrenze(1) })
+        k.addView(zeile)
+
+        zeigeGrenze()
+        return k
+    }
+
+    private fun schiebeGrenze(stunden: Int) {
+        Einstellungen.setzeTagesgrenze(
+            this, Einstellungen.tagesgrenze(this) + stunden
+        )
+        zeigeGrenze()
+        // Das Widget rechnet mit derselben Grenze - es soll nicht bis zur
+        // naechsten Minute einen anderen Tag zeigen als die App.
+        GesundheitWidget.stosseAn(this)
+    }
+
+    private fun zeigeGrenze() {
+        val stunde = Einstellungen.tagesgrenze(this)
+        grenzwert.text = String.format("%02d:00", stunde) +
+            if (stunde == 0) " (Mitternacht)" else ""
+    }
+
+    private fun schiebe(minuten: Int) {
+        Einstellungen.setzeSchlafziel(
+            this, Einstellungen.schlafziel(this) + minuten
+        )
+        zeigeSchlafziel()
+    }
+
+    private fun zeigeSchlafziel() {
+        schlafwert.text = Zahlen.dauer(Einstellungen.schlafziel(this).toDouble())
     }
 
     private fun aufgabenKarte(titel: String, text: String): LinearLayout {

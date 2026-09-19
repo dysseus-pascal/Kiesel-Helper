@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.BroadcastReceiver
 import android.content.IntentFilter
 import android.os.Build
 import android.os.IBinder
@@ -35,6 +36,21 @@ class EmpfangsDienst : Service() {
 
     private var empfaenger: PebbleEmpfaenger? = null
 
+    /**
+     * Der Minutentakt fuer das Widget.
+     *
+     * ACTION_TIME_TICK schickt das System jede Minute - aber nur an zur
+     * Laufzeit angemeldete Empfaenger und nur bei eingeschaltetem Bildschirm.
+     * Beides passt hier: der Dienst laeuft ohnehin, und wenn der Bildschirm
+     * aus ist, schaut niemand aufs Widget. Ein eigener Wecker im Minutentakt
+     * waere 1440 Weckrufe am Tag fuer eine Textzeile.
+     */
+    private val takt = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent?) {
+            GesundheitWidget.taktet(context)
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         startForeground(MELDUNG_ID, baueMeldung())
@@ -51,6 +67,8 @@ class EmpfangsDienst : Service() {
         }
         empfaenger = e
         Log.i(PebbleEmpfaenger.TAG, "Empfaenger zur Laufzeit angemeldet")
+
+        registerReceiver(takt, IntentFilter(Intent.ACTION_TIME_TICK))
 
         // OsmAnd anbinden, solange dieser Dienst laeuft. Er ist die richtige
         // Stelle dafuer: er lebt so lange wie der Empfang selbst, und eine
@@ -104,6 +122,11 @@ class EmpfangsDienst : Service() {
             }
         }
         empfaenger = null
+        try {
+            unregisterReceiver(takt)
+        } catch (e: IllegalArgumentException) {
+            // war nicht angemeldet - nichts zu tun
+        }
         OsmandNavigation.loese(this)
         super.onDestroy()
     }

@@ -32,12 +32,14 @@
             android:textSize="12sp"
             android:textStyle="bold" />
 
-        <!-- EIN CHRONOMETER, KEINE UHRZEIT. "21:12" beantwortet die Frage
-             nicht, die man am Widget hat - die lautet "ist das noch aktuell".
-             Und ein Chronometer zaehlt SELBST weiter: er braucht keinen
-             Wecker, der das Telefon alle paar Minuten fuer eine Textzeile
-             aufweckt. -->
-        <Chronometer
+        <!-- WIE ALT, NICHT WANN. "21:12" beantwortet die Frage nicht, die man
+             am Widget hat - die lautet "ist das noch aktuell". Hier stehen
+             ganze Minuten; die Sekunden eines Chronometers waren genauer, als
+             die Frage es verlangt, und unruhiger als noetig.
+
+             Weitergezaehlt wird im Minutentakt des Systems, den der laufende
+             Dienst ohnehin bekommt - siehe EmpfangsDienst. -->
+        <TextView
             android:id="@+id/w_stand"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
