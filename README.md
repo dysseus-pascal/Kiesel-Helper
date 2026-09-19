@@ -37,7 +37,7 @@ Zustand, Aufgaben und Verlauf.
 | Bewegung | Schritte, Aktiv, Distanz, Kalorien |
 | Schlaf | Schlaf, Tiefschlaf |
 | Herz | Ruhepuls, HRV, Puls tief, Puls hoch |
-| Wasser | Wasser |
+| Ernährung | Wasser, Supplemente |
 
 Einen Balken bekommt nur, was ein Ziel hat. Für einen Ruhepuls gibt es keins,
 und ein Balken ohne Ziel wäre eine Behauptung darüber, was gut ist.
@@ -51,7 +51,7 @@ Zu jeder Karte ein Bild - eine Zahl allein sagt nicht, ob sie hoch ist.
 | Bewegung | Schritte der letzten sieben Tage, mit Ziellinie |
 | Schlaf | die Nacht in Phasen (tief, REM, leicht, wach) + sieben Nächte |
 | Herz | Pulsverlauf des Tages, gestrichelt der Ruhepuls |
-| Wasser | sieben Tage |
+| Ernährung | Wasser über sieben Tage, dazu die Supplemente: hell geplant, dunkel genommen |
 
 Selbst gezeichnet, ohne Diagramm-Bibliothek: die drei Bilder zusammen sind
 kürzer als die Einrichtung einer Bibliothek, und jede Bibliothek brächte ihre
@@ -180,7 +180,20 @@ Drei feste Aufgaben, **im Code**, nicht in einer Datei aus dem Netz:
 |---|---|---|
 | Drinktervall | Gesundheitsakte | jedes getrunkene Glas als Wassermenge, mit dem Zeitpunkt von der Uhr |
 | Herzintervall | Gesundheitsakte | die nächtliche RMSSD-Messung als Herzratenvariabilität |
+| SupCycle | **eigener Speicher** | wie viele Präparate heute anstanden und wie viele davon genommen sind |
 | OsmAnd | Kieselstrasse | Abbiegeart, Entfernung, Strasse, Ankunftszeit |
+
+**SupCycle geht nicht in die Akte, und das ist kein Versehen.** Health Connect
+kennt keine Satzart für »genommen«; am nächsten käme ein Ernährungssatz mit
+Nährstoffmassen — und die weiss SupCycle nicht, ein Plan dort besteht aus Namen
+und Zyklen, nicht aus Milligramm. Eine Zahl zu erfinden, damit sie in eine
+fremde Tabelle passt, wäre der schlechteste aller Wege.
+
+Geschickt wird nichts Neues: SupCycle meldet Tag, Fälligkeits- und
+Abhak-Bitmaske ohnehin nach jeder Einnahme, für seine eigenen Timeline-Pins.
+Gezählt wird, was **fällig war** und davon genommen wurde — ein Präparat, das
+heute pausiert, gehört in keine Quote. Namen kommen nicht mit; die kennt nur
+SupCycles Konfigseite.
 
 Auf jedem Eintrag liegt ein **Riegel** gegen Doppelte: die Uhr schickt ihren
 Stand bei jeder Gelegenheit mit, nicht nur beim Trinken. Ohne ihn stünde

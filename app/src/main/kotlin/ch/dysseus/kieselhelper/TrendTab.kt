@@ -41,7 +41,7 @@ object TrendTab {
         Gruppe("Schritte", listOf("schritte")),
         Gruppe("Schlaf", listOf("schlaf", "tief")),
         Gruppe("Herz", listOf("ruhepuls", "puls_min", "puls_hoch", "puls_tief", "hrv")),
-        Gruppe("Wasser", listOf("wasser")),
+        Gruppe("Ernährung", listOf("wasser", "supp_faellig", "supp_genommen")),
         Gruppe("Aktiv", listOf("aktiv")),
     )
 
@@ -133,6 +133,7 @@ object TrendTab {
         when (gruppe.name) {
             "Schlaf" -> schlaf(ctx, s, daten, heute)
             "Herz" -> herz(ctx, s, daten, heute)
+            "Ernährung" -> ernaehrung(ctx, s, daten, heute)
             else -> einfach(ctx, s, gruppe, daten, heute)
         }
 
@@ -157,9 +158,7 @@ object TrendTab {
     ) {
         val bild = Auswertung.bild(daten[gruppe.spalten.first()].orEmpty(), heute)
         val form: (Double) -> String = { Zahlen.ganz(it) ?: "" }
-        val einheit = when (gruppe.name) {
-            "Wasser" -> " ml"; "Aktiv" -> " min"; else -> ""
-        }
+        val einheit = if (gruppe.name == "Aktiv") " min" else ""
 
         s.addView(ctx.abschnitt("TYPISCHE WOCHE"))
         val woche = ctx.karte()
@@ -299,6 +298,77 @@ object TrendTab {
         verlauf.addView(ctx.fliesstext(richtung(ruhe, "Ruhepuls, letzte vier Wochen")))
         s.addView(verlauf)
     }
+
+    /**
+     * Ernaehrung: Wasser und Supplemente auf einem Schirm.
+     *
+     * Sie haben nichts miteinander zu tun und gehoeren trotzdem zusammen -
+     * beides ist, was man dem Koerper ZUFUEHRT, und beides haengt an derselben
+     * Frage: hat man heute daran gedacht.
+     */
+    private fun ernaehrung(
+        ctx: Context,
+        s: LinearLayout,
+        daten: Trenddaten,
+        heute: LocalDate,
+    ) {
+        val wasser = Auswertung.bild(daten["wasser"].orEmpty(), heute)
+        val form: (Double) -> String = { Zahlen.ganz(it) ?: "" }
+
+        s.addView(ctx.abschnitt("WASSER, TYPISCHE WOCHE"))
+        val karte = ctx.karte()
+        karte.addView(ctx.saeulenbild(
+            wasser.profil.map { p ->
+                Saeule(kurz(p.tag), p.mittel, hervor = p.tag == heute.dayOfWeek)
+            },
+            ziel = wasser.gesamt,
+        ))
+        karte.addView(ctx.zart(schnittzeile(wasser, form, " ml")))
+        extreme(ctx, karte, wasser, form, " ml")
+        s.addView(karte)
+
+        s.addView(ctx.abschnitt("WASSER, VERLAUF"))
+        val verlauf = ctx.karte()
+        verlauf.addView(ctx.saeulenbild(wochensaeulen(wasser), ziel = wasser.gesamt))
+        verlauf.addView(ctx.zart("Kalenderwochen, je der Schnitt eines Tages"))
+        verlauf.addView(ctx.fliesstext(richtung(wasser)))
+        s.addView(verlauf)
+
+        val faellig = Auswertung.bild(daten["supp_faellig"].orEmpty(), heute)
+        val genommen = Auswertung.bild(daten["supp_genommen"].orEmpty(), heute)
+        s.addView(ctx.abschnitt("SUPPLEMENTE"))
+        val supp = ctx.karte()
+        if (faellig.anzahl == 0) {
+            supp.addView(ctx.zart(
+                "Von SupCycle kam noch nichts. Die Uhr meldet ihren Stand, " +
+                    "sobald dort etwas abgehakt wird — rückwirkend gibt es " +
+                    "nichts zu holen."
+            ))
+        } else {
+            val genommenTag = genommen.profil.associate { it.tag to it.mittel }
+            supp.addView(ctx.saeulenbild(
+                faellig.profil.map { p ->
+                    Saeule(kurz(p.tag), p.mittel, hervor = p.tag == heute.dayOfWeek,
+                           innen = genommenTag[p.tag])
+                }
+            ))
+            supp.addView(ctx.zart("Hell geplant, dunkel genommen"))
+            val g = genommen.gesamt
+            val f = faellig.gesamt
+            supp.addView(ctx.fliesstext(
+                if (g != null && f != null && f > 0)
+                    "Von " + zehntel(f) + " geplanten Einnahmen am Tag kommen im " +
+                        "Schnitt " + zehntel(g) + " an — " +
+                        (Zahlen.ganz(g / f * 100) ?: "") + " %."
+                else "Noch kein Schnitt."
+            ))
+        }
+        s.addView(supp)
+    }
+
+    /** Eine Nachkommastelle, aber ohne die ",0" bei glatten Zahlen. */
+    private fun zehntel(d: Double): String =
+        if (d == Math.floor(d)) (Zahlen.ganz(d) ?: "") else (Zahlen.eine(d) ?: "")
 
     // --- Kleinkram -----------------------------------------------------------
 

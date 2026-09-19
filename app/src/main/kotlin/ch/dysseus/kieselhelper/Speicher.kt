@@ -32,17 +32,21 @@ class Speicher(context: Context) : SQLiteOpenHelper(context, NAME, null, FASSUNG
 
     companion object {
         private const val NAME = "gesundheit.db"
-        private const val FASSUNG = 2
+        private const val FASSUNG = 3
 
         /** Die Spalten, die einen Messwert tragen - in der Reihenfolge der Tabelle. */
         val SPALTEN = listOf(
             "schritte", "distanz", "kalorien", "aktiv", "wasser",
             "schlaf", "tief", "rem", "leicht", "wach",
             "ruhepuls", "puls_min", "puls_hoch", "puls_tief", "hrv",
+            "supp_faellig", "supp_genommen",
         )
 
         /** Was seit Fassung 1 dazugekommen ist - fuer [onUpgrade]. */
-        private val NACHGEWACHSEN = mapOf(2 to listOf("puls_hoch", "puls_tief"))
+        private val NACHGEWACHSEN = mapOf(
+            2 to listOf("puls_hoch", "puls_tief"),
+            3 to listOf("supp_faellig", "supp_genommen"),
+        )
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -129,6 +133,27 @@ class Speicher(context: Context) : SQLiteOpenHelper(context, NAME, null, FASSUNG
             }
         } catch (e: Exception) {
             Log.w(PebbleEmpfaenger.TAG, "Speicher lesen: " + e.message)
+        }
+        return ergebnis
+    }
+
+    /**
+     * Ein einzelner Wert eines einzelnen Tages.
+     *
+     * Fuer die Dinge, die NICHT aus der Gesundheitsakte kommen: Supplemente
+     * stehen nur hier, weil die Akte keine Satzart fuer "genommen" kennt.
+     */
+    fun wert(tag: LocalDate, spalte: String): Double? {
+        if (spalte !in SPALTEN) return null
+        var ergebnis: Double? = null
+        try {
+            readableDatabase.rawQuery(
+                "SELECT $spalte FROM tag WHERE datum = ?", arrayOf(tag.toString())
+            ).use { zeiger ->
+                if (zeiger.moveToNext() && !zeiger.isNull(0)) ergebnis = zeiger.getDouble(0)
+            }
+        } catch (e: Exception) {
+            Log.w(PebbleEmpfaenger.TAG, "Speicher Einzelwert: " + e.message)
         }
         return ergebnis
     }

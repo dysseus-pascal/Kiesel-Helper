@@ -96,15 +96,47 @@ object GesundheitTab {
         }
         s.addView(herz)
 
-        // --- Wasser ---
-        s.addView(ctx.abschnitt("WASSER"))
-        val wasser = ctx.karte()
-        wasser.addView(ctx.reihe().apply {
-            addView(ctx.wert(stand.wasser, Zahlen.ganz(stand.wasser.zahl), "ml"))
-        })
-        wasser.addView(ctx.zart("Sieben Tage"))
-        wasser.addView(ctx.wochenbild(stand.wocheWasser, 8 * 300.0))
-        s.addView(wasser)
+        // --- Ernaehrung ---
+        s.addView(ctx.abschnitt("ERNÄHRUNG"))
+        val ernaehrung = ctx.karte()
+        ernaehrung.addView(ctx.messreihe(
+            ctx.wert(stand.wasser, Zahlen.ganz(stand.wasser.zahl), "ml"),
+            ctx.messwert(
+                "Supplemente", quote(stand), "",
+                stand.suppGenommen.anteil,
+                stand.suppGenommen.da && stand.suppFaellig.da,
+            ),
+        ))
+        ernaehrung.addView(ctx.zart("Wasser, sieben Tage"))
+        ernaehrung.addView(ctx.wochenbild(stand.wocheWasser, 8 * 300.0))
+
+        if (stand.wocheSuppFaellig.any { it.zahl != null }) {
+            ernaehrung.addView(ctx.zart("Supplemente: hell geplant, dunkel genommen"))
+            // Der genommene Teil sitzt IM geplanten. Zwei Balken nebeneinander
+            // liessen offen, ob "3 genommen" von drei oder von acht war.
+            val genommen = stand.wocheSuppGenommen.associate { it.tag to it.zahl }
+            ernaehrung.addView(ctx.saeulenbild(
+                stand.wocheSuppFaellig.map { t ->
+                    Saeule(
+                        t.tag.dayOfWeek.getDisplayName(
+                            java.time.format.TextStyle.SHORT, java.util.Locale.getDefault()
+                        ),
+                        t.zahl,
+                        hervor = t.tag == java.time.LocalDate.now(),
+                        innen = genommen[t.tag],
+                    )
+                }
+            ))
+        } else {
+            // KEIN LEERES BILD, sondern der Grund. Wer nichts sieht, sucht
+            // sonst den Fehler bei sich.
+            ernaehrung.addView(ctx.zart(
+                "Von SupCycle kam noch nichts. Die Uhr meldet ihren Stand, " +
+                    "sobald dort etwas abgehakt wird — rückwirkend gibt es " +
+                    "nichts zu holen, das fängt ab der ersten Einnahme an."
+            ))
+        }
+        s.addView(ernaehrung)
 
         // Woher die Zahlen kommen - und warum manche fehlen. Ohne diese Zeile
         // haelt man ein leeres Feld fuer einen Fehler der App.
@@ -115,6 +147,18 @@ object GesundheitTab {
                 "dort wirklich steht, sagt der Technik-Reiter."
         ))
         return s
+    }
+
+    /**
+     * "3 / 5" statt einer nackten Zahl.
+     *
+     * Drei genommene Praeparate sind ein Erfolg oder eine Luecke, je nachdem,
+     * wie viele anstanden. Die Zahl allein sagt das nicht.
+     */
+    private fun quote(stand: Gesundheit.Stand): String? {
+        val genommen = stand.suppGenommen.zahl ?: return null
+        val faellig = stand.suppFaellig.zahl ?: return null
+        return (Zahlen.ganz(genommen) ?: "") + " / " + (Zahlen.ganz(faellig) ?: "")
     }
 
     /**

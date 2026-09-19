@@ -106,10 +106,14 @@ class Gesundheit(private val context: Context) {
         val pulsHoch: Wert,
         val pulsTief: Wert,
         val hrv: Wert,
+        val suppFaellig: Wert,
+        val suppGenommen: Wert,
         val phasen: Phasen?,
         val wocheSchritte: List<Tageswert>,
         val wocheSchlaf: List<Tageswert>,
         val wocheWasser: List<Tageswert>,
+        val wocheSuppFaellig: List<Tageswert>,
+        val wocheSuppGenommen: List<Tageswert>,
         val pulsverlauf: List<Punkt>,
         val gelesen: Instant,
     )
@@ -203,6 +207,16 @@ class Gesundheit(private val context: Context) {
             )[SleepSessionRecord.SLEEP_DURATION_TOTAL]?.toMinutes()?.toDouble()
         }
 
+        // SUPPLEMENTE KOMMEN NICHT AUS DER AKTE, sondern aus der eigenen
+        // Tabelle: die Akte kennt keine Satzart fuer "genommen". SupCycle
+        // schickt seinen Stand bei jeder Einnahme, [Aufgaben] schreibt ihn
+        // weg, und hier wird er nur noch abgeholt.
+        val speicher = Speicher(context)
+        val suppFaellig = withContext(Dispatchers.IO) { speicher.wert(heute, "supp_faellig") }
+        val suppGenommen = withContext(Dispatchers.IO) { speicher.wert(heute, "supp_genommen") }
+        val suppWocheF = withContext(Dispatchers.IO) { wocheAusSpeicher(speicher, "supp_faellig", heute) }
+        val suppWocheG = withContext(Dispatchers.IO) { wocheAusSpeicher(speicher, "supp_genommen", heute) }
+
         val sitzungen = fange("Schlafphasen") {
             klient.readRecords(ReadRecordsRequest(SleepSessionRecord::class, nacht)).records
         } ?: emptyList()
@@ -227,10 +241,14 @@ class Gesundheit(private val context: Context) {
             pulsHoch = Wert("Puls hoch", summen?.get(HeartRateRecord.BPM_MAX)?.toDouble(), "bpm"),
             pulsTief = Wert("Puls tief", summen?.get(HeartRateRecord.BPM_MIN)?.toDouble(), "bpm"),
             hrv = Wert("HRV", letzteHrv(klient), "ms"),
+            suppFaellig = Wert("Geplant", suppFaellig, ""),
+            suppGenommen = Wert("Supplemente", suppGenommen, "", ziel = suppFaellig),
             phasen = phasenAus(sitzungen),
             wocheSchritte = wocheSchritteWasser(klient, StepsRecord.COUNT_TOTAL),
             wocheWasser = wocheSchritteWasser(klient, HydrationRecord.VOLUME_TOTAL),
             wocheSchlaf = wocheSchlaf(klient, heute),
+            wocheSuppFaellig = suppWocheF,
+            wocheSuppGenommen = suppWocheG,
             pulsverlauf = pulsverlauf(klient, tag),
             gelesen = Instant.now(),
         )
@@ -595,6 +613,19 @@ class Gesundheit(private val context: Context) {
             saetze.size,
             saetze.map { it.metadata.dataOrigin.packageName }.filter { it.isNotEmpty() }.toSet(),
         )
+    }
+
+    /** Sieben Tage einer Spalte aus dem eigenen Speicher. */
+    private fun wocheAusSpeicher(
+        speicher: Speicher,
+        spalte: String,
+        heute: LocalDate,
+    ): List<Tageswert> {
+        val nach = speicher.reihe(spalte).toMap()
+        return (0 until TAGE).map { i ->
+            val t = heute.minusDays((TAGE - 1 - i).toLong())
+            Tageswert(t, nach[t])
+        }
     }
 
     // --- Kleinkram ---

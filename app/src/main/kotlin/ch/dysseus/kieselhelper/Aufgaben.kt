@@ -9,7 +9,10 @@ import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.units.Volume
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 
 /**
@@ -19,12 +22,14 @@ import java.util.UUID
  * Regelwerk, ein Katalog von 22 Satzarten, ein Bildschirm zum Einbinden: rund
  * 1660 Zeilen, damit die App Dinge tun konnte, die ihr niemand beigebracht
  * hatte. Das war richtig gedacht fuer eine App, die andere benutzen. Diese
- * benutzt nur einer, und fuer ihn sind es drei Aufgaben - die stehen jetzt hier
+ * benutzt nur einer, und fuer ihn sind es vier Aufgaben - die stehen jetzt hier
  * und sind in einer Minute zu lesen.
  *
- * Zwei davon kommen VON der Uhr und gehen in die Gesundheitsakte. Die dritte
- * geht in die andere Richtung und steht in [OsmandNavigation]: sie hat keine
- * AppMessage als Anlass, sondern OsmAnds Schnittstelle.
+ * Drei kommen VON der Uhr: zwei davon gehen in die Gesundheitsakte, die dritte
+ * (SupCycle) in den eigenen Speicher, weil die Akte fuer "genommen" keine
+ * Satzart hat. Die vierte geht in die andere Richtung und steht in
+ * [OsmandNavigation]: sie hat keine AppMessage als Anlass, sondern OsmAnds
+ * Schnittstelle.
  */
 object Aufgaben {
 
@@ -52,8 +57,26 @@ object Aufgaben {
     private const val HZ_RMSSD = 10000
     private const val HZ_WHEN = 10005
 
+    // --- SupCycle: was heute ansteht und was davon genommen ist ---
+
+    private val SUPCYCLE: UUID =
+        UUID.fromString("33ce868a-2beb-4335-9421-4d741ed16eb3")
+
+    /**
+     * SupCycle schickt das ohnehin - fuer seine eigenen Timeline-Pins.
+     *
+     * Die Uhr meldet nach jeder Einnahme den Kalendertag und zwei Bitmasken:
+     * was heute faellig ist und was davon abgehakt wurde. Namen kommen nicht
+     * mit; die kennt nur die Konfigseite von SupCycle. Gezaehlt wird also,
+     * nicht aufgelistet - und das ist genau die Zahl, die man taeglich wissen
+     * will.
+     */
+    private const val SC_TODAY = 10039
+    private const val SC_DUE = 10040
+    private const val SC_TAKEN = 10041
+
     /** Alle Uhr-Apps, von denen diese App ueberhaupt etwas annimmt. */
-    val BEKANNTE_UHREN = setOf(DRINKTERVALL, HERZINTERVALL)
+    val BEKANNTE_UHREN = setOf(DRINKTERVALL, HERZINTERVALL, SUPCYCLE)
 
     /** Die Berechtigungen, die dafuer noetig sind. */
     val BERECHTIGUNGEN: Set<String> = setOf(
@@ -72,8 +95,52 @@ object Aufgaben {
         when (von) {
             DRINKTERVALL -> wasser(context, felder)
             HERZINTERVALL -> herz(context, felder)
+            SUPCYCLE -> supplemente(context, felder)
             else -> null
         }
+
+    /**
+     * Supplemente festhalten - im EIGENEN Speicher, nicht in der Akte.
+     *
+     * DIE AKTE KENNT KEIN "GENOMMEN". Was ihr am naechsten kommt, ist ein
+     * Ernaehrungssatz mit Naehrstoffmassen - und die weiss SupCycle nicht: ein
+     * Plan dort besteht aus Namen und Zyklen, nicht aus Milligramm. Eine Zahl
+     * zu erfinden, damit sie in eine fremde Tabelle passt, waere der
+     * schlechteste aller Wege.
+     *
+     * Gezaehlt wird, was FAELLIG war und davon genommen wurde. Ein Praeparat,
+     * das heute pausiert, gehoert in keine Quote.
+     */
+    private suspend fun supplemente(context: Context, felder: Map<Int, Long>): String? {
+        val ymd = felder[SC_TODAY] ?: return null
+        val faellig = felder[SC_DUE] ?: return null
+        val genommen = felder[SC_TAKEN] ?: 0L
+
+        val tag = try {
+            LocalDate.of(
+                (ymd / 10000).toInt(), ((ymd / 100) % 100).toInt(), (ymd % 100).toInt()
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "SupCycle: unbrauchbares Datum " + ymd); return null
+        }
+
+        val wieViele = java.lang.Long.bitCount(faellig)
+        // UND, nicht blosses Zaehlen: abgehakt bleibt abgehakt, auch wenn ein
+        // Praeparat heute gar nicht dran waere. In der Quote hat es dann
+        // nichts verloren.
+        val davon = java.lang.Long.bitCount(genommen and faellig)
+
+        if (!Riegel.neu(context, "supcycle", "$ymd:$faellig:$genommen")) return null
+
+        withContext(Dispatchers.IO) {
+            Speicher(context).merke(tag, mapOf(
+                "supp_faellig" to wieViele.toDouble(),
+                "supp_genommen" to davon.toDouble(),
+            ))
+        }
+        GesundheitWidget.stosseAn(context)
+        return "$davon von $wieViele Präparaten"
+    }
 
     /**
      * Getrunkenes Wasser eintragen.

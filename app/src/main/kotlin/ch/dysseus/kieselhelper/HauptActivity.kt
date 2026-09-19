@@ -29,7 +29,7 @@ import java.util.Date
  * Gesundheitsakte selbst kann alles und zeigt darum nichts zuerst; hier stehen
  * acht Zahlen auf einem Schirm, ohne Suchen.
  *
- * TECHNIK IST DER ALTE SCHIRM. Er zeigt drei feste Aufgaben und fragt nach
+ * TECHNIK IST DER ALTE SCHIRM. Er zeigt die festen Aufgaben und fragt nach
  * nichts. Vorher stand dort eine Liste eingebundener Beschreibungen mit einem
  * Knopf zum Nachladen - die App konnte Dinge tun, die ihr niemand
  * einprogrammiert hatte. Das war richtig gedacht fuer eine App, die viele
@@ -157,6 +157,13 @@ class HauptActivity : ComponentActivity() {
             "Herzintervall → Gesundheitsakte",
             "Die nächtliche RMSSD-Messung wird als Herzratenvariabilität " +
                 "eingetragen."
+        ))
+        technik.addView(aufgabenKarte(
+            "SupCycle → Ernährung",
+            "Was heute ansteht und was davon abgehakt ist. Gezählt, nicht " +
+                "aufgelistet: Namen kennt nur SupCycles eigene Konfigseite. " +
+                "Landet im eigenen Speicher, nicht in der Akte — die kennt " +
+                "keine Satzart für »genommen«."
         ))
         technik.addView(aufgabenKarte(
             "OsmAnd → Kieselstrasse",
