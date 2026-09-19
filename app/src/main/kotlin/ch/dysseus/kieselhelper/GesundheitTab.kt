@@ -144,6 +144,22 @@ object GesundheitTab {
         herz.addView(ctx.pulsbild(
             stand.pulsverlauf, stand.ruhepuls.zahl, beginnMinute = stand.pulsBeginn
         ))
+        // DIE STREUUNG IST NICHT DIE HRV. Sie steht deshalb als Satz da und
+        // nicht als Kachel neben ihr - und der Satz sagt, was sie misst.
+        stand.nachtStreuung.zahl?.let { sd ->
+            herz.addView(ctx.fliesstext(
+                "In der Nacht " + (Zahlen.ganz(stand.ruhepuls.zahl) ?: "") +
+                    " ± " + (Zahlen.ganz(sd) ?: "") + " bpm, über " +
+                    stand.nachtProben + " Messungen."
+            ))
+            herz.addView(ctx.zart(
+                "Das ± ist die Streuung der Pulswerte über die Nacht — wie " +
+                    "ruhig sie verlief. Es ist NICHT die HRV: die misst die " +
+                    "Schwankung zwischen aufeinanderfolgenden Schlägen, und " +
+                    "dafür braucht es deren Zeitpunkte, nicht ganze bpm."
+            ))
+        }
+
         if (stand.ruhepuls.geschaetzt) {
             herz.addView(ctx.zart(
                 "Das ≈ beim Ruhepuls heisst: niemand hat einen eingetragen. " +

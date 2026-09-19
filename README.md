@@ -397,6 +397,33 @@ ein — und drei Wochen sind die Untergrenze, ab der sich etwas ablesen lässt.
 Dafür stehen zwei neue Paare unter *Zusammenhänge*: **Schlaf ↔ Energie** und
 **Koffein ↔ Tiefschlaf**.
 
+### Nachtpuls: das ± ist nicht die HRV
+
+Neben dem geschätzten Ruhepuls steht die **Streuung der Pulswerte über die
+Nacht**: *»In der Nacht 54 ± 6 bpm, über 42 Messungen.«* Beides kommt aus
+demselben Lesevorgang.
+
+**Sie darf nicht HRV heissen.** RMSSD misst die Schwankung zwischen
+*aufeinanderfolgenden Schlägen*, in Millisekunden — dafür braucht es die
+Zeitpunkte einzelner Schläge, und die stehen in keinem `HeartRateRecord`.
+Selbst bei dichter Messung reichte die Auflösung nicht: bei 60 bpm ist **ein
+einziger Schritt in der bpm-Zahl schon rund 16 ms**, und RMSSD liegt
+typischerweise bei 20 bis 50 ms — die Rundung wäre so gross wie das Signal.
+
+Was hier steht, sagt etwas anderes, aber nichts Falsches: wie ruhig eine Nacht
+verlief. Sie wird mitgespeichert, damit sich später fragen lässt, woran sie
+hängt.
+
+### Kartenlink ausprobieren
+
+In den Einstellungen: Link einfügen, *Nur prüfen* oder *An OsmAnd geben*.
+
+An der Umleitung hängen **drei Dinge hintereinander** — Android muss den Link
+überhaupt weitergeben, die Zerlegung muss ihn verstehen, OsmAnd muss ihn
+annehmen. Geht es nicht, weiss man ohne diesen Weg nicht, welches der drei
+schuld ist. Der Prüfstand überspringt das erste: was hier klappt und draussen
+nicht, ist eine Sache der Link-Freigabe in den Android-Einstellungen.
+
 ### Kartenlinks nach OsmAnd
 
 Ein Google-Maps-Link öffnet OsmAnd mit gesetztem Ziel. Die App zerlegt dabei

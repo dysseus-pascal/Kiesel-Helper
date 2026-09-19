@@ -136,6 +136,9 @@ class Gesundheit(private val context: Context) {
         val puls: Wert,
         val pulsHoch: Wert,
         val pulsTief: Wert,
+        /** Streuung der Nachtproben - NICHT die HRV, siehe [Nachtpuls]. */
+        val nachtStreuung: Wert,
+        val nachtProben: Int,
         val hrv: Wert,
         val suppFaellig: Wert,
         val suppGenommen: Wert,
@@ -271,6 +274,7 @@ class Gesundheit(private val context: Context) {
         val jetzt = LocalDateTime.now(zone)
         val tag = TimeRangeFilter.between(tagBeginn(heute), jetzt)
         val nacht = nachtfenster(heute)
+        val nachts = nachtpuls(Akte(context).bereit() ?: return null, nacht)
 
         val summen = fange("Tagessummen") {
             klient.aggregate(
@@ -339,6 +343,8 @@ class Gesundheit(private val context: Context) {
             puls = Wert("Puls", letzterPuls(klient, tag), "bpm"),
             pulsHoch = Wert("Puls hoch", summen?.get(HeartRateRecord.BPM_MAX)?.toDouble(), "bpm"),
             pulsTief = Wert("Puls tief", summen?.get(HeartRateRecord.BPM_MIN)?.toDouble(), "bpm"),
+            nachtStreuung = Wert("Nachtpuls", nachts?.streuung, "bpm"),
+            nachtProben = nachts?.proben ?: 0,
             hrv = Wert("HRV", letzteHrv(klient), "ms"),
             suppFaellig = Wert("Geplant", suppFaellig, ""),
             suppGenommen = Wert("Supplemente", suppGenommen, "", ziel = suppFaellig),
@@ -391,6 +397,7 @@ class Gesundheit(private val context: Context) {
             "puls_min" to stand.ruhepuls.zahl.takeIf { stand.ruhepuls.geschaetzt },
             "puls_hoch" to stand.pulsHoch.zahl,
             "puls_tief" to stand.pulsTief.zahl,
+            "puls_nacht_sd" to stand.nachtStreuung.zahl,
             "hrv" to stand.hrv.zahl,
             "koffein_mg" to stand.koffeinMg,
         ))
@@ -483,9 +490,13 @@ class Gesundheit(private val context: Context) {
         // ueberall dasselbe. Drei Naechte, weil jede ein eigener Lesevorgang
         // ist - aeltere fuellen sich von selbst, sobald die App laeuft.
         val geschaetzt = HashMap<LocalDate, Double>()
+        val nachtsd = HashMap<LocalDate, Double>()
         for (i in 1..NAECHTE_NACH) {
             val nacht = heute.minusDays(i.toLong())
-            ruheAusNacht(klient, nachtfenster(nacht))?.let { geschaetzt[nacht] = it }
+            nachtpuls(klient, nachtfenster(nacht))?.let {
+                geschaetzt[nacht] = it.ruhe
+                it.streuung?.let { sd -> nachtsd[nacht] = sd }
+            }
         }
 
         val speicher = Speicher(context)
@@ -524,6 +535,7 @@ class Gesundheit(private val context: Context) {
                     "puls_tief" to e.result[HeartRateRecord.BPM_MIN]?.toDouble(),
                     "puls_hoch" to e.result[HeartRateRecord.BPM_MAX]?.toDouble(),
                     "puls_min" to geschaetzt[tag],
+                    "puls_nacht_sd" to nachtsd[tag],
                     "hrv" to hrvNachTag[tag],
                 ))
             }
@@ -571,34 +583,45 @@ class Gesundheit(private val context: Context) {
             ).records.maxByOrNull { it.time }?.beatsPerMinute
         }?.let { return Wert("Ruhepuls", it.toDouble(), "bpm") }
 
-        ruheAusNacht(klient, nacht)
-            ?.let { return Wert("Ruhepuls", it, "bpm", geschaetzt = true) }
+        nachtpuls(klient, nacht)
+            ?.let { return Wert("Ruhepuls", it.ruhe, "bpm", geschaetzt = true) }
 
         return Wert("Ruhepuls", null, "bpm")
     }
 
     /**
-     * Der geschaetzte Ruhepuls: Mittel der [TIEFSTE] tiefsten Messungen.
+     * Was die Nacht ueber den Puls hergibt.
      *
-     * Ein einfacher Durchschnitt, kein getrimmtes Mittel und keine Gewichtung.
-     * Die Auswahl der zehn tiefsten ist schon die Filterung; noch einmal zu
-     * rechnen machte die Zahl nicht richtiger, nur schwerer nachzuvollziehen.
+     * ZWEI ZAHLEN AUS EINEM LESEVORGANG: der geschaetzte Ruhepuls (Mittel der
+     * [TIEFSTE] tiefsten Messungen) und die Streuung aller Nachtproben.
      *
-     * Unter drei Messungen gibt es nichts: aus zwei Werten einen Ruhepuls zu
-     * mitteln hiesse, die Nacht aus zwei Augenblicken zu beschreiben.
+     * DIE STREUUNG IST NICHT DIE HRV, und sie darf auch nicht so heissen.
+     * RMSSD misst die Schwankung zwischen AUFEINANDERFOLGENDEN SCHLAEGEN, in
+     * Millisekunden; dafuer braucht es die Zeitpunkte einzelner Schlaege, und
+     * die stehen in keinem HeartRateRecord. Was hier steht, ist die Streuung
+     * ganzzahliger Pulswerte ueber Stunden - sie sagt, wie ruhig eine Nacht
+     * verlief (Schlafphasen, Aufwachen), nicht wie das vegetative Nervensystem
+     * von Schlag zu Schlag arbeitet.
      */
-    private suspend fun ruheAusNacht(
+    data class Nachtpuls(val ruhe: Double, val streuung: Double?, val proben: Int)
+
+    private suspend fun nachtpuls(
         klient: HealthConnectClient,
         nacht: TimeRangeFilter,
-    ): Double? {
+    ): Nachtpuls? {
         val proben = fange("Nachtpuls") {
             klient.readRecords(ReadRecordsRequest(HeartRateRecord::class, nacht))
                 .records.flatMap { it.samples }.map { it.beatsPerMinute.toDouble() }
         } ?: return null
+        // Unter drei Messungen gibt es nichts: aus zwei Werten einen Ruhepuls
+        // zu mitteln hiesse, die Nacht aus zwei Augenblicken zu beschreiben.
         if (proben.size < 3) return null
-        return proben.sorted().take(TIEFSTE).average()
+        return Nachtpuls(
+            ruhe = proben.sorted().take(TIEFSTE).average(),
+            streuung = Auswertung.streuung(proben),
+            proben = proben.size,
+        )
     }
-
 
     /**
      * Wann die Nacht anfing, aufhoerte, und wo ihre Mitte lag.
