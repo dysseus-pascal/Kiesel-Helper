@@ -336,7 +336,8 @@ Zwei Dinge, die kein Sensor weiss, unten im Gesundheits-Reiter:
 **»Wie war der Tag?«** — eine Zahl von 1 bis 5. Eine Uhr misst, wie lange man
 geschlafen hat; ob man sich ausgeruht *fühlt*, weiss nur der Mensch.
 
-**Koffein** — ein Tipp je Getränk (Kaffee 80 mg, Espresso 60, Tee 40). Die
+**Koffein** — ein Tipp je Getränk (Kaffee 80 mg, Espresso 60, Tee 40,
+Energydrink 80). Die
 Milligramm sind Hausnummern; die interessante Hälfte ist der **Zeitpunkt des
 letzten**, denn der erklärt die Nacht, über die man sich wundert.
 

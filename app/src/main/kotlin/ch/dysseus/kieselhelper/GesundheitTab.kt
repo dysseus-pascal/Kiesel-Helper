@@ -282,18 +282,31 @@ object GesundheitTab {
             else (Zahlen.ganz(stand.koffeinMg) ?: "") + " mg" +
                 (Zahlen.uhrzeit(stand.koffeinLetzt)?.let { ", zuletzt um $it" } ?: "")
         ))
-        val getraenke = ctx.reihe()
-        listOf("Kaffee" to 80, "Espresso" to 60, "Tee" to 40).forEach { (name, mg) ->
-            getraenke.addView(ctx.knopfLeise("+ $name") { eingaben.fuegeKoffein(mg) }.apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
-                ).apply { marginEnd = ctx.dp(6f) }
-            })
+        // ZWEI REIHEN ZU ZWEIT, nicht vier nebeneinander. Bei vier Knoepfen
+        // in einer Zeile brach schon "Espresso" um, und ein Knopf, dessen
+        // Beschriftung auf zwei Zeilen steht, sieht kaputt aus.
+        listOf(
+            listOf("Kaffee" to 80, "Espresso" to 60),
+            listOf("Tee" to 40, "Energy" to 80),
+        ).forEach { paar ->
+            val zeile = ctx.reihe()
+            paar.forEach { (name, mg) ->
+                zeile.addView(ctx.knopfLeise("+ $name") { eingaben.fuegeKoffein(mg) }.apply {
+                    maxLines = 1
+                    layoutParams = LinearLayout.LayoutParams(
+                        0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+                    ).apply {
+                        marginEnd = ctx.dp(6f)
+                        topMargin = ctx.dp(4f)
+                    }
+                })
+            }
+            k.addView(zeile)
         }
-        k.addView(getraenke)
         k.addView(ctx.zart(
-            "Die Milligramm sind Hausnummern — für die Frage »Kaffee nach 16 " +
-                "Uhr gegen Tiefschlaf« zählt vor allem der Zeitpunkt."
+            "Kaffee 80 mg, Espresso 60, Tee 40, Energydrink 80 — Hausnummern " +
+                "für eine übliche Portion. Für die Frage »Koffein nach 16 Uhr " +
+                "gegen Tiefschlaf« zählt ohnehin vor allem der Zeitpunkt."
         ))
         return k
     }

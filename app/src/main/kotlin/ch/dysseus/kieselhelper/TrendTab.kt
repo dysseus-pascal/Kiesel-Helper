@@ -635,10 +635,10 @@ object TrendTab {
         } ?: "Für einen Vergleich über acht Wochen fehlen noch Tage."
 
     private fun kurz(tag: DayOfWeek) =
-        tag.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+        tag.getDisplayName(TextStyle.SHORT, Locale.GERMAN)
 
     private fun lang(tag: DayOfWeek) =
-        tag.getDisplayName(TextStyle.FULL, Locale.getDefault())
+        tag.getDisplayName(TextStyle.FULL, Locale.GERMAN)
 
     private fun kw(montag: LocalDate) =
         montag.get(WeekFields.ISO.weekOfWeekBasedYear()).toString()

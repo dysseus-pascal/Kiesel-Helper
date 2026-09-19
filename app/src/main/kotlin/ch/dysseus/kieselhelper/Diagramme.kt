@@ -234,7 +234,11 @@ fun Context.saeulenbild(
  * Sieben Tage: der heutige voll im Akzent, die sechs davor blasser.
  *
  * KURZ UND NICHT SCHMAL als Beschriftung: im Deutschen heissen Dienstag und
- * Donnerstag beide "D", Samstag und Sonntag beide "S". Ein Buchstabe spart
+ * Donnerstag beide "D", Samstag und Sonntag beide "S".
+ *
+ * DEUTSCH, NICHT IN DER SPRACHE DES TELEFONS. Die ganze App spricht deutsch;
+ * "Sun, Mon, Tue" zwischen deutschen Saetzen sieht aus wie ein Versehen -
+ * und ist eines. Ein Buchstabe spart
  * Platz und kostet die Aussage.
  */
 fun Context.wochenbild(
@@ -247,7 +251,7 @@ fun Context.wochenbild(
     return saeulenbild(
         werte.map { tag ->
             Saeule(
-                tag.tag.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
+                tag.tag.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.GERMAN),
                 tag.zahl,
                 hervor = tag.tag == heute,
                 oben = if (tag.tag == heute && tag.zahl != null) beschriftung(tag.zahl) else null,
