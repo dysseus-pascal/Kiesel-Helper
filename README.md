@@ -54,7 +54,7 @@ Zu jeder Karte ein Bild - eine Zahl allein sagt nicht, ob sie hoch ist.
 | Karte | Bild |
 |---|---|
 | Bewegung | Schritte der sieben Tage **vor** heute, mit Ziellinie |
-| Schlaf | die Nacht in Phasen (tief, REM, leicht, wach) + sieben Nächte |
+| Schlaf | die Nacht in Phasen (tief, REM, leicht, wach) + die sieben Nächte **davor** |
 | Herz | Punktewolke der letzten **24 Stunden**, mit gleitendem Median; im Trend dieselbe Wolke über 14 Tage |
 | Ernährung | Wasser über sieben Tage, dazu die Supplemente: hell geplant, dunkel genommen |
 
@@ -67,11 +67,17 @@ rosa gemacht hat.
 bekommt darum keinen Balken der Höhe null, sondern gar keinen, und eine Nacht
 ohne Phasen keinen geviertelten Balken.
 
-**Der laufende Tag steht nicht im Schrittebild.** Um zehn Uhr morgens stünde er
+**Der laufende Tag steht nicht im Schritte- und Schlafbild.** Um zehn Uhr morgens stünde er
 auf einem Drittel neben ganzen Tagen, und das Bild sagte »heute war schwach«,
 wo »heute ist noch nicht vorbei« gilt. Oben steht er ohnehin, und zwar als das,
 was er ist. Wasser und Supplemente behalten ihn: dort will man genau wissen,
 was heute noch fehlt.
+
+**Auch die horizontalen Balken tragen ihre Marke.** Ein gedeckelter Balken
+verschweigt den Überschuss: neun Stunden Schlaf bei acht Stunden Ideal sahen
+aus wie genau acht, weil beide Male der Balken voll war. Die Spur steht deshalb
+für den grösseren der beiden Werte, das Ziel sitzt als schmaler Strich darin,
+und was dahinter kommt, bekommt dieselbe Farbe wie im Wochenbild.
 
 **Das Pulsbild zeigt die letzten 24 Stunden**, nicht den laufenden Tag. Die
 Tagesgrenze ist eine Zählgrenze, kein Sichtschutz — wer sie auf sechs Uhr

@@ -74,13 +74,15 @@ object GesundheitTab {
             ))
         }
         val ideal = Einstellungen.schlafziel(ctx).toDouble()
+        // OHNE DIE LETZTE NACHT, wie bei den Schritten: oben steht sie
+        // ohnehin, und im Bild stuende sie neben sieben abgeschlossenen.
         schlaf.addView(ctx.zart(
-            "Sieben Nächte. Die Linie ist dein Ideal von " +
+            "Die sieben Nächte davor. Die Linie ist dein Ideal von " +
                 (Zahlen.dauer(ideal) ?: "") + "; was darüber liegt, steht " +
                 "in eigener Farbe."
         ))
         schlaf.addView(ctx.wochenbild(
-            stand.wocheSchlaf.takeLast(Gesundheit.TAGE), ziel = ideal, marke = ideal
+            stand.wocheSchlaf.dropLast(1), ziel = ideal, marke = ideal
         ) { Zahlen.dauer(it) ?: "" })
         s.addView(schlaf)
 
@@ -119,8 +121,9 @@ object GesundheitTab {
             ctx.wert(stand.wasser, Zahlen.ganz(stand.wasser.zahl), "ml"),
             ctx.messwert(
                 "Supplemente", quote(stand), "",
-                stand.suppGenommen.anteil,
+                stand.suppGenommen.balkenAnteil,
                 stand.suppGenommen.da && stand.suppFaellig.da,
+                stand.suppGenommen.balkenUeber,
             ),
         ))
         // WAS HEUTE ANSTEHT, namentlich. Eine Quote sagt, wie viel fehlt;
@@ -200,7 +203,8 @@ object GesundheitTab {
             w.name,
             if (text != null && w.geschaetzt) "≈$text" else text,
             einheit,
-            w.anteil,
+            w.balkenAnteil,
             w.ziel != null && w.da,
+            w.balkenUeber,
         )
 }

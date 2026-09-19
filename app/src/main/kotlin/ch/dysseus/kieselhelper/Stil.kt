@@ -263,6 +263,15 @@ fun Context.messwert(
     einheit: String,
     anteil: Float,
     mitBalken: Boolean,
+    /**
+     * Was ueber das Ziel hinausgeht, als Anteil desselben Balkens.
+     *
+     * Ist er groesser als null, steht das Ziel als MARKE mitten im Balken und
+     * nicht mehr an seinem Ende - genau wie die Linie im Wochenbild. Ohne
+     * diese Marke sahen neun Stunden Schlaf bei acht Stunden Ideal aus wie
+     * genau acht: der Balken war in beiden Faellen voll.
+     */
+    ueber: Float = 0f,
 ): LinearLayout = LinearLayout(this).apply {
     orientation = LinearLayout.VERTICAL
     layoutParams = LinearLayout.LayoutParams(
@@ -311,6 +320,7 @@ fun Context.messwert(
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(6f)
             ).apply { topMargin = -dp(6f) }
+
             addView(View(this@messwert).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     0, dp(6f), anteil.coerceAtLeast(0.001f)
@@ -320,9 +330,25 @@ fun Context.messwert(
                     cornerRadius = dp(3f).toFloat()
                 }
             })
+
+            if (ueber > 0f) {
+                // Die Marke: ein schmaler Strich genau auf dem Ziel.
+                addView(View(this@messwert).apply {
+                    layoutParams = LinearLayout.LayoutParams(dp(2f), dp(6f))
+                    setBackgroundColor(farbe(R.color.schrift))
+                })
+                addView(View(this@messwert).apply {
+                    layoutParams = LinearLayout.LayoutParams(0, dp(6f), ueber)
+                    background = GradientDrawable().apply {
+                        setColor(farbe(R.color.ueber_ziel))
+                        cornerRadius = dp(3f).toFloat()
+                    }
+                })
+            }
+
             addView(View(this@messwert).apply {
                 layoutParams = LinearLayout.LayoutParams(
-                    0, dp(6f), (1f - anteil).coerceAtLeast(0.001f)
+                    0, dp(6f), (1f - anteil - ueber).coerceAtLeast(0.001f)
                 )
             })
         })

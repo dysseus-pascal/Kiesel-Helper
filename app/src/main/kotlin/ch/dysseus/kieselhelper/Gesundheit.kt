@@ -61,12 +61,41 @@ class Gesundheit(private val context: Context) {
         val geschaetzt: Boolean = false,
     ) {
         val da: Boolean get() = zahl != null
+
+        /** Wie weit das Ziel erfuellt ist, hoechstens ganz. Fuer das Widget. */
         val anteil: Float
             get() {
                 val z = zahl ?: return 0f
                 val t = ziel ?: return 0f
                 if (t <= 0) return 0f
                 return (z / t).coerceIn(0.0, 1.0).toFloat()
+            }
+
+        /**
+         * Derselbe Balken, aber mit Platz fuer das, was darueber hinausgeht.
+         *
+         * EIN GEDECKELTER BALKEN VERSCHWEIGT DEN UEBERSCHUSS: neun Stunden
+         * Schlaf bei acht Stunden Ideal sahen aus wie genau acht. Die Spur
+         * steht deshalb fuer den GROESSEREN der beiden Werte, das Ziel sitzt
+         * als Marke darin, und was dahinter kommt, bekommt eine eigene Farbe.
+         */
+        private val groesserer: Double
+            get() = maxOf(zahl ?: 0.0, ziel ?: 0.0)
+
+        val balkenAnteil: Float
+            get() {
+                val z = zahl ?: return 0f
+                val t = ziel ?: return 0f
+                if (groesserer <= 0) return 0f
+                return (minOf(z, t) / groesserer).toFloat()
+            }
+
+        val balkenUeber: Float
+            get() {
+                val z = zahl ?: return 0f
+                val t = ziel ?: return 0f
+                if (groesserer <= 0 || z <= t) return 0f
+                return ((z - t) / groesserer).toFloat()
             }
     }
 
