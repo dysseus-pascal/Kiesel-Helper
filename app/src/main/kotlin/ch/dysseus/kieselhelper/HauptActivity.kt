@@ -227,7 +227,14 @@ class HauptActivity : ComponentActivity() {
             gesundheit.addView(k)
         }
 
-        gesundheit.addView(GesundheitTab.baue(this@HauptActivity, stand))
+        // Zwei Abfragen mehr, beide gruppiert: das Profil von heute und der
+        // Schnitt der letzten zwei Wochen.
+        val ich = this@HauptActivity
+        val profilHeute = Gesundheit(ich).bewegungsprofil(1)
+        val profilTypisch = Gesundheit(ich).bewegungsprofil(14)
+        gesundheit.addView(
+            GesundheitTab.baue(ich, stand, profilHeute, profilTypisch)
+        )
 
         // Die Zahlen sind eben gelesen; das Widget soll nicht aelteres zeigen
         // als der Schirm daneben.

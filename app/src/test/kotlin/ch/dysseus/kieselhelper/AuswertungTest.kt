@@ -148,4 +148,15 @@ class AuswertungTest {
         assertEquals(500.0, w.wochenende, 0.001)
         assertEquals(400.0, w.unterschied, 0.001)
     }
+
+    @Test
+    fun `Streuung braucht drei Werte`() {
+        assertNull(Auswertung.streuung(listOf(1.0, 2.0)))
+        assertEquals(1.0, Auswertung.streuung(listOf(1.0, 2.0, 3.0))!!, 0.0001)
+    }
+
+    @Test
+    fun `gleiche Werte streuen nicht`() {
+        assertEquals(0.0, Auswertung.streuung(listOf(7.0, 7.0, 7.0, 7.0))!!, 0.0001)
+    }
 }

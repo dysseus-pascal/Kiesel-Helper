@@ -246,4 +246,22 @@ object Auswertung {
             frei.size,
         )
     }
+
+    /**
+     * Wie stark eine Groesse schwankt - Standardabweichung.
+     *
+     * FUER DIE SCHLAFMITTE IST DAS DIE EIGENTLICHE ZAHL. Wer jede Nacht
+     * gleich lang schlaeft, aber jedes Mal zu einer anderen Zeit, hat einen
+     * unauffaelligen Mittelwert und trotzdem ein Problem. Ein Mittelwert
+     * allein sieht das nie.
+     *
+     * Gerechnet wird ueber die Stichprobe (n-1): die Tage sind eine Auswahl
+     * aus allen, nicht alle.
+     */
+    fun streuung(werte: List<Double>): Double? {
+        if (werte.size < 3) return null
+        val mittel = werte.average()
+        val summe = werte.sumOf { (it - mittel) * (it - mittel) }
+        return kotlin.math.sqrt(summe / (werte.size - 1))
+    }
 }

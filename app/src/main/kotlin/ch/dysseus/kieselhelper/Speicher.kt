@@ -32,7 +32,7 @@ class Speicher(context: Context) : SQLiteOpenHelper(context, NAME, null, FASSUNG
 
     companion object {
         private const val NAME = "gesundheit.db"
-        private const val FASSUNG = 3
+        private const val FASSUNG = 4
 
         /** Die Spalten, die einen Messwert tragen - in der Reihenfolge der Tabelle. */
         val SPALTEN = listOf(
@@ -40,12 +40,14 @@ class Speicher(context: Context) : SQLiteOpenHelper(context, NAME, null, FASSUNG
             "schlaf", "tief", "rem", "leicht", "wach",
             "ruhepuls", "puls_min", "puls_hoch", "puls_tief", "hrv",
             "supp_faellig", "supp_genommen",
+            "schlaf_von", "schlaf_bis", "schlaf_mitte",
         )
 
         /** Was seit Fassung 1 dazugekommen ist - fuer [onUpgrade]. */
         private val NACHGEWACHSEN = mapOf(
             2 to listOf("puls_hoch", "puls_tief"),
             3 to listOf("supp_faellig", "supp_genommen"),
+            4 to listOf("schlaf_von", "schlaf_bis", "schlaf_mitte"),
         )
     }
 

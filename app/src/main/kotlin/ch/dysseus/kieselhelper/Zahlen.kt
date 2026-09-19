@@ -32,4 +32,16 @@ object Zahlen {
         val m = min?.toInt() ?: return null
         return if (m < 60) "$m min" else "${m / 60} h ${m % 60}"
     }
+
+    /**
+     * Minuten seit achtzehn Uhr zurueck in eine Uhrzeit.
+     *
+     * Nachtzeiten werden ab 18 Uhr gerechnet, damit Mitternacht keine Kante
+     * ist. Lesen will man sie trotzdem als Uhrzeit.
+     */
+    fun uhrzeitAb18(minuten: Double?): String? {
+        val m = minuten?.toInt() ?: return null
+        val tagesminute = ((18 * 60 + m) % 1440 + 1440) % 1440
+        return String.format("%02d:%02d", tagesminute / 60, tagesminute % 60)
+    }
 }

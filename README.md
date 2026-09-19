@@ -53,7 +53,7 @@ Zu jeder Karte ein Bild - eine Zahl allein sagt nicht, ob sie hoch ist.
 
 | Karte | Bild |
 |---|---|
-| Bewegung | Schritte der sieben Tage **vor** heute, mit Ziellinie |
+| Bewegung | Schritte der sieben Tage **vor** heute, dazu das Tagesprofil in Halbstundenstufen |
 | Schlaf | die Nacht in Phasen (tief, REM, leicht, wach) + die sieben Nächte **davor** |
 | Herz | Punktewolke der letzten **24 Stunden**, mit gleitendem Median; im Trend dieselbe Wolke über 14 Tage |
 | Ernährung | Wasser über sieben Tage, dazu die Supplemente: hell geplant, dunkel genommen |
@@ -184,6 +184,32 @@ alle Tage. So heisst »über der Linie« überall dasselbe.
 Die Auswahlleiste wird **einmal** gebaut und danach nur umgefärbt — sonst
 stünde sie nach jedem Umschalten wieder ganz links, während man rechts aussen
 getippt hat.
+
+### Bewegungsprofil
+
+Schritte in Halbstundenstufen über den Tag, blass dahinter der Schnitt der
+letzten zwei Wochen. **Die Tagessumme sagt nicht, ob ein Tag schwach war oder
+nur spät**: 4000 Schritte um achtzehn Uhr sind ein anderer Tag als 4000 um
+zehn.
+
+Balken und keine Linie: zwischen zwei Pulsmessungen liegt ein Verlauf, zwischen
+zwei Schrittzählungen eine Summe. Sie zu verbinden hiesse, zwischen zehn und
+halb elf etwas zu behaupten.
+
+### Schlafmitte
+
+Die Schlafsätze tragen Anfang und Ende — bisher wurde nur die Dauer genutzt.
+Jetzt stehen Einschlafzeit, Aufwachzeit und **die Mitte der Nacht** da, im
+Trend mit ihrer Streuung: *»02:47 ± 38 min — regelmässig«*.
+
+**Die Mitte ist der stabilere Wert.** Wer eine Nacht kurz schläft, merkt das am
+nächsten Tag; wer jede Nacht zu einer anderen Zeit schläft, merkt es dauerhaft.
+Die Dauer sagt das nicht.
+
+Gerechnet wird **ab 18 Uhr**, nicht in Uhrzeiten: 23:10 und 00:30 liegen
+achtzig Minuten auseinander, als Tagesminuten aber 1360 — jeder Mittelwert über
+Mitternacht hinweg wäre sonst Unsinn, und gerade die Mitte ist hier die
+interessante Zahl.
 
 ### Zusammenhänge
 

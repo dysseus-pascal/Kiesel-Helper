@@ -39,7 +39,7 @@ object TrendTab {
 
     val GRUPPEN = listOf(
         Gruppe("Schritte", listOf("schritte")),
-        Gruppe("Schlaf", listOf("schlaf", "tief")),
+        Gruppe("Schlaf", listOf("schlaf", "tief", "schlaf_mitte")),
         Gruppe("Herz", listOf("ruhepuls", "puls_min", "puls_hoch", "puls_tief", "hrv")),
         Gruppe("Ernährung", listOf("wasser", "supp_faellig", "supp_genommen")),
         Gruppe("Aktiv", listOf("aktiv")),
@@ -229,6 +229,36 @@ object TrendTab {
         wochenendzeile(ctx, woche, daten, "schlaf", "Schlaf", form, heute)
         wochenendzeile(ctx, woche, daten, "tief", "Tiefschlaf", form, heute)
         s.addView(woche)
+
+        // DIE SCHLAFMITTE IST DIE ZWEITE HAELFTE DER GESCHICHTE. Wer jede
+        // Nacht gleich lang, aber zu anderen Zeiten schlaeft, hat einen
+        // unauffaelligen Mittelwert und trotzdem etwas zu sehen.
+        val mitten = daten["schlaf_mitte"].orEmpty()
+            .filter { it.first < heute }.map { it.second }
+        val streuung = Auswertung.streuung(mitten)
+        if (streuung != null) {
+            s.addView(ctx.abschnitt("SCHLAFMITTE"))
+            val k = ctx.karte()
+            k.addView(ctx.kartentitel(
+                (Zahlen.uhrzeitAb18(mitten.average()) ?: "") + " ± " +
+                    (Zahlen.dauer(streuung) ?: "")
+            ))
+            k.addView(ctx.fliesstext(
+                "Die Mitte deiner Nächte über " + mitten.size + " Tage. " +
+                    when {
+                        streuung < 30 -> "Sehr regelmässig."
+                        streuung < 60 -> "Regelmässig."
+                        streuung < 90 -> "Schwankend."
+                        else -> "Stark schwankend."
+                    }
+            ))
+            k.addView(ctx.zart(
+                "Gerechnet wird ab 18 Uhr, damit Mitternacht keine Kante ist: " +
+                    "23:10 und 00:30 liegen achtzig Minuten auseinander, als " +
+                    "Uhrzeiten aber fast einen ganzen Tag."
+            ))
+            s.addView(k)
+        }
 
         s.addView(ctx.abschnitt("VERLAUF"))
         val verlauf = ctx.karte()

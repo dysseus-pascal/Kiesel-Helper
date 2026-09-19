@@ -742,3 +742,95 @@ fun Context.streubild(
         ViewGroup.LayoutParams.MATCH_PARENT, dp(150f)
     ).apply { topMargin = dp(10f) }
 }
+
+// --- Tagesprofil -------------------------------------------------------------
+
+/**
+ * Was ueber den Tag verteilt geschieht - in Stufen, nicht als Linie.
+ *
+ * SCHRITTE SIND KEINE KURVE. Zwischen zwei Messungen liegt bei einem Puls ein
+ * Verlauf, bei Schritten eine Summe; sie zu verbinden hiesse, zwischen zehn
+ * und halb elf etwas zu behaupten. Deshalb Balken, eine halbe Stunde breit.
+ *
+ * Das typische Profil steht BLASS DAHINTER, der heutige Tag davor. So sieht
+ * man auf einen Blick, ob die Bewegung fehlt oder nur noch nicht da war.
+ */
+class TagesprofilView(
+    ctx: Context,
+    private val heute: List<Gesundheit.Punkt>,
+    private val typisch: List<Gesundheit.Punkt>,
+    private val stufe: Int,
+    private val beginnMinute: Int,
+) : View(ctx) {
+
+    private val stift = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val gitter = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = ctx.dp(1f).toFloat()
+        color = ctx.farbe(R.color.linie)
+    }
+    private val schrift = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_SP, 10f, ctx.resources.displayMetrics
+        )
+        color = ctx.farbe(R.color.schrift_zart)
+    }
+
+    override fun onDraw(leinwand: Canvas) {
+        val alle = heute + typisch
+        if (alle.isEmpty()) {
+            schrift.textAlign = Paint.Align.LEFT
+            leinwand.drawText("Noch keine Schritte gemessen", 0f, height / 2f, schrift)
+            return
+        }
+
+        val fuss = context.dp(14f).toFloat()
+        val boden = height - fuss
+        val breite = width.toFloat()
+        val spitze = maxOf(alle.maxOf { it.wert }, 1.0)
+        val fach = breite * (stufe / 1440f)
+        val balken = maxOf(fach - context.dp(1f), context.dp(2f).toFloat())
+
+        fun x(minute: Int): Float {
+            // Rechnet die Uhrzeit auf die Stelle im Bild um - das Bild faengt
+            // an der Tagesgrenze an, nicht um Mitternacht.
+            val versatz = ((minute - beginnMinute) + 1440) % 1440
+            return breite * (versatz / 1440f)
+        }
+
+        listOf(360, 720, 1080).forEach { versatz ->
+            val sx = breite * (versatz / 1440f)
+            leinwand.drawLine(sx, 0f, sx, boden, gitter)
+            schrift.textAlign = Paint.Align.CENTER
+            val stunde = ((beginnMinute + versatz) / 60) % 24
+            leinwand.drawText(
+                String.format("%02d", stunde), sx,
+                height - context.dp(2f).toFloat(), schrift,
+            )
+        }
+
+        typisch.forEach { p ->
+            stift.color = context.farbe(R.color.schrift_zart)
+            stift.alpha = 60
+            val h = (boden * (p.wert / spitze)).toFloat()
+            leinwand.drawRect(x(p.minute), boden - h, x(p.minute) + balken, boden, stift)
+        }
+        stift.alpha = 255
+        heute.forEach { p ->
+            stift.color = context.farbe(R.color.akzent)
+            val h = (boden * (p.wert / spitze)).toFloat()
+            leinwand.drawRect(x(p.minute), boden - h, x(p.minute) + balken, boden, stift)
+        }
+    }
+}
+
+fun Context.tagesprofil(
+    heute: List<Gesundheit.Punkt>,
+    typisch: List<Gesundheit.Punkt>,
+    stufe: Int,
+    beginnMinute: Int,
+): View = TagesprofilView(this, heute, typisch, stufe, beginnMinute).apply {
+    layoutParams = LinearLayout.LayoutParams(
+        ViewGroup.LayoutParams.MATCH_PARENT, dp(104f)
+    ).apply { topMargin = dp(10f) }
+}

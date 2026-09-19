@@ -14,6 +14,7 @@ import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.request.AggregateGroupByDurationRequest
 import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
@@ -139,6 +140,7 @@ class Gesundheit(private val context: Context) {
         val suppGenommen: Wert,
         val suppListe: List<Supplemente.Eintrag>,
         val phasen: Phasen?,
+        val nachtzeiten: Nachtzeiten?,
         val wocheSchritte: List<Tageswert>,
         val wocheSchlaf: List<Tageswert>,
         val wocheWasser: List<Tageswert>,
@@ -218,6 +220,9 @@ class Gesundheit(private val context: Context) {
          * und es bleibt trotzdem die ruhigste Stelle der Nacht.
          */
         const val TIEFSTE = 10
+
+        /** Die Stufe im Bewegungsprofil. Halbe Stunden: feiner waere Rauschen. */
+        const val STUFE_MIN = 30
 
         /** So viele Naechte holt das Nachtragen den Schaetzwert nach. */
         const val NAECHTE_NACH = 3
@@ -329,6 +334,7 @@ class Gesundheit(private val context: Context) {
             suppGenommen = Wert("Supplemente", suppGenommen, "", ziel = suppFaellig),
             suppListe = Supplemente.lies(context)?.heute.orEmpty(),
             phasen = phasenAus(sitzungen),
+            nachtzeiten = zeitenAus(sitzungen, heute),
             wocheSchritte = wocheSchritteWasser(klient, StepsRecord.COUNT_TOTAL),
             wocheWasser = wocheSchritteWasser(klient, HydrationRecord.VOLUME_TOTAL),
             wocheSchlaf = wocheSchlaf(klient, heute),
@@ -359,6 +365,9 @@ class Gesundheit(private val context: Context) {
             "rem" to stand.phasen?.rem,
             "leicht" to stand.phasen?.leicht,
             "wach" to stand.phasen?.wach,
+            "schlaf_von" to stand.nachtzeiten?.von,
+            "schlaf_bis" to stand.nachtzeiten?.bis,
+            "schlaf_mitte" to stand.nachtzeiten?.mitte,
             // GEMESSEN UND GESCHAETZT IN GETRENNTE SPALTEN. Ein aus dem
             // Nachttief hergeleiteter Ruhepuls darf spaeter nicht als
             // eingetragener durchgehen - in einem Jahresmittel sieht man
@@ -469,6 +478,7 @@ class Gesundheit(private val context: Context) {
                 val tag = e.startTime.toLocalDate()
                 val nacht = naechte[tag].orEmpty()
                 val phasen = phasenAus(nacht)
+                val zeiten = zeitenAus(nacht, tag)
                 val geschlafen = nacht.sumOf {
                     Duration.between(it.startTime, it.endTime).toMinutes()
                 }.toDouble().takeIf { it > 0 }
@@ -486,6 +496,9 @@ class Gesundheit(private val context: Context) {
                     "rem" to phasen?.rem,
                     "leicht" to phasen?.leicht,
                     "wach" to phasen?.wach,
+                    "schlaf_von" to zeiten?.von,
+                    "schlaf_bis" to zeiten?.bis,
+                    "schlaf_mitte" to zeiten?.mitte,
                     "ruhepuls" to e.result[RestingHeartRateRecord.BPM_AVG]?.toDouble(),
                     // KEIN "puls_min" HIER. Der Schaetzwert ist das Mittel der
                     // zehn tiefsten Nachtmessungen; das Tagestief waere eine
@@ -568,6 +581,35 @@ class Gesundheit(private val context: Context) {
         } ?: return null
         if (proben.size < 3) return null
         return proben.sorted().take(TIEFSTE).average()
+    }
+
+
+    /**
+     * Wann die Nacht anfing, aufhoerte, und wo ihre Mitte lag.
+     *
+     * GERECHNET WIRD IN MINUTEN SEIT ACHTZEHN UHR, nicht in Uhrzeiten. 23:10
+     * und 00:30 liegen achtzig Minuten auseinander, als Tagesminuten aber
+     * 1360 - jeder Mittelwert ueber Mitternacht hinweg waere sonst Unsinn, und
+     * gerade die Mitte ist hier die interessante Zahl.
+     *
+     * DIE SCHLAFMITTE IST DER STABILERE WERT. Wer eine Nacht kurz schlaeft,
+     * merkt das am naechsten Tag; wer jede Nacht zu einer anderen Zeit
+     * schlaeft, merkt es dauerhaft. Die Dauer sagt das nicht.
+     */
+    data class Nachtzeiten(val von: Double, val bis: Double) {
+        val mitte: Double get() = (von + bis) / 2
+    }
+
+    private fun zeitenAus(
+        sitzungen: List<SleepSessionRecord>,
+        nacht: LocalDate,
+    ): Nachtzeiten? {
+        if (sitzungen.isEmpty()) return null
+        val null18 = nacht.minusDays(1).atTime(NACHT_AB).atZone(zone).toInstant()
+        val von = sitzungen.minOf { Duration.between(null18, it.startTime).toMinutes() }
+        val bis = sitzungen.maxOf { Duration.between(null18, it.endTime).toMinutes() }
+        if (bis <= von) return null
+        return Nachtzeiten(von.toDouble(), bis.toDouble())
     }
 
     /**
@@ -703,6 +745,52 @@ class Gesundheit(private val context: Context) {
         return (0 until PUNKTE_MAX).map { i -> alle[(i * schritt).toInt()] }
     }
 
+
+
+    /**
+     * Wann am Tag man sich bewegt - in Halbstundenstufen.
+     *
+     * DIE TAGESSUMME SAGT NICHT, OB EIN TAG SCHWACH WAR oder nur spaet: 4000
+     * Schritte um achtzehn Uhr sind ein anderer Tag als 4000 um zehn. Das
+     * Profil beantwortet das, und uebereinandergelegt ueber zwei Wochen sagt
+     * es, wie ein Tag bei einem AUSSIEHT.
+     *
+     * Eine einzige Abfrage je Zeitraum: die Akte kann selbst in Stufen
+     * schneiden (`aggregateGroupByDuration`), und achtundvierzig Eimer von
+     * Hand zu fuellen hiesse, achtundvierzig Mal dasselbe zu fragen.
+     */
+    suspend fun bewegungsprofil(tage: Int = 1): List<Punkt> {
+        val klient = Akte(context).bereit() ?: return emptyList()
+        val heute = heute()
+        val beginn = tagBeginn(heute.minusDays((tage - 1).toLong()))
+            .atZone(zone).toInstant()
+        val jetzt = Instant.now()
+
+        val eimer = fange("Bewegungsprofil") {
+            klient.aggregateGroupByDuration(
+                AggregateGroupByDurationRequest(
+                    metrics = setOf(StepsRecord.COUNT_TOTAL),
+                    timeRangeFilter = TimeRangeFilter.between(beginn, jetzt),
+                    timeRangeSlicer = Duration.ofMinutes(STUFE_MIN.toLong()),
+                )
+            )
+        } ?: return emptyList()
+
+        // Nach TAGESZEIT zusammenlegen, nicht nach Eimer: bei mehreren Tagen
+        // sollen sich die Stufen desselben Zeitfensters treffen. Gemittelt
+        // wird ueber die Zahl der Tage, nicht ueber die gefundenen Eimer -
+        // ein Fenster ganz ohne Schritte fehlt in der Antwort, und es als
+        // "nicht vorhanden" zu behandeln hoebe den Schnitt kuenstlich an.
+        val summe = HashMap<Int, Double>()
+        eimer.forEach { e ->
+            val z = LocalDateTime.ofInstant(e.startTime, zone)
+            val stufe = ((z.hour * 60 + z.minute) / STUFE_MIN) * STUFE_MIN
+            val schritte = e.result[StepsRecord.COUNT_TOTAL]?.toDouble() ?: 0.0
+            summe[stufe] = (summe[stufe] ?: 0.0) + schritte
+        }
+        return summe.entries.sortedBy { it.key }
+            .map { (stufe, gesamt) -> Punkt(stufe, gesamt / tage) }
+    }
 
     /**
      * Alle Pulsmessungen der letzten Tage, nach Tageszeit uebereinandergelegt.

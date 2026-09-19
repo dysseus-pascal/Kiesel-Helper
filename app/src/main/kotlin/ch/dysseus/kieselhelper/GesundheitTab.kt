@@ -21,7 +21,12 @@ import android.widget.LinearLayout
  */
 object GesundheitTab {
 
-    fun baue(ctx: Context, stand: Gesundheit.Stand?): LinearLayout {
+    fun baue(
+        ctx: Context,
+        stand: Gesundheit.Stand?,
+        profilHeute: List<Gesundheit.Punkt> = emptyList(),
+        profilTypisch: List<Gesundheit.Punkt> = emptyList(),
+    ): LinearLayout {
         val s = ctx.spalte()
 
         if (stand == null) {
@@ -53,6 +58,18 @@ object GesundheitTab {
         bewegung.addView(ctx.wochenbild(
             stand.wocheSchritte.dropLast(1), Gesundheit.ZIEL_SCHRITTE
         ))
+
+        if (profilHeute.isNotEmpty() || profilTypisch.isNotEmpty()) {
+            bewegung.addView(ctx.zart(
+                "Schritte über den Tag, halbstündlich. Blass dahinter der " +
+                    "Schnitt der letzten zwei Wochen — so sieht man, ob die " +
+                    "Bewegung fehlt oder nur noch nicht da war."
+            ))
+            bewegung.addView(ctx.tagesprofil(
+                profilHeute, profilTypisch, Gesundheit.STUFE_MIN,
+                Einstellungen.tagesgrenze(ctx) * 60,
+            ))
+        }
         s.addView(bewegung)
 
         // --- Schlaf ---
@@ -62,6 +79,16 @@ object GesundheitTab {
             ctx.wert(stand.schlaf, Zahlen.dauer(stand.schlaf.zahl), ""),
             ctx.messwert("Tiefschlaf", Zahlen.dauer(stand.phasen?.tief), "", 0f, false),
         ))
+        // WANN, nicht nur wie lange. Die Schlafmitte ist der stabilere Wert:
+        // wer jede Nacht gleich lang, aber zu anderen Zeiten schlaeft, hat
+        // einen unauffaelligen Mittelwert und trotzdem etwas zu sehen.
+        stand.nachtzeiten?.let { z ->
+            schlaf.addView(ctx.fliesstext(
+                "Von " + (Zahlen.uhrzeitAb18(z.von) ?: "") + " bis " +
+                    (Zahlen.uhrzeitAb18(z.bis) ?: "") + ", Mitte " +
+                    (Zahlen.uhrzeitAb18(z.mitte) ?: "") + "."
+            ))
+        }
         if (stand.phasen != null) {
             schlaf.addView(ctx.phasenbild(stand.phasen))
         } else {
