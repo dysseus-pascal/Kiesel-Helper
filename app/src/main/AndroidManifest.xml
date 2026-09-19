@@ -127,15 +127,37 @@
             android:launchMode="singleTask"
             android:excludeFromRecents="true">
 
+            <!-- ZWEI FILTER, NICHT EINER - und das ist kein Schoenheitsfehler.
+                 Alle <data>-Zeilen INNERHALB eines Filters werden von Android
+                 zu EINER Bedingung verschmolzen: jedes Schema mal jeden Host
+                 mal jeden Pfad. Stand irgendwo ein pathPrefix, galt er damit
+                 fuer ALLE Hosts des Filters.
+
+                 Genau das war hier der Fall: "/maps" stand wegen
+                 www.google.com im selben Filter wie maps.app.goo.gl - und ein
+                 Kurzlink hat als Pfad "/abc123". Er passte also auf keine
+                 Bedingung und kam nie an. Getrennt nach "mit Pfad" und "ohne
+                 Pfad" stimmt beides. -->
             <intent-filter android:autoVerify="false">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="maps.google.com" />
-                <data android:scheme="https" android:host="www.google.com" android:pathPrefix="/maps" />
-                <data android:scheme="https" android:host="google.com" android:pathPrefix="/maps" />
-                <data android:scheme="https" android:host="maps.app.goo.gl" />
-                <data android:scheme="https" android:host="goo.gl" android:pathPrefix="/maps" />
+                <data android:scheme="https" />
+                <data android:scheme="http" />
+                <data android:host="maps.google.com" />
+                <data android:host="maps.app.goo.gl" />
+            </intent-filter>
+
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:scheme="http" />
+                <data android:host="www.google.com" />
+                <data android:host="google.com" />
+                <data android:host="goo.gl" />
+                <data android:pathPrefix="/maps" />
             </intent-filter>
 
             <!-- geo: gehoert niemandem und braucht keine Freigabe. Darueber

@@ -461,6 +461,16 @@ läuft sonst im Hintergrund, und man sucht die Karte selbst.
 Antwort, höchstens fünf Sprünge. Eine Google-Maps-Seite ist ein Megabyte
 JavaScript, und gesucht ist nur das Ziel der Umleitung.
 
+**Zwei Intent-Filter, nicht einer** — und das ist kein Schönheitsfehler. Alle
+`<data>`-Zeilen *innerhalb* eines Filters verschmilzt Android zu **einer**
+Bedingung: jedes Schema mal jeden Host mal jeden Pfad. Stand irgendwo ein
+`pathPrefix`, galt er damit für alle Hosts des Filters.
+
+Genau das war hier der Fall: `/maps` stand wegen `www.google.com` im selben
+Filter wie `maps.app.goo.gl` — und ein Kurzlink hat als Pfad `/abc123`. Er
+passte auf keine Bedingung und kam **nie** an. Getrennt nach »mit Pfad« und
+»ohne Pfad« stimmt beides.
+
 **Android gibt diese Links nicht von selbst her.** Seit Android 12 muss eine
 App den Besitz einer Adresse nachweisen, um sie zu beanspruchen, und für
 google.com kann das niemand ausser Google. Einmal von Hand erlauben:
