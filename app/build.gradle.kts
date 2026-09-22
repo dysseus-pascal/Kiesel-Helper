@@ -21,28 +21,8 @@ android {
         versionName = "0.30.0"
     }
 
-    // EIN FESTER SCHLUESSEL, NICHT DER DEBUG-SCHLUESSEL DES LAUFS. Jeder
-    // GitHub-Lauf legt sich einen eigenen Debug-Schluessel an, und Android
-    // installiert eine anders signierte Fassung nicht ueber die alte - nur
-    // nach dem Deinstallieren, und das loescht den eigenen Speicher. Der
-    // Schluessel kommt aus den Secrets des Repos; fehlen sie (lokal, in
-    // einem fremden PR), bleibt es beim Debug-Schluessel.
-    val schluessel = System.getenv("KIESEL_KEYSTORE")?.let { file(it) }?.takeIf { it.exists() }
-    val fest = schluessel?.let {
-        signingConfigs.create("fest") {
-            storeFile = it
-            storePassword = System.getenv("KIESEL_KEYSTORE_PASSWORT")
-            keyAlias = System.getenv("KIESEL_KEY_ALIAS")
-            keyPassword = System.getenv("KIESEL_KEY_PASSWORT")
-        }
-    }
-
     buildTypes {
-        debug {
-            if (fest != null) signingConfig = fest
-        }
         release {
-            if (fest != null) signingConfig = fest
             // Nicht verkleinern: die Health-Connect-Bibliothek arbeitet mit
             // Reflexion ueber die Datensatzklassen, und eine ungetestete App
             // durch ProGuard zu schicken hiesse, zwei Unbekannte zu stapeln.
