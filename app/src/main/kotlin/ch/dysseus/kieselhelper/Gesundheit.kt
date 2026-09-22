@@ -21,6 +21,8 @@ import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.Instant
@@ -268,100 +270,145 @@ class Gesundheit(private val context: Context) {
      * traege; gebuendelt geht es in einem Durchgang. Faellt eine Abfrage aus,
      * fehlt NUR ihr Wert - die uebrigen stehen trotzdem da.
      */
-    suspend fun lies(): Stand? {
-        val klient = Akte(context).bereit() ?: return null
+    suspend fun lies(): Stand? = coroutineScope {
+        val klient = Akte(context).bereit() ?: return@coroutineScope null
         val heute = heute()
         val jetzt = LocalDateTime.now(zone)
         val tag = TimeRangeFilter.between(tagBeginn(heute), jetzt)
         val nacht = nachtfenster(heute)
-        val nachts = nachtpuls(Akte(context).bereit() ?: return null, nacht)
 
-        val summen = fange("Tagessummen") {
-            klient.aggregate(
-                AggregateRequest(
-                    metrics = setOf(
-                        StepsRecord.COUNT_TOTAL,
-                        DistanceRecord.DISTANCE_TOTAL,
-                        ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL,
-                        ExerciseSessionRecord.EXERCISE_DURATION_TOTAL,
-                        HydrationRecord.VOLUME_TOTAL,
-                        // Tageshoch und Tagestief des Pulses. Sie kosten hier
-                        // nichts extra - dieselbe Abfrage, zwei Kennzahlen
-                        // mehr - und beantworten, was ein Mittelwert nie sagt:
-                        // wie weit der Tag ausgeschlagen hat.
-                        HeartRateRecord.BPM_MAX,
-                        HeartRateRecord.BPM_MIN,
-                        // Seit die App es selbst eintraegt, ist die Akte auch
-                        // beim Koffein die Quelle - und faengt mit, was eine
-                        // andere App eingetragen hat.
-                        NutritionRecord.CAFFEINE_TOTAL,
-                    ),
-                    timeRangeFilter = tag,
+        // NEBENEINANDER, NICHT HINTEREINANDER. Es sind ein Dutzend Abfragen,
+        // und keine braucht das Ergebnis einer anderen. Hintereinander
+        // addierten sich ihre Wartezeiten zu der Sekunde, in der der Schirm
+        // beim Oeffnen leer stand; nebeneinander dauert es so lange wie die
+        // langsamste.
+        val nachts = async { nachtpuls(klient, nacht) }
+
+        val summen = async {
+            fange("Tagessummen") {
+                klient.aggregate(
+                    AggregateRequest(
+                        metrics = setOf(
+                            StepsRecord.COUNT_TOTAL,
+                            DistanceRecord.DISTANCE_TOTAL,
+                            ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL,
+                            ExerciseSessionRecord.EXERCISE_DURATION_TOTAL,
+                            HydrationRecord.VOLUME_TOTAL,
+                            // Tageshoch und Tagestief des Pulses. Sie kosten
+                            // hier nichts extra - dieselbe Abfrage, zwei
+                            // Kennzahlen mehr - und beantworten, was ein
+                            // Mittelwert nie sagt: wie weit der Tag
+                            // ausgeschlagen hat.
+                            HeartRateRecord.BPM_MAX,
+                            HeartRateRecord.BPM_MIN,
+                            // Seit die App es selbst eintraegt, ist die Akte
+                            // auch beim Koffein die Quelle - und faengt mit,
+                            // was eine andere App eingetragen hat.
+                            NutritionRecord.CAFFEINE_TOTAL,
+                        ),
+                        timeRangeFilter = tag,
+                    )
                 )
-            )
+            }
         }
 
-        val schlafMin = fange("Schlaf") {
-            klient.aggregate(
-                AggregateRequest(
-                    metrics = setOf(SleepSessionRecord.SLEEP_DURATION_TOTAL),
-                    timeRangeFilter = nacht,
-                )
-            )[SleepSessionRecord.SLEEP_DURATION_TOTAL]?.toMinutes()?.toDouble()
+        val schlafMin = async {
+            fange("Schlaf") {
+                klient.aggregate(
+                    AggregateRequest(
+                        metrics = setOf(SleepSessionRecord.SLEEP_DURATION_TOTAL),
+                        timeRangeFilter = nacht,
+                    )
+                )[SleepSessionRecord.SLEEP_DURATION_TOTAL]?.toMinutes()?.toDouble()
+            }
         }
+
+        val sitzungen = async {
+            fange("Schlafphasen") {
+                klient.readRecords(ReadRecordsRequest(SleepSessionRecord::class, nacht)).records
+            } ?: emptyList()
+        }
+
+        val ruhe = async { ruhepuls(klient, nacht) }
+        val puls = async { letzterPuls(klient, tag) }
+        val hrv = async { letzteHrv(klient) }
+        val wocheSchritte = async { wocheSchritteWasser(klient, StepsRecord.COUNT_TOTAL) }
+        val wocheWasser = async { wocheSchritteWasser(klient, HydrationRecord.VOLUME_TOTAL) }
+        val wocheSchl = async { wocheSchlaf(klient, heute) }
+        val verlauf = async { pulsverlauf(klient) }
 
         // SUPPLEMENTE KOMMEN NICHT AUS DER AKTE, sondern aus der eigenen
         // Tabelle: die Akte kennt keine Satzart fuer "genommen". SupCycle
         // schickt seinen Stand bei jeder Einnahme, [Aufgaben] schreibt ihn
         // weg, und hier wird er nur noch abgeholt.
-        val speicher = Speicher(context)
-        val suppFaellig = withContext(Dispatchers.IO) { speicher.wert(heute, "supp_faellig") }
-        val suppGenommen = withContext(Dispatchers.IO) { speicher.wert(heute, "supp_genommen") }
-        val suppWocheF = withContext(Dispatchers.IO) { wocheAusSpeicher(speicher, "supp_faellig", heute) }
-        val suppWocheG = withContext(Dispatchers.IO) { wocheAusSpeicher(speicher, "supp_genommen", heute) }
+        class Eigenes(
+            val suppFaellig: Double?,
+            val suppGenommen: Double?,
+            val suppWocheF: List<Tageswert>,
+            val suppWocheG: List<Tageswert>,
+            val suppListe: List<Supplemente.Eintrag>,
+            val energie: Double?,
+            val koffeinMg: Double?,
+            val koffeinLetzt: Double?,
+        )
+        val eigenes = async(Dispatchers.IO) {
+            val speicher = Speicher(context)
+            Eigenes(
+                suppFaellig = speicher.wert(heute, "supp_faellig"),
+                suppGenommen = speicher.wert(heute, "supp_genommen"),
+                suppWocheF = wocheAusSpeicher(speicher, "supp_faellig", heute),
+                suppWocheG = wocheAusSpeicher(speicher, "supp_genommen", heute),
+                suppListe = Supplemente.lies(context)?.heute.orEmpty(),
+                energie = speicher.wert(heute, "energie"),
+                koffeinMg = speicher.wert(heute, "koffein_mg"),
+                koffeinLetzt = speicher.wert(heute, "koffein_letzt"),
+            )
+        }
 
-        val sitzungen = fange("Schlafphasen") {
-            klient.readRecords(ReadRecordsRequest(SleepSessionRecord::class, nacht)).records
-        } ?: emptyList()
+        val sum = summen.await()
+        val eig = eigenes.await()
+        val nachtpuls = nachts.await()
+        val schlafsitzungen = sitzungen.await()
 
         val stand = Stand(
-            schritte = Wert("Schritte", summen?.get(StepsRecord.COUNT_TOTAL)?.toDouble(),
+            schritte = Wert("Schritte", sum?.get(StepsRecord.COUNT_TOTAL)?.toDouble(),
                             "", ZIEL_SCHRITTE),
             distanz = Wert("Distanz",
-                           summen?.get(DistanceRecord.DISTANCE_TOTAL)?.inKilometers, "km"),
+                           sum?.get(DistanceRecord.DISTANCE_TOTAL)?.inKilometers, "km"),
             kalorien = Wert("Aktive Kalorien",
-                            summen?.get(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+                            sum?.get(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
                                 ?.inKilocalories, "kcal"),
             aktiv = Wert("Aktiv",
-                         summen?.get(ExerciseSessionRecord.EXERCISE_DURATION_TOTAL)
+                         sum?.get(ExerciseSessionRecord.EXERCISE_DURATION_TOTAL)
                              ?.toMinutes()?.toDouble(), "min", ZIEL_AKTIV_MIN),
             wasser = Wert("Wasser",
-                          summen?.get(HydrationRecord.VOLUME_TOTAL)?.inMilliliters,
+                          sum?.get(HydrationRecord.VOLUME_TOTAL)?.inMilliliters,
                           "ml", wasserziel()),
-            schlaf = Wert("Schlaf", schlafMin, "min", Einstellungen.schlafziel(context).toDouble()),
-            ruhepuls = ruhepuls(klient, nacht),
-            puls = Wert("Puls", letzterPuls(klient, tag), "bpm"),
-            pulsHoch = Wert("Puls hoch", summen?.get(HeartRateRecord.BPM_MAX)?.toDouble(), "bpm"),
-            pulsTief = Wert("Puls tief", summen?.get(HeartRateRecord.BPM_MIN)?.toDouble(), "bpm"),
-            nachtStreuung = Wert("Nachtpuls", nachts?.streuung, "bpm"),
-            nachtProben = nachts?.proben ?: 0,
-            hrv = Wert("HRV", letzteHrv(klient), "ms"),
-            suppFaellig = Wert("Geplant", suppFaellig, ""),
-            suppGenommen = Wert("Supplemente", suppGenommen, "", ziel = suppFaellig),
-            suppListe = Supplemente.lies(context)?.heute.orEmpty(),
-            energie = withContext(Dispatchers.IO) { speicher.wert(heute, "energie") }?.toInt(),
-            koffeinMg = summen?.get(NutritionRecord.CAFFEINE_TOTAL)
+            schlaf = Wert("Schlaf", schlafMin.await(), "min",
+                          Einstellungen.schlafziel(context).toDouble()),
+            ruhepuls = ruhe.await(),
+            puls = Wert("Puls", puls.await(), "bpm"),
+            pulsHoch = Wert("Puls hoch", sum?.get(HeartRateRecord.BPM_MAX)?.toDouble(), "bpm"),
+            pulsTief = Wert("Puls tief", sum?.get(HeartRateRecord.BPM_MIN)?.toDouble(), "bpm"),
+            nachtStreuung = Wert("Nachtpuls", nachtpuls?.streuung, "bpm"),
+            nachtProben = nachtpuls?.proben ?: 0,
+            hrv = Wert("HRV", hrv.await(), "ms"),
+            suppFaellig = Wert("Geplant", eig.suppFaellig, ""),
+            suppGenommen = Wert("Supplemente", eig.suppGenommen, "", ziel = eig.suppFaellig),
+            suppListe = eig.suppListe,
+            energie = eig.energie?.toInt(),
+            koffeinMg = sum?.get(NutritionRecord.CAFFEINE_TOTAL)
                 ?.inGrams?.times(1000)
-                ?: withContext(Dispatchers.IO) { speicher.wert(heute, "koffein_mg") },
-            koffeinLetzt = withContext(Dispatchers.IO) { speicher.wert(heute, "koffein_letzt") },
-            phasen = phasenAus(sitzungen),
-            nachtzeiten = zeitenAus(sitzungen, heute),
-            wocheSchritte = wocheSchritteWasser(klient, StepsRecord.COUNT_TOTAL),
-            wocheWasser = wocheSchritteWasser(klient, HydrationRecord.VOLUME_TOTAL),
-            wocheSchlaf = wocheSchlaf(klient, heute),
-            wocheSuppFaellig = suppWocheF,
-            wocheSuppGenommen = suppWocheG,
-            pulsverlauf = pulsverlauf(klient),
+                ?: eig.koffeinMg,
+            koffeinLetzt = eig.koffeinLetzt,
+            phasen = phasenAus(schlafsitzungen),
+            nachtzeiten = zeitenAus(schlafsitzungen, heute),
+            wocheSchritte = wocheSchritte.await(),
+            wocheWasser = wocheWasser.await(),
+            wocheSchlaf = wocheSchl.await(),
+            wocheSuppFaellig = eig.suppWocheF,
+            wocheSuppGenommen = eig.suppWocheG,
+            pulsverlauf = verlauf.await(),
             pulsBeginn = pulsBeginn(),
             gelesen = Instant.now(),
         )
@@ -370,7 +417,7 @@ class Gesundheit(private val context: Context) {
         // nicht in die eigene Tabelle faellt, ist in einem Monat als
         // Mittwoch nicht mehr nachweisbar.
         merke(stand, heute)
-        return stand
+        stand
     }
 
     /** Den Tagesstand in die eigene Tabelle schreiben. */

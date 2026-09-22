@@ -16,6 +16,8 @@ import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.lifecycleScope
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -73,12 +75,12 @@ class HauptActivity : ComponentActivity(), Eingaben {
         setContentView(baueAnsicht())
         EmpfangsDienst.starte(this)
 
-        // EINMAL JE START, nicht bei jedem Zurueckkehren: die Akte haelt rund
-        // dreissig Tage, und die einmal abzuschreiben ist der Unterschied
-        // zwischen "in drei Wochen sagt dir die App etwas" und "jetzt".
-        lifecycleScope.launch {
-            Gesundheit(this@HauptActivity).nachtragen()
-        }
+        // WAS SCHON EINMAL GELESEN WURDE, STEHT SOFORT DA. Solange der Prozess
+        // lebt, ist der letzte Stand noch im Speicher; ihn zu zeigen, waehrend
+        // der neue kommt, ist besser als ein leerer Schirm - er ist hoechstens
+        // ein paar Minuten alt und wird gleich darauf ersetzt.
+        zuletzt?.let { zeigeStand(it) }
+        zuletztTraining?.let { zeigeTraining(it) }
     }
 
     override fun onResume() {
@@ -156,22 +158,34 @@ class HauptActivity : ComponentActivity(), Eingaben {
     }
 
     /**
-     * Alles neu holen - der Reihe nach, damit der Wischer die Wahrheit sagt.
+     * Alles neu holen - nebeneinander, und der Wischer wartet auf beide.
      *
-     * Nebenlaeufig waere es schneller, aber dann muesste jemand zaehlen, wann
-     * der Letzte fertig ist. Hintereinander dauert es zwei Sekunden und der
-     * Kreisel verschwindet genau dann, wenn nichts mehr nachkommt.
+     * Die Trainings haengen nicht am Tagesstand. Sie hintereinander zu holen
+     * hiesse, die Wartezeiten zu addieren; der Schirm stuende so lange leer
+     * wie beide zusammen.
      */
     private fun auffrischen() {
+        // Beim allerersten Laden steht noch nichts da. Dann dreht der
+        // Kreisel, damit der leere Schirm als "kommt gleich" zu lesen ist und
+        // nicht als "hier ist nichts".
+        if (zuletzt == null) wischer.isRefreshing = true
         lifecycleScope.launch {
             try {
+                val training = async { TrainingTab.hole(this@HauptActivity) }
                 standLaden()
-                trainingLaden()
-                // Zurueck auf den Reiter, den man gerade sieht: sonst baute
-                // das naechste Stueck im Ton des zuletzt geladenen.
-                Ton.setze(sichtbarerReiter())
+                zeigeTraining(training.await().also { zuletztTraining = it })
             } finally {
                 wischer.isRefreshing = false
+            }
+
+            // EINMAL JE START, nicht bei jedem Zurueckkehren: die Akte haelt
+            // rund dreissig Tage, und die einmal abzuschreiben ist der
+            // Unterschied zwischen "in drei Wochen sagt dir die App etwas"
+            // und "jetzt". ERST NACH DEM ERSTEN BILD - vorher stuende es mit
+            // dreissig Tagen Abfragen vor den Zahlen von heute in der Schlange.
+            if (!nachgetragen) {
+                nachgetragen = true
+                Gesundheit(this@HauptActivity).nachtragen()
             }
         }
     }
@@ -187,57 +201,74 @@ class HauptActivity : ComponentActivity(), Eingaben {
      * waehrend die App im Hintergrund liegt - ein gemerkter Stand von heute
      * Morgen saehe genauso aus wie einer von eben.
      */
-    private suspend fun standLaden() {
+    private suspend fun standLaden() = coroutineScope {
         val ich = this@HauptActivity
+        // Zwei Abfragen mehr, beide gruppiert: das Profil von heute und der
+        // Schnitt der letzten zwei Wochen. Sie laufen NEBEN dem Tagesstand,
+        // nicht danach.
+        val profilHeute = async { Gesundheit(ich).bewegungsprofil(1) }
+        val profilTypisch = async { Gesundheit(ich).bewegungsprofil(14) }
         val stand = Gesundheit(ich).lies()
         val fehlt =
             if (stand == null) emptySet()
             else Akte(ich).fehlendeBerechtigungen(Gesundheit.BERECHTIGUNGEN)
 
-        gesundheit.removeAllViews()
-
-        // DIESE KARTE STEHT OBEN, nicht unten. Ohne Lese-Erlaubnis antwortet
-        // die Akte nicht mit Nein, sondern gar nicht - die Felder blieben leer
-        // und saehen aus wie ein Fehler der App.
-        if (fehlt.isNotEmpty()) {
-            val k = karte()
-            k.addView(schild(false, "Lese-Erlaubnis fehlt"))
-            k.addView(zart(
-                fehlt.size.toString() + " von " +
-                    Gesundheit.BERECHTIGUNGEN.size + " Werten sind " +
-                    "gesperrt. Gesperrt heisst hier leer — die Akte sagt " +
-                    "nicht Nein, sie schweigt."
-            ))
-            k.addView(knopfHaupt("Erlaubnis erteilen", breit = true) {
-                erlaubnisStarter?.launch(fehlt) ?: melde("Noch nicht bereit")
-            })
-            gesundheit.addView(k)
-        }
-
-        // Zwei Abfragen mehr, beide gruppiert: das Profil von heute und der
-        // Schnitt der letzten zwei Wochen.
-        val profilHeute = Gesundheit(ich).bewegungsprofil(1)
-        val profilTypisch = Gesundheit(ich).bewegungsprofil(14)
-        // JEDER REITER WIRD IN SEINEM TON GEBAUT. Die Farbe steckt bis in die
-        // Balken der Diagramme; sie muss stehen, BEVOR gebaut wird.
-        Ton.setze(Ton.GESUNDHEIT)
-        gesundheit.addView(GesundheitTab.baue(ich, stand, profilHeute, profilTypisch, ich))
-
-        ernaehrung.removeAllViews()
-        Ton.setze(Ton.ERNAEHRUNG)
-        ernaehrung.addView(ErnaehrungTab.baue(ich, stand, ich))
+        val bild = Tagesbild(stand, fehlt, profilHeute.await(), profilTypisch.await())
+        zuletzt = bild
+        zeigeStand(bild)
 
         // Die Zahlen sind eben gelesen; das Widget soll nicht aelteres zeigen
         // als der Schirm daneben.
         GesundheitWidget.stosseAn(ich)
     }
 
+    /**
+     * Gesundheit und Ernaehrung bauen - ohne zu warten, aus dem, was gelesen ist.
+     *
+     * JEDER REITER WIRD IN SEINEM TON GEBAUT. Die Farbe steckt bis in die
+     * Balken der Diagramme; sie muss stehen, BEVOR gebaut wird - und danach
+     * wieder auf dem Reiter, den man sieht. Sonst baute das naechste Stueck
+     * im Ton des zuletzt gebauten, und das war die Ernaehrung.
+     */
+    private fun zeigeStand(bild: Tagesbild) {
+        val ich = this@HauptActivity
+        gesundheit.removeAllViews()
+
+        // DIESE KARTE STEHT OBEN, nicht unten. Ohne Lese-Erlaubnis antwortet
+        // die Akte nicht mit Nein, sondern gar nicht - die Felder blieben leer
+        // und saehen aus wie ein Fehler der App.
+        Ton.setze(Ton.GESUNDHEIT)
+        if (bild.fehlt.isNotEmpty()) {
+            val k = karte()
+            k.addView(schild(false, "Lese-Erlaubnis fehlt"))
+            k.addView(zart(
+                bild.fehlt.size.toString() + " von " +
+                    Gesundheit.BERECHTIGUNGEN.size + " Werten sind " +
+                    "gesperrt. Gesperrt heisst hier leer — die Akte sagt " +
+                    "nicht Nein, sie schweigt."
+            ))
+            k.addView(knopfHaupt("Erlaubnis erteilen", breit = true) {
+                erlaubnisStarter?.launch(bild.fehlt) ?: melde("Noch nicht bereit")
+            })
+            gesundheit.addView(k)
+        }
+        gesundheit.addView(GesundheitTab.baue(
+            ich, bild.stand, bild.profilHeute, bild.profilTypisch, ich
+        ))
+
+        ernaehrung.removeAllViews()
+        Ton.setze(Ton.ERNAEHRUNG)
+        ernaehrung.addView(ErnaehrungTab.baue(ich, bild.stand, ich))
+
+        Ton.setze(sichtbarerReiter())
+    }
+
     /** Die Trainings der letzten drei Monate, samt ihrer Strecke. */
-    private suspend fun trainingLaden() {
-        val sitzungen = TrainingTab.hole(this@HauptActivity)
+    private fun zeigeTraining(sitzungen: List<TrainingTab.Eintrag>) {
         training.removeAllViews()
         Ton.setze(Ton.TRAINING)
         training.addView(TrainingTab.baue(this@HauptActivity, sitzungen))
+        Ton.setze(sichtbarerReiter())
     }
 
     // --- Was kein Sensor weiss ---
@@ -298,5 +329,27 @@ class HauptActivity : ComponentActivity(), Eingaben {
 
     private fun melde(text: String) {
         Toast.makeText(this, text, Toast.LENGTH_LONG).show()
+    }
+
+    /** Was der Schirm aus einem Durchgang durch die Akte baut. */
+    private class Tagesbild(
+        val stand: Gesundheit.Stand?,
+        val fehlt: Set<String>,
+        val profilHeute: List<Gesundheit.Punkt>,
+        val profilTypisch: List<Gesundheit.Punkt>,
+    )
+
+    companion object {
+        /**
+         * Der zuletzt gelesene Stand, solange der Prozess lebt.
+         *
+         * Nur Zahlen, keine Ansichten: eine gemerkte Ansicht hielte die
+         * Activity fest, in der sie gebaut wurde.
+         */
+        private var zuletzt: Tagesbild? = null
+        private var zuletztTraining: List<TrainingTab.Eintrag>? = null
+
+        /** Das Nachtragen gehoert zum Start der App, nicht zu jedem Schirm. */
+        private var nachgetragen = false
     }
 }

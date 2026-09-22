@@ -23,14 +23,14 @@ import kotlinx.coroutines.withContext
  * umschalten, oben die Kategorie suchen - und zwischen ihnen vergisst man,
  * was man wissen wollte.
  *
- * DIE LEISTE BLEIBT TROTZDEM. Wer einmal hier ist, vergleicht weiter; der
- * Weg von Schlaf zu Herz soll nicht ueber den Zurueck-Knopf fuehren. Sie
- * beginnt nur nicht mehr immer links, sondern bei dem, was man angetippt hat.
+ * EINE SEITE JE KARTE. Eine Leiste mit allen Gruppen oben machte aus der
+ * Antwort wieder einen Katalog: wer auf den Schlaf tippt, will den Schlaf
+ * sehen und was mit ihm zusammenhaengt, nicht einen Weg zum Herz. Wer das
+ * Herz will, geht zurueck und tippt auf das Herz.
  */
 class TrendActivity : ComponentActivity() {
 
     private lateinit var wurzel: LinearLayout
-    private lateinit var leiste: TrendTab.Leiste
     private lateinit var inhalt: LinearLayout
     private var wahl = 0
 
@@ -52,13 +52,7 @@ class TrendActivity : ComponentActivity() {
         Ton.setze(if (wahl == ERNAEHRUNG) Ton.ERNAEHRUNG else Ton.GESUNDHEIT)
     }
 
-    /**
-     * Kopf fest, Inhalt beweglich - wie auf dem Hauptschirm.
-     *
-     * Die Auswahlleiste steht MIT im festen Teil. Sie ist die Antwort auf
-     * "und was war beim Schlaf?", und die stellt sich mitten im Lesen, nicht
-     * oben am Anfang.
-     */
+    /** Kopf fest, Inhalt beweglich - wie auf dem Hauptschirm. */
     private fun baueAnsicht(): View {
         val aussen = spalte()
         aussen.layoutParams = LinearLayout.LayoutParams(
@@ -68,17 +62,8 @@ class TrendActivity : ComponentActivity() {
         val oben = spalte().apply { setPadding(dp(16f), dp(16f), dp(16f), 0) }
         oben.addView(knopfLeise(getString(R.string.zurueck)) { finish() })
         oben.luft(10f)
-        oben.addView(kopf("Trend"))
+        oben.addView(kopf(TrendTab.GRUPPEN[wahl].name + " im Trend"))
         oben.luft(6f)
-
-        leiste = TrendTab.leiste(this) { gewaehlt ->
-            wahl = gewaehlt
-            toenen()
-            leiste.male(gewaehlt)
-            lifecycleScope.launch { lade() }
-        }
-        leiste.male(wahl)
-        oben.addView(leiste.sicht)
         aussen.addView(oben)
 
         wurzel = spalte().apply { setPadding(dp(16f), 0, dp(16f), dp(24f)) }
@@ -107,7 +92,8 @@ class TrendActivity : ComponentActivity() {
         val gruppe = TrendTab.GRUPPEN[wahl]
         val (daten, umfang) = withContext(Dispatchers.IO) {
             val speicher = Speicher(this@TrendActivity)
-            gruppe.spalten.associateWith { speicher.reihe(it) } to speicher.umfang()
+            TrendTab.spaltenFuer(gruppe).associateWith { speicher.reihe(it) } to
+                speicher.umfang()
         }
 
         // Die Wolke NUR fuer Herz. Sie liest vierzehn Tage Einzelmessungen aus
@@ -119,6 +105,11 @@ class TrendActivity : ComponentActivity() {
             emptyList()
         }
 
+        // DER TON NOCH EINMAL, UNMITTELBAR VOR DEM BAUEN. Waehrend hier
+        // gelesen wurde, kann der Hauptschirm dahinter fertig geladen und den
+        // Ton auf seinen Reiter zurueckgestellt haben - er ist eine Stelle
+        // fuer die ganze App.
+        toenen()
         inhalt.removeAllViews()
         inhalt.addView(TrendTab.inhalt(this@TrendActivity, wahl, daten, umfang, wolke))
     }
@@ -127,7 +118,7 @@ class TrendActivity : ComponentActivity() {
         const val EXTRA_GRUPPE = "gruppe"
 
         /** Die Nummern der Gruppen in [TrendTab.GRUPPEN] - hier, damit sie einmal stehen. */
-        const val SCHRITTE = 0
+        const val BEWEGUNG = 0
         const val SCHLAF = 1
         const val HERZ = 2
         const val ERNAEHRUNG = 3

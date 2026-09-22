@@ -1,13 +1,7 @@
 package ch.dysseus.kieselhelper
 
 import android.content.Context
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
-import android.util.TypedValue
-import android.view.ViewGroup
-import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
-import android.widget.TextView
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.TextStyle
@@ -25,6 +19,9 @@ typealias Trenddaten = Map<String, List<Pair<LocalDate, Double>>>
  * Seite rechnet das aus den eigenen Aufzeichnungen aus, nicht aus der Akte:
  * Health Connect vergisst, [Speicher] nicht.
  *
+ * EINE SEITE JE KARTE. Wer auf den Schlaf tippt, sieht den Schlaf und das,
+ * was mit ihm zusammenhaengt - nicht einen Schirm mit allem.
+ *
  * GRUPPEN STATT EINZELWERTE. Schlaf ohne Tiefschlaf daneben sagt wenig, und
  * ein Ruhepuls ohne die Spanne des Tages noch weniger. Was zusammen gelesen
  * wird, steht zusammen in einem Bild - nicht hintereinander auf zwei.
@@ -34,76 +31,43 @@ typealias Trenddaten = Map<String, List<Pair<LocalDate, Double>>>
  */
 object TrendTab {
 
-    /** Eine Gruppe zusammengehoerender Groessen, mit ihren Spalten im Speicher. */
-    data class Gruppe(val name: String, val spalten: List<String>)
-
-    val GRUPPEN = listOf(
-        Gruppe("Schritte", listOf("schritte")),
-        Gruppe("Schlaf", listOf("schlaf", "tief", "schlaf_mitte")),
-        Gruppe("Herz", listOf("ruhepuls", "puls_min", "puls_hoch", "puls_tief", "hrv")),
-        Gruppe("Ernährung", listOf("wasser", "supp_faellig", "supp_genommen")),
-        Gruppe("Aktiv", listOf("aktiv")),
-        Gruppe("Zusammenhänge", listOf(
-            "schlaf", "tief", "ruhepuls", "puls_min", "hrv", "schritte", "aktiv",
-            "energie", "koffein_mg", "koffein_letzt",
-        )),
-    )
-
-    // --- Die Auswahlleiste ---------------------------------------------------
+    /**
+     * Eine Gruppe zusammengehoerender Groessen - eine je Karte.
+     *
+     * [spalten] traegt die Bilder dieser Seite. [bezug] sagt, welche
+     * Zusammenhaenge hierher gehoeren: ein Paar erscheint auf jeder Seite,
+     * deren Groesse es enthaelt, und sonst nirgends.
+     */
+    data class Gruppe(val name: String, val spalten: List<String>, val bezug: Set<String>)
 
     /**
-     * Die Leiste ueberlebt den Wechsel.
-     *
-     * SIE WIRD NICHT NEU GEBAUT, nur neu eingefaerbt. Vorher entstand bei jedem
-     * Umschalten eine neue Leiste - und die stand wieder ganz links, waehrend
-     * man gerade rechts aussen auf "Aktiv" getippt hatte. Wer schiebt, will
-     * dort bleiben, wo er geschoben hat.
+     * EINE SEITE JE KARTE, nicht ein Schirm mit allem und einer Leiste oben.
+     * Wer auf den Schlaf tippt, will den Schlaf sehen; das Umschalten auf
+     * das Herz war ein Weg, den niemand ging, und die Leiste stand dafuer
+     * jedes Mal im Bild.
      */
-    class Leiste(val sicht: HorizontalScrollView, private val felder: List<TextView>) {
-        fun male(gewaehlt: Int) {
-            val ctx = sicht.context
-            felder.forEachIndexed { i, feld ->
-                feld.setTextColor(ctx.farbe(
-                    if (i == gewaehlt) R.color.akzent_schrift else R.color.schrift_zart
-                ))
-                feld.background = GradientDrawable().apply {
-                    setColor(ctx.farbe(if (i == gewaehlt) R.color.akzent else R.color.karte))
-                    cornerRadius = ctx.dp(16f).toFloat()
-                    if (i != gewaehlt) setStroke(ctx.dp(1f), ctx.farbe(R.color.linie))
-                }
-            }
-        }
-    }
+    val GRUPPEN = listOf(
+        Gruppe("Bewegung", listOf("schritte", "aktiv"), setOf("schritte", "aktiv")),
+        Gruppe("Schlaf", listOf("schlaf", "tief", "schlaf_mitte"), setOf("schlaf", "tief")),
+        Gruppe("Herz", listOf("ruhepuls", "puls_min", "puls_hoch", "puls_tief", "hrv"),
+               setOf("ruhepuls", "hrv")),
+        Gruppe("Ernährung", listOf("wasser", "supp_faellig", "supp_genommen"),
+               setOf("koffein_mg")),
+    )
 
-    fun leiste(ctx: Context, waehle: (Int) -> Unit): Leiste {
-        val reihe = ctx.reihe()
-        // WRAP_CONTENT, nicht MATCH_PARENT: in einem Schieber hiesse "so breit
-        // wie der Platz", dass nichts hinausragt - und damit schoebe sich auch
-        // nichts.
-        reihe.layoutParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
-        )
-        val felder = GRUPPEN.mapIndexed { i, gruppe ->
-            TextView(ctx).apply {
-                text = gruppe.name
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-                setTypeface(typeface, Typeface.BOLD)
-                setPadding(ctx.dp(14f), ctx.dp(8f), ctx.dp(14f), ctx.dp(8f))
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
-                ).apply { marginEnd = ctx.dp(8f) }
-                setOnClickListener { waehle(i) }
-                reihe.addView(this)
-            }
-        }
-        val schieber = HorizontalScrollView(ctx).apply {
-            isHorizontalScrollBarEnabled = false
-            addView(reihe)
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = ctx.dp(4f) }
-        }
-        return Leiste(schieber, felder).also { it.male(0) }
+    /** Die Zusammenhaenge, die auf die Seite dieser Gruppe gehoeren. */
+    private fun paare(gruppe: Gruppe) =
+        PAARE.filter { (_, x, _, y) -> x in gruppe.bezug || y in gruppe.bezug }
+
+    /**
+     * Alles, was die Seite aus dem Speicher braucht: ihre eigenen Spalten und
+     * die der Zusammenhaenge darunter. Der Ruhepuls zieht das Nachttief mit,
+     * weil er aus beiden zusammengesetzt wird.
+     */
+    fun spaltenFuer(gruppe: Gruppe): Set<String> {
+        val alle = (gruppe.spalten + paare(gruppe).flatMap { listOf(it[1], it[3]) }).toMutableSet()
+        if ("ruhepuls" in alle) alle += "puls_min"
+        return alle
     }
 
     // --- Der Inhalt ----------------------------------------------------------
@@ -136,12 +100,15 @@ object TrendTab {
         }
 
         when (gruppe.name) {
+            "Bewegung" -> {
+                einfach(ctx, s, "SCHRITTE", "schritte", "Schritte", "", daten, heute)
+                einfach(ctx, s, "AKTIV", "aktiv", "Aktiv", " min", daten, heute)
+            }
             "Schlaf" -> schlaf(ctx, s, daten, heute)
             "Herz" -> herz(ctx, s, daten, heute, wolke)
             "Ernährung" -> ernaehrung(ctx, s, daten, heute)
-            "Zusammenhänge" -> zusammenhaenge(ctx, s, daten, heute)
-            else -> einfach(ctx, s, gruppe, daten, heute)
         }
+        zusammenhaenge(ctx, s, paare(gruppe), daten, heute)
 
         s.addView(ctx.zart(
             "$tage Tage im Speicher, seit $seit. Heute zählt nicht mit — ein " +
@@ -154,19 +121,29 @@ object TrendTab {
 
     // --- Die drei Formen -----------------------------------------------------
 
-    /** Eine einzelne Groesse: Wochenprofil und Verlauf. */
+    /**
+     * Eine einzelne Groesse: Wochenprofil und Verlauf.
+     *
+     * Fehlen die Tage, faellt der Block weg, statt leere Bilder zu zeigen -
+     * auf der Bewegungsseite stehen Schritte oft schon lange, bevor die erste
+     * aktive Minute eingetragen ist.
+     */
     private fun einfach(
         ctx: Context,
         s: LinearLayout,
-        gruppe: Gruppe,
+        titel: String,
+        spalte: String,
+        name: String,
+        einheit: String,
         daten: Trenddaten,
         heute: LocalDate,
     ) {
-        val bild = Auswertung.bild(daten[gruppe.spalten.first()].orEmpty(), heute)
+        val reihe = daten[spalte].orEmpty()
+        if (reihe.size < 2) return
+        val bild = Auswertung.bild(reihe, heute)
         val form: (Double) -> String = { Zahlen.ganz(it) ?: "" }
-        val einheit = if (gruppe.name == "Aktiv") " min" else ""
 
-        s.addView(ctx.abschnitt("TYPISCHE WOCHE"))
+        s.addView(ctx.abschnitt("$titel, TYPISCHE WOCHE"))
         val woche = ctx.karte()
         woche.addView(ctx.saeulenbild(
             bild.profil.map { p ->
@@ -180,10 +157,10 @@ object TrendTab {
                 " Der Fühler zeigt die Spanne, aus der gemittelt wurde."
         ))
         extreme(ctx, woche, bild, form, einheit)
-        wochenendzeile(ctx, woche, daten, gruppe.spalten.first(), gruppe.name, form, heute)
+        wochenendzeile(ctx, woche, daten, spalte, name, form, heute)
         s.addView(woche)
 
-        s.addView(ctx.abschnitt("VERLAUF"))
+        s.addView(ctx.abschnitt("$titel, VERLAUF"))
         val verlauf = ctx.karte()
         verlauf.addView(ctx.saeulenbild(wochensaeulen(ctx, bild), ziel = bild.gesamt))
         verlauf.addView(ctx.zart("Kalenderwochen, je der Schnitt eines Tages"))
@@ -459,31 +436,33 @@ object TrendTab {
         listOf("Koffein", "koffein_mg", "Tiefschlaf", "tief"),
     )
 
+    /**
+     * Die Zusammenhaenge dieser Seite - nur die, die schon etwas sagen.
+     *
+     * Solange zu wenige gemeinsame Tage da sind, steht EIN Satz dafuer da,
+     * nicht eine Karte je Paar: auf jeder Seite drei Karten mit "noch zu
+     * wenig" waeren mehr Rauschen als Auskunft.
+     */
     private fun zusammenhaenge(
         ctx: Context,
         s: LinearLayout,
+        paare: List<List<String>>,
         daten: Trenddaten,
         heute: LocalDate,
     ) {
+        if (paare.isEmpty()) return
         s.addView(ctx.abschnitt("ZUSAMMENHÄNGE"))
 
-        PAARE.forEach { (nameX, spalteX, nameY, spalteY) ->
+        var gezeigt = 0
+        paare.forEach { (nameX, spalteX, nameY, spalteY) ->
             val bild = Auswertung.zusammenhang(
                 reihe(daten, spalteX), reihe(daten, spalteY), heute
             )
+            if (!bild.belastbar) return@forEach
+            gezeigt++
+
             val karte = ctx.karte()
             karte.addView(ctx.kartentitel("$nameX und $nameY"))
-
-            if (!bild.belastbar) {
-                karte.addView(ctx.zart(
-                    "Gemeinsame Tage: ${bild.n}. Gezeigt wird erst ab " +
-                        "${Auswertung.PAARE_MINDESTENS} — aus einer Handvoll Punkte " +
-                        "lässt sich jede Gerade legen, und sie sähe überzeugend aus."
-                ))
-                s.addView(karte)
-                return@forEach
-            }
-
             karte.addView(ctx.streubild(bild, formel(spalteX), formel(spalteY)))
             karte.addView(ctx.zart("waagerecht $nameX, senkrecht $nameY"))
             val r = bild.r ?: 0.0
@@ -498,14 +477,25 @@ object TrendTab {
             s.addView(karte)
         }
 
-        // EINMAL AM ENDE, nicht fuenfmal daneben: der Satz gilt fuer alle
+        if (gezeigt == 0) {
+            val namen = paare.joinToString(", ") { "${it[0]} und ${it[2]}" }
+            s.addView(ctx.karte().apply {
+                addView(ctx.zart(
+                    "$namen — erscheinen ab ${Auswertung.PAARE_MINDESTENS} " +
+                        "gemeinsamen Tagen. Aus einer Handvoll Punkte lässt sich " +
+                        "jede Gerade legen, und sie sähe überzeugend aus."
+                ))
+            })
+            return
+        }
+
+        // EINMAL AM ENDE, nicht je Bild daneben: der Satz gilt fuer alle
         // Bilder hier, und wiederholt liest ihn niemand mehr.
         s.addView(ctx.zart(
             "Zusammenhang ist keine Ursache. Wer lange schläft, hat vielleicht " +
                 "einen tieferen Ruhepuls — oder wer einen tieferen Ruhepuls hat, " +
                 "schläft besser, oder beides hängt an einem dritten, das hier gar " +
-                "nicht steht. Und: fünf Paare sind fünf Versuche; bei genug " +
-                "Versuchen findet sich irgendwo immer eine Linie."
+                "nicht steht."
         ))
     }
 

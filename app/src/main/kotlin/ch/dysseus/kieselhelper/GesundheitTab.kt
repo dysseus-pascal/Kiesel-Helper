@@ -57,10 +57,10 @@ object GesundheitTab {
 
         // --- Bewegung ---
         s.addView(ctx.abschnittTipp("BEWEGUNG") {
-            TrendActivity.zeige(ctx, TrendActivity.SCHRITTE)
+            TrendActivity.zeige(ctx, TrendActivity.BEWEGUNG)
         })
         val bewegung = ctx.karte()
-        bewegung.setOnClickListener { TrendActivity.zeige(ctx, TrendActivity.SCHRITTE) }
+        bewegung.setOnClickListener { TrendActivity.zeige(ctx, TrendActivity.BEWEGUNG) }
         bewegung.addView(ctx.messreihe(
             ctx.wert(stand.schritte, Zahlen.ganz(stand.schritte.zahl), ""),
             ctx.wert(stand.aktiv, Zahlen.ganz(stand.aktiv.zahl), "min"),

@@ -49,8 +49,12 @@ eigene Frage: man sieht 7985 Schritte und will wissen, ob das viel ist. Als
 Reiter kostete das zwei Bewegungen — unten umschalten, oben die Kategorie
 suchen — und zwischen ihnen vergisst man, was man wissen wollte. Jetzt führt
 **jede Karte weiter**: ein Tippen, und der Trend öffnet sich gleich bei der
-richtigen Grösse. Die Auswahlleiste bleibt dort trotzdem, denn wer einmal da
-ist, vergleicht weiter.
+richtigen Grösse.
+
+**Eine Trendseite je Karte, ohne Leiste.** Eine Zeit lang stand oben eine
+Auswahl mit allen Gruppen, damit man vom Schlaf zum Herz wechseln konnte. Das
+machte aus der Antwort wieder einen Katalog: wer auf den Schlaf tippt, will den
+Schlaf sehen — und was mit ihm zusammenhängt —, nicht alles andere daneben.
 
 Damit man eine Fläche auch antippt, steht neben jeder Überschrift ein
 **»Trend ›«**. Eine Karte, die still auf eine Berührung wartet, wird nie
@@ -404,18 +408,19 @@ Die Frage, die ein Tageswert nicht beantwortet: *7985 Schritte — ist das viel?
 **Gruppen statt Einzelwerte.** Schlaf ohne Tiefschlaf daneben sagt wenig, ein
 Ruhepuls ohne die Spanne des Tages noch weniger:
 
-| Gruppe | Form |
+| Seite | Form |
 |---|---|
-| Schritte, Wasser, Aktiv | ein Balken je Tag |
+| Bewegung (Schritte, Aktiv), Ernährung (Wasser) | ein Balken je Tag |
 | Schlaf | ein Balken, der Tiefschlaf dunkel **darin** — er steckt im Schlaf, zwei Balken nebeneinander behaupteten zwei Dinge |
 | Herz | eine **Spanne** vom Tagestief zum Tageshoch, der Ruhepuls als heller Strich darin; die HRV daneben, weil Millisekunden nicht auf eine bpm-Achse gehören |
 
 Die gestrichelte Linie ist in beiden Bildern **dasselbe**: der Schnitt über
 alle Tage. So heisst »über der Linie« überall dasselbe.
 
-Die Auswahlleiste wird **einmal** gebaut und danach nur umgefärbt — sonst
-stünde sie nach jedem Umschalten wieder ganz links, während man rechts aussen
-getippt hat.
+**Die Farbe wird beim Bauen festgehalten, nicht beim Zeichnen.** Der Ton des
+Reiters ist eine einzige Stelle für die ganze App. Fragte ein Bild ihn erst ab,
+wenn es gezeichnet wird, malte es in der Farbe des Reiters, der zuletzt geladen
+hat — und das war die Ernährung.
 
 ### Bewegungsprofil
 
@@ -445,9 +450,12 @@ interessante Zahl.
 
 ### Zusammenhänge
 
-Eine eigene Gruppe im Trend: zwei Grössen gegeneinander als Punktewolke mit
-Ausgleichsgerade, dazu der Korrelationskoeffizient nach Pearson und die Zahl
-der gemeinsamen Tage.
+Zwei Grössen gegeneinander als Punktewolke mit Ausgleichsgerade, dazu der
+Korrelationskoeffizient nach Pearson und die Zahl der gemeinsamen Tage. **Ein
+Paar steht auf jeder Trendseite, deren Grösse es enthält** — Schlaf ↔ Ruhepuls
+also beim Schlaf und beim Herz, Koffein ↔ Tiefschlaf beim Schlaf und bei der
+Ernährung. Solange zu wenige Tage da sind, steht dafür ein Satz und nicht eine
+leere Karte je Paar.
 
 | | |
 |---|---|
