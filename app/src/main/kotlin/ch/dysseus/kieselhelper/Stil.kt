@@ -513,3 +513,32 @@ fun Context.kopfleiste(titel: String, zahnrad: () -> Unit): LinearLayout = reihe
     })
     addView(zahnradknopf(zahnrad))
 }
+
+/**
+ * Eine Abschnittsueberschrift, die weiterfuehrt.
+ *
+ * DER TIEFERE SCHIRM WAR VORHER EIN EIGENER REITER. Wer wissen wollte, ob
+ * 7985 Schritte viel sind, musste unten umschalten und oben die Kategorie
+ * suchen - zwei Bewegungen, zwischen denen man vergisst, was man wissen
+ * wollte. Jetzt tippt man auf die Zahl, die die Frage ausgeloest hat.
+ *
+ * DER HINWEIS STEHT DA, WEIL EINE FLAECHE NICHT AUSSIEHT, ALS KOENNTE MAN SIE
+ * TIPPEN. Eine Karte, die still auf eine Beruehrung wartet, wird nie
+ * gefunden.
+ */
+fun Context.abschnittTipp(text: String, tue: () -> Unit): LinearLayout = reihe().apply {
+    gravity = Gravity.CENTER_VERTICAL
+    addView(abschnitt(text).apply {
+        layoutParams = LinearLayout.LayoutParams(
+            0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+        )
+    })
+    addView(TextView(this@abschnittTipp).apply {
+        this.text = "Trend ›"
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+        setTypeface(typeface, Typeface.BOLD)
+        setTextColor(farbe(R.color.akzent))
+        setPadding(dp(8f), dp(20f), dp(4f), dp(8f))
+    })
+    setOnClickListener { tue() }
+}

@@ -28,14 +28,33 @@ Zweite gilt.
 
 ### Der Schirm
 
-**Zwei Reiter, unten.** Weil der Daumen dort ist — oben wären sie näher am
+**Drei Reiter, unten.** Weil der Daumen dort ist — oben wären sie näher am
 Titel, aber weiter weg von der Hand.
 
-**Gesundheit** zeigt heute, **Trend** rechnet aus dem eigenen Speicher. Die
-Technik — Zustand, Erlaubnisse, Aufgabenliste, Verlauf — liegt hinter dem
-**Zahnrad** oben rechts. Sie war einmal ein dritter Reiter, und das war eine
+Sie trennen **drei Fragen, nicht drei Datenquellen**:
+
+| Reiter | Die Frage dahinter | Karten |
+|---|---|---|
+| **Gesundheit** | Was hat der Tag mit mir gemacht? | Bewegung, Schlaf, Herz, »Wie war der Tag?« |
+| **Training** | Was habe ich getan? | Die Woche, das letzte Training mit Karte, die davor |
+| **Ernährung** | Was geht hinein? | Wasser, Präparate, Koffein |
+
+Die Technik — Zustand, Erlaubnisse, Aufgabenliste, Verlauf — liegt hinter dem
+**Zahnrad** oben rechts. Sie war einmal ein Reiter, und das war eine
 Fehleinschätzung: ein Reiter ist eine Behauptung darüber, wie oft man etwas
 anschaut, und das hier schaut man an, wenn etwas nicht geht. Zweimal im Jahr.
+
+**Der Trend war auch einmal ein Reiter.** Er ist aber eine *Antwort* und keine
+eigene Frage: man sieht 7985 Schritte und will wissen, ob das viel ist. Als
+Reiter kostete das zwei Bewegungen — unten umschalten, oben die Kategorie
+suchen — und zwischen ihnen vergisst man, was man wissen wollte. Jetzt führt
+**jede Karte weiter**: ein Tippen, und der Trend öffnet sich gleich bei der
+richtigen Grösse. Die Auswahlleiste bleibt dort trotzdem, denn wer einmal da
+ist, vergleicht weiter.
+
+Damit man eine Fläche auch antippt, steht neben jeder Überschrift ein
+**»Trend ›«**. Eine Karte, die still auf eine Berührung wartet, wird nie
+gefunden.
 
 | Karte | Werte |
 |---|---|
@@ -46,6 +65,32 @@ anschaut, und das hier schaut man an, wenn etwas nicht geht. Zweimal im Jahr.
 
 Einen Balken bekommt nur, was ein Ziel hat. Für einen Ruhepuls gibt es keins,
 und ein Balken ohne Ziel wäre eine Behauptung darüber, was gut ist.
+
+**Gesundheit und Ernährung lesen denselben Tagesstand — einmal.** Ihn je
+Reiter zu holen hiesse, die teuerste Stelle der App doppelt zu bezahlen, und
+die beiden Schirme könnten auseinanderlaufen.
+
+### Der Trainings-Reiter
+
+Oben die **letzten sieben Tage** in drei Zahlen: wie viele Trainings, wie viel
+Zeit, wie viele Kilometer. Nicht der Monat und nicht das Jahr — eine
+Trainingswoche ist die Einheit, in der man plant; was im August war, sagt
+heute nichts mehr.
+
+Darunter **das jüngste Training gross**, mit Strecke, Tempo, Aufstieg und
+Karte, und die davor als Zeilen. Was man sucht, wenn man diesen Schirm öffnet,
+ist fast immer das letzte.
+
+Die Liste kommt **aus der Gesundheitsakte**, nicht aus einer eigenen Tabelle.
+Dort stehen die Sitzungen ohnehin; eine zweite Liste daneben wäre eine zweite
+Wahrheit. Trainings anderer Apps erscheinen deshalb mit, sobald sie dort
+stehen.
+
+**Die Spuren werden beim Laden gelesen, nicht beim Zeichnen** — und die Punkte
+nur für das oberste Training. Eine Stunde Laufen sind tausend Zeilen JSON;
+zwanzig solche Dateien beim Zusammensetzen der Ansicht zu lesen hielte den
+Bildschirm an, und der Fehler fiele erst auf, wenn jemand ein halbes Jahr lang
+trainiert hat. Die Länge bleibt, die Punkte nicht.
 
 ### Die Bilder
 
@@ -337,8 +382,8 @@ das Loch als Differenz — mit einer Even-Odd-Füllung wäre es kürzer und fals
 ein Loch in den Körper.
 
 **Von oben ziehen holt alles neu.** Der Kreisel verschwindet erst, wenn
-wirklich nichts mehr nachkommt: die drei Reiter laden hintereinander, nicht
-nebeneinander. Nebenläufig wäre es schneller, aber dann müsste jemand zählen,
+wirklich nichts mehr nachkommt: Tagesstand und Trainings laden
+hintereinander, nicht nebeneinander. Nebenläufig wäre es schneller, aber dann müsste jemand zählen,
 wann der Letzte fertig ist.
 
 ## Einstellungen
@@ -382,13 +427,16 @@ halbe Nacht auf zwei Tage zu verteilen.
 
 ### Selbst eintragen
 
-Zwei Dinge, die kein Sensor weiss, unten im Gesundheits-Reiter:
+Zwei Dinge, die kein Sensor weiss — und sie stehen in verschiedenen Reitern,
+weil sie verschiedene Dinge sind:
 
-**»Wie war der Tag?«** — eine Zahl von 1 bis 5. Eine Uhr misst, wie lange man
-geschlafen hat; ob man sich ausgeruht *fühlt*, weiss nur der Mensch.
+**»Wie war der Tag?«** steht unter **Gesundheit** — eine Zahl von 1 bis 5.
+Eine Uhr misst, wie lange man geschlafen hat; ob man sich ausgeruht *fühlt*,
+weiss nur der Mensch. Es ist eine Beobachtung des Tages.
 
-**Koffein** — ein Tipp je Getränk (Kaffee 80 mg, Espresso 60, Tee 40,
-Energydrink 80). Die
+**Koffein** steht unter **Ernährung** — ein Tipp je Getränk (Kaffee 80 mg,
+Espresso 60, Tee 40, Energydrink 80). Es ist keine Beobachtung, sondern
+etwas, das man tut, und zwar mehrmals am Tag: der Knopf muss nah liegen. Die
 Milligramm sind Hausnummern; die interessante Hälfte ist der **Zeitpunkt des
 letzten**, denn der erklärt die Nacht, über die man sich wundert.
 
@@ -520,6 +568,7 @@ Drei feste Aufgaben, **im Code**, nicht in einer Datei aus dem Netz:
 | Drinktervall | Gesundheitsakte | jedes getrunkene Glas als Wassermenge, mit dem Zeitpunkt von der Uhr |
 | Herzintervall | Gesundheitsakte | die nächtliche RMSSD-Messung als Herzratenvariabilität |
 | Kieselsport | Gesundheitsakte | ein beendetes Training als Trainingssitzung — **nur die Sitzung**, nicht die Zahlen darin; die Strecke kommt vom Telefon dazu |
+| Kieselsport | Trainings-Reiter | dieselben Sitzungen, aus der Akte zurückgelesen, mit Strecke auf der Karte |
 | SupCycle | Gesundheitsakte + eigener Speicher | jedes genommene Präparat als Ernährungssatz mit Namen; die Quote bleibt für den Trend lokal |
 | OsmAnd | Kieselstrasse | Abbiegeart, Entfernung, Strasse, Ankunftszeit |
 
@@ -532,6 +581,18 @@ Geschickt wird nichts Neues: SupCycle meldet Tag, Fälligkeits- und
 Abhak-Bitmaske ohnehin nach jeder Einnahme, für seine eigenen Timeline-Pins.
 Gezählt wird, was **fällig war** und davon genommen wurde — ein Präparat, das
 heute pausiert, gehört in keine Quote.
+
+**Sieben Sportarten, drei davon Velo.** Kieselsport unterscheidet seit 0.3.0
+Strasse, Gravel und MTB; dazu kam Yoga. Die Gesundheitsakte kennt diese
+Unterscheidung nicht — sie hat ein einziges »Velo« und kein Mountainbike.
+Alle drei gehen deshalb als Velo hinein, und der **Titel** trägt, was es war:
+»Velo Gravel«, »Velo MTB«. Sie wegzulassen hiesse, drei sehr verschiedene
+Ausfahrten in einen Topf zu werfen.
+
+Die Zahl einer Art darf sich dabei **nie verschieben**: sie ist alles, was von
+der Uhr kommt. Gravel und MTB stehen deshalb hinter Kraft und nicht neben
+Strasse, wo sie hingehörten — eine eingeschobene Zeile hätte jede gespeicherte
+Aufzeichnung um eine Art verschoben.
 
 **Die Namen kommen seit SupCycle 0.10.0 mit**, alle sechs Plätze durch
 Zeilenumbruch getrennt, auch die leeren: die Bitmasken zählen Plätze, nicht

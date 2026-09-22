@@ -20,13 +20,23 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Zwei Reiter unten, ein Zahnrad oben.
+ * Drei Reiter unten, ein Zahnrad oben.
  *
- * WAS MAN TAEGLICH ANSCHAUT, IST DIE GANZE APP: die Zahlen von heute und das
- * Muster dahinter. Die Technik - Zustand, Erlaubnisse, Aufgabenliste - stand
- * lange als dritter Reiter daneben und nahm den beiden anderen Platz weg,
- * obwohl man sie zweimal im Jahr braucht. Sie liegt jetzt hinter dem Zahnrad
- * in [EinstellungenActivity].
+ * DIE REITER TRENNEN DREI FRAGEN, NICHT DREI DATENQUELLEN:
+ * - **Gesundheit**, was der Tag mit einem gemacht hat: Bewegung, Schlaf, Herz.
+ * - **Training**, was man selbst getan hat - die Aufzeichnungen der Uhr, mit
+ *   der Strecke auf der Karte.
+ * - **Ernährung**, was hineingeht: Wasser, Präparate, Koffein.
+ *
+ * DER TREND WAR EINMAL EIN REITER UND IST JETZT EIN SCHIRM DAHINTER. Er ist
+ * eine Antwort und keine eigene Frage: man sieht 7985 Schritte und will
+ * wissen, ob das viel ist. Dafuer fuehrt jede Karte weiter - ein Tippen, und
+ * zwar gleich bei der richtigen Groesse, statt unten umschalten und oben
+ * suchen.
+ *
+ * DIE TECHNIK - Zustand, Erlaubnisse, Aufgabenliste - stand lange als Reiter
+ * daneben und nahm den anderen Platz weg, obwohl man sie zweimal im Jahr
+ * braucht. Sie liegt hinter dem Zahnrad in [EinstellungenActivity].
  *
  * DIE REITER SITZEN UNTEN, weil der Daumen dort ist. Der Kopf mit Name und
  * Zahnrad steht fest, dazwischen scrollt der Inhalt und laesst sich von oben
@@ -36,13 +46,10 @@ class HauptActivity : ComponentActivity(), Eingaben {
 
     private lateinit var wurzel: LinearLayout
     private lateinit var gesundheit: LinearLayout
-    private lateinit var trend: LinearLayout
-    private lateinit var trendLeiste: TrendTab.Leiste
-    private lateinit var trendInhalt: LinearLayout
+    private lateinit var training: LinearLayout
+    private lateinit var ernaehrung: LinearLayout
     private lateinit var wischer: SwipeRefreshLayout
 
-    /** Welche Groesse der Trend-Schirm gerade auswertet. */
-    private var trendWahl = 0
     private var erlaubnisStarter: ActivityResultLauncher<Set<String>>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,13 +77,23 @@ class HauptActivity : ComponentActivity(), Eingaben {
         // zwischen "in drei Wochen sagt dir die App etwas" und "jetzt".
         lifecycleScope.launch {
             Gesundheit(this@HauptActivity).nachtragen()
-            trendLaden()
         }
     }
 
     override fun onResume() {
         super.onResume()
+        TrainingTab.weiter()
         auffrischen()
+    }
+
+    override fun onPause() {
+        TrainingTab.anhalten()
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+        TrainingTab.vergiss()
+        super.onDestroy()
     }
 
     /**
@@ -89,7 +106,8 @@ class HauptActivity : ComponentActivity(), Eingaben {
     private fun baueAnsicht(): View {
         wurzel = spalte().apply { setPadding(dp(16f), 0, dp(16f), dp(20f)) }
         gesundheit = spalte()
-        trend = spalte()
+        training = spalte()
+        ernaehrung = spalte()
 
         val aussen = spalte()
         aussen.layoutParams = LinearLayout.LayoutParams(
@@ -100,21 +118,10 @@ class HauptActivity : ComponentActivity(), Eingaben {
         })
 
         wurzel.addView(gesundheit)
-        wurzel.addView(trend)
-        trend.visibility = View.GONE
-
-        // Die Auswahlleiste des Trends wird EINMAL gebaut und danach nur noch
-        // umgefaerbt - sonst stuende sie nach jedem Umschalten wieder ganz
-        // links, waehrend man rechts aussen getippt hat.
-        trendLeiste = TrendTab.leiste(this) { gewaehlt ->
-            trendWahl = gewaehlt
-            trendLeiste.male(gewaehlt)
-            lifecycleScope.launch { trendLaden() }
-        }
-        trendLeiste.male(trendWahl)
-        trendInhalt = spalte()
-        trend.addView(trendLeiste.sicht)
-        trend.addView(trendInhalt)
+        wurzel.addView(training)
+        wurzel.addView(ernaehrung)
+        training.visibility = View.GONE
+        ernaehrung.visibility = View.GONE
 
         val roller = ScrollView(this)
         roller.addView(wurzel)
@@ -133,9 +140,10 @@ class HauptActivity : ComponentActivity(), Eingaben {
         // Beim Wechsel nach oben rollen: der neue Reiter faengt oben an, und
         // eine halb heruntergescrollte Seite, die man nie angeschaut hat,
         // sieht aus wie ein Fehler.
-        aussen.addView(fussleiste(listOf("Gesundheit", "Trend")) { welcher ->
+        aussen.addView(fussleiste(listOf("Gesundheit", "Training", "Ernährung")) { welcher ->
             gesundheit.visibility = if (welcher == 0) View.VISIBLE else View.GONE
-            trend.visibility = if (welcher == 1) View.VISIBLE else View.GONE
+            training.visibility = if (welcher == 1) View.VISIBLE else View.GONE
+            ernaehrung.visibility = if (welcher == 2) View.VISIBLE else View.GONE
             roller.scrollTo(0, 0)
         })
 
@@ -153,8 +161,8 @@ class HauptActivity : ComponentActivity(), Eingaben {
     private fun auffrischen() {
         lifecycleScope.launch {
             try {
-                gesundheitLaden()
-                trendLaden()
+                standLaden()
+                trainingLaden()
             } finally {
                 wischer.isRefreshing = false
             }
@@ -162,50 +170,22 @@ class HauptActivity : ComponentActivity(), Eingaben {
     }
 
     /**
-     * Den Trend-Schirm neu rechnen.
+     * Die Zahlen neu holen - einmal fuer zwei Reiter.
      *
-     * DIE TABELLE WIRD IM HINTERGRUND GELESEN. Ein Jahr sind dreihundert
-     * Zeilen - das ist schnell, aber SQLite auf dem Hauptfaden ist es nie,
-     * und der Fehler faellt erst auf, wenn die Tabelle gross genug ist.
-     *
-     * Getauscht wird NUR der Inhalt unter der Auswahlleiste. Die Leiste selbst
-     * bleibt stehen, samt ihrer Schiebestellung.
-     */
-    private suspend fun trendLaden() {
-        val gruppe = TrendTab.GRUPPEN[trendWahl]
-        val (daten, umfang) = withContext(Dispatchers.IO) {
-            val speicher = Speicher(this@HauptActivity)
-            gruppe.spalten.associateWith { speicher.reihe(it) } to speicher.umfang()
-        }
-
-        // Die Wolke NUR fuer Herz. Sie liest vierzehn Tage Einzelmessungen aus
-        // der Akte - das ist die teuerste Abfrage der App, und fuer die
-        // Schritte-Gruppe braucht sie niemand.
-        val wolke = if (gruppe.name == "Herz") {
-            Gesundheit(this@HauptActivity).pulswolke()
-        } else {
-            emptyList()
-        }
-
-        trendInhalt.removeAllViews()
-        trendInhalt.addView(
-            TrendTab.inhalt(this@HauptActivity, trendWahl, daten, umfang, wolke)
-        )
-    }
-
-    /**
-     * Die Zahlen neu holen.
+     * EINE ABFRAGE, NICHT ZWEI. Gesundheit und Ernaehrung lesen denselben
+     * Tagesstand; ihn je Reiter zu holen hiesse, die teuerste Stelle der App
+     * doppelt zu bezahlen - und die beiden Schirme koennten auseinanderlaufen.
      *
      * JEDES MAL NEU, auch beim blossen Zurueckkehren. Die Akte aendert sich,
      * waehrend die App im Hintergrund liegt - ein gemerkter Stand von heute
      * Morgen saehe genauso aus wie einer von eben.
      */
-    private suspend fun gesundheitLaden() {
-        val stand = Gesundheit(this@HauptActivity).lies()
+    private suspend fun standLaden() {
+        val ich = this@HauptActivity
+        val stand = Gesundheit(ich).lies()
         val fehlt =
             if (stand == null) emptySet()
-            else Akte(this@HauptActivity)
-                .fehlendeBerechtigungen(Gesundheit.BERECHTIGUNGEN)
+            else Akte(ich).fehlendeBerechtigungen(Gesundheit.BERECHTIGUNGEN)
 
         gesundheit.removeAllViews()
 
@@ -229,16 +209,23 @@ class HauptActivity : ComponentActivity(), Eingaben {
 
         // Zwei Abfragen mehr, beide gruppiert: das Profil von heute und der
         // Schnitt der letzten zwei Wochen.
-        val ich = this@HauptActivity
         val profilHeute = Gesundheit(ich).bewegungsprofil(1)
         val profilTypisch = Gesundheit(ich).bewegungsprofil(14)
-        gesundheit.addView(
-            GesundheitTab.baue(ich, stand, profilHeute, profilTypisch, this@HauptActivity)
-        )
+        gesundheit.addView(GesundheitTab.baue(ich, stand, profilHeute, profilTypisch, ich))
+
+        ernaehrung.removeAllViews()
+        ernaehrung.addView(ErnaehrungTab.baue(ich, stand, ich))
 
         // Die Zahlen sind eben gelesen; das Widget soll nicht aelteres zeigen
         // als der Schirm daneben.
-        GesundheitWidget.stosseAn(this@HauptActivity)
+        GesundheitWidget.stosseAn(ich)
+    }
+
+    /** Die Trainings der letzten drei Monate, samt ihrer Strecke. */
+    private suspend fun trainingLaden() {
+        val sitzungen = TrainingTab.hole(this@HauptActivity)
+        training.removeAllViews()
+        training.addView(TrainingTab.baue(this@HauptActivity, sitzungen))
     }
 
     // --- Was kein Sensor weiss ---
@@ -258,7 +245,7 @@ class HauptActivity : ComponentActivity(), Eingaben {
                     mapOf("energie" to wert.toDouble()),
                 )
             }
-            gesundheitLaden()
+            standLaden()
         }
     }
 
@@ -287,7 +274,7 @@ class HauptActivity : ComponentActivity(), Eingaben {
             Aufgaben.koffein(this@HauptActivity, mg, augenblick)?.let {
                 Verlauf(this@HauptActivity).merkeMeldung(it)
             }
-            gesundheitLaden()
+            standLaden()
         }
     }
 

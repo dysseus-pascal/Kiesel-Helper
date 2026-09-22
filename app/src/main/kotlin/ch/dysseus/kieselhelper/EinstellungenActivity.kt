@@ -429,9 +429,6 @@ class EinstellungenActivity : ComponentActivity() {
                 oeffneAppEinstellungen()
             })
         }
-        k.addView(knopfLeise("Trainings ansehen") {
-            startActivity(Intent(this, TrainingActivity::class.java))
-        })
         return k
     }
 

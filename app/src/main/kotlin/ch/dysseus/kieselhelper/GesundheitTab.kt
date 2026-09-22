@@ -4,22 +4,25 @@ import android.content.Context
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.util.TypedValue
-import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 
 /**
- * Der Gesundheits-Schirm: vier Karten, vier Bilder.
+ * Der Gesundheits-Schirm: drei Karten, drei Bilder.
  *
  * DAS IST DER GANZE PUNKT. Die Gesundheitsakte kann alles und zeigt darum
  * nichts zuerst - man sucht sich durch Listen zu einer Zahl, die man taeglich
  * wissen will. Hier stehen sie auf einem Schirm, in der Reihenfolge, in der
  * man sie braucht: erst was man selbst tut (Bewegung), dann was der Koerper
- * meldet (Schlaf, Herz), zuletzt was man nachfuellt (Wasser).
+ * meldet (Schlaf, Herz).
  *
  * ZU JEDER ZAHL EIN BILD. Eine Zahl allein sagt nicht, ob sie hoch ist - 7985
  * Schritte sind viel oder wenig, je nachdem, was die Woche davor war. Das Bild
  * daneben beantwortet das ohne ein Wort.
+ *
+ * UND JEDE KARTE FUEHRT WEITER. Die naechste Frage nach "7985" ist immer
+ * dieselbe: ist das viel? Sie wird hier nicht beantwortet, sondern eine
+ * Beruehrung weiter - im Trend, und zwar gleich bei der richtigen Groesse.
  *
  * Gebaut, nicht gezeichnet: die Werte kommen aus [Gesundheit], und fehlt einer,
  * steht ein Strich statt einer Null.
@@ -53,8 +56,11 @@ object GesundheitTab {
         }
 
         // --- Bewegung ---
-        s.addView(ctx.abschnitt("BEWEGUNG"))
+        s.addView(ctx.abschnittTipp("BEWEGUNG") {
+            TrendActivity.zeige(ctx, TrendActivity.SCHRITTE)
+        })
         val bewegung = ctx.karte()
+        bewegung.setOnClickListener { TrendActivity.zeige(ctx, TrendActivity.SCHRITTE) }
         bewegung.addView(ctx.messreihe(
             ctx.wert(stand.schritte, Zahlen.ganz(stand.schritte.zahl), ""),
             ctx.wert(stand.aktiv, Zahlen.ganz(stand.aktiv.zahl), "min"),
@@ -82,16 +88,14 @@ object GesundheitTab {
                 Einstellungen.tagesgrenze(ctx) * 60,
             ))
         }
-        // Der Weg zu den Trainings: dort liegt die Strecke auf der Karte,
-        // und die passt in keine Kachel hier.
-        bewegung.addView(ctx.knopfLeise("Trainings ansehen") {
-            ctx.startActivity(android.content.Intent(ctx, TrainingActivity::class.java))
-        })
         s.addView(bewegung)
 
         // --- Schlaf ---
-        s.addView(ctx.abschnitt("SCHLAF"))
+        s.addView(ctx.abschnittTipp("SCHLAF") {
+            TrendActivity.zeige(ctx, TrendActivity.SCHLAF)
+        })
         val schlaf = ctx.karte()
+        schlaf.setOnClickListener { TrendActivity.zeige(ctx, TrendActivity.SCHLAF) }
         schlaf.addView(ctx.messreihe(
             ctx.wert(stand.schlaf, Zahlen.dauer(stand.schlaf.zahl), ""),
             ctx.messwert("Tiefschlaf", Zahlen.dauer(stand.phasen?.tief), "", 0f, false),
@@ -131,8 +135,11 @@ object GesundheitTab {
         s.addView(schlaf)
 
         // --- Herz ---
-        s.addView(ctx.abschnitt("HERZ"))
+        s.addView(ctx.abschnittTipp("HERZ") {
+            TrendActivity.zeige(ctx, TrendActivity.HERZ)
+        })
         val herz = ctx.karte()
+        herz.setOnClickListener { TrendActivity.zeige(ctx, TrendActivity.HERZ) }
         herz.addView(ctx.messreihe(
             ctx.wert(stand.ruhepuls, Zahlen.ganz(stand.ruhepuls.zahl), "bpm"),
             ctx.wert(stand.hrv, Zahlen.ganz(stand.hrv.zahl), "ms"),
@@ -174,99 +181,42 @@ object GesundheitTab {
         }
         s.addView(herz)
 
-        // --- Ernaehrung ---
-        s.addView(ctx.abschnitt("ERNÄHRUNG"))
-        val ernaehrung = ctx.karte()
-        ernaehrung.addView(ctx.messreihe(
-            ctx.wert(stand.wasser, Zahlen.ganz(stand.wasser.zahl), "ml"),
-            ctx.messwert(
-                "Supplemente", quote(stand), "",
-                stand.suppGenommen.balkenAnteil,
-                stand.suppGenommen.da && stand.suppFaellig.da,
-                stand.suppGenommen.balkenUeber,
-            ),
-        ))
-        // WAS HEUTE ANSTEHT, namentlich. Eine Quote sagt, wie viel fehlt;
-        // sie sagt nicht, WAS fehlt - und danach greift man, wenn man vor dem
-        // Schrank steht.
-        if (stand.suppListe.isNotEmpty()) {
-            val liste = ctx.spalte()
-            stand.suppListe.forEach { eintrag ->
-                liste.addView(ctx.zart(
-                    (if (eintrag.genommen) "✓ " else "○ ") + eintrag.name
-                ))
-            }
-            ernaehrung.addView(liste)
-        }
-        ernaehrung.addView(ctx.zart("Wasser, sieben Tage"))
-        ernaehrung.addView(ctx.wochenbild(stand.wocheWasser.takeLast(Gesundheit.TAGE), 8 * 300.0))
-
-        if (stand.wocheSuppFaellig.any { it.zahl != null }) {
-            ernaehrung.addView(ctx.zart("Supplemente: hell geplant, dunkel genommen"))
-            // Der genommene Teil sitzt IM geplanten. Zwei Balken nebeneinander
-            // liessen offen, ob "3 genommen" von drei oder von acht war.
-            val genommen = stand.wocheSuppGenommen.associate { it.tag to it.zahl }
-            ernaehrung.addView(ctx.saeulenbild(
-                stand.wocheSuppFaellig.takeLast(Gesundheit.TAGE).map { t ->
-                    Saeule(
-                        t.tag.dayOfWeek.getDisplayName(
-                            java.time.format.TextStyle.SHORT, java.util.Locale.getDefault()
-                        ),
-                        t.zahl,
-                        hervor = t.tag == Einstellungen.heute(ctx),
-                        innen = genommen[t.tag],
-                    )
-                }
-            ))
-        } else {
-            // KEIN LEERES BILD, sondern der Grund. Wer nichts sieht, sucht
-            // sonst den Fehler bei sich.
-            ernaehrung.addView(ctx.zart(
-                "Von SupCycle kam noch nichts. Die Uhr meldet ihren Stand, " +
-                    "sobald dort etwas abgehakt wird — rückwirkend gibt es " +
-                    "nichts zu holen, das fängt ab der ersten Einnahme an."
-            ))
-        }
-        s.addView(ernaehrung)
-
         if (eingaben != null) {
-            s.addView(ctx.abschnitt("SELBST EINTRAGEN"))
-            s.addView(eingabekarte(ctx, stand, eingaben))
+            s.addView(ctx.abschnitt("WIE WAR DER TAG?"))
+            s.addView(energiekarte(ctx, stand, eingaben))
         }
 
         // Woher die Zahlen kommen - und warum manche fehlen. Ohne diese Zeile
         // haelt man ein leeres Feld fuer einen Fehler der App.
         s.addView(ctx.zart(
             "Alles aus Health Connect. Ein Strich heisst: dort steht nichts — " +
-                "nicht, dass der Wert null ist. Wasser, HRV, Koffein und " +
-                "Präparate trägt diese App selbst ein, den Rest müssen Uhr " +
-                "oder andere Apps liefern. Die Einschätzung von 1 bis 5 bleibt " +
-                "hier: für »wie ich mich fühle« hat die Akte keinen Satz. Was " +
-                "dort wirklich steht, sagen die Einstellungen."
+                "nicht, dass der Wert null ist. Schritte, Puls und Schlaf " +
+                "müssen Uhr oder andere Apps liefern. Die Einschätzung von 1 " +
+                "bis 5 bleibt hier: für »wie ich mich fühle« hat die Akte " +
+                "keinen Satz. Was dort wirklich steht, sagen die Einstellungen."
         ))
         return s
     }
 
-
     /**
      * Was kein Sensor weiss.
      *
-     * DIE ZWEI DINGE, DIE ERST DIE ZUSAMMENHAENGE INTERESSANT MACHEN. Eine Uhr
-     * misst, wie lange man geschlafen hat; ob man sich ausgeruht FUEHLT, weiss
-     * nur der Mensch. Und Koffein steht in keiner Akte, obwohl es die Nacht
-     * erklaert, an der man sich wundert.
+     * EINE UHR MISST, WIE LANGE MAN GESCHLAFEN HAT; ob man sich ausgeruht
+     * FUEHLT, weiss nur der Mensch. Diese eine Zahl macht aus den
+     * Zusammenhaengen erst eine Aussage - ohne sie laesst sich ausrechnen,
+     * dass der Puls nach kurzen Naechten steigt, aber nicht, ob es einem
+     * etwas ausmacht.
      *
-     * Ein Tipp je Sache, nicht mehr. Was mehr kostet, traegt niemand drei
-     * Wochen lang ein - und drei Wochen sind die Untergrenze, ab der sich
-     * etwas ablesen laesst.
+     * Ein Tipp, nicht mehr. Was mehr kostet, traegt niemand drei Wochen lang
+     * ein - und drei Wochen sind die Untergrenze, ab der sich etwas ablesen
+     * laesst.
      */
-    private fun eingabekarte(
+    private fun energiekarte(
         ctx: Context,
         stand: Gesundheit.Stand,
         eingaben: Eingaben,
     ): LinearLayout {
         val k = ctx.karte()
-        k.addView(ctx.kartentitel("Wie war der Tag?"))
 
         val reihe = ctx.reihe()
         (1..5).forEach { stufe ->
@@ -297,54 +247,7 @@ object GesundheitTab {
                     "drei Wochen sieht man, woran sie hängt."
             else "Eingetragen. Ein Tippen ändert sie."
         ))
-
-        k.addView(ctx.strich())
-        k.addView(ctx.kartentitel("Koffein"))
-        k.addView(ctx.fliesstext(
-            if (stand.koffeinMg == null || stand.koffeinMg <= 0) "Heute noch keines."
-            else (Zahlen.ganz(stand.koffeinMg) ?: "") + " mg" +
-                (Zahlen.uhrzeit(stand.koffeinLetzt)?.let { ", zuletzt um $it" } ?: "")
-        ))
-        // ZWEI REIHEN ZU ZWEIT, nicht vier nebeneinander. Bei vier Knoepfen
-        // in einer Zeile brach schon "Espresso" um, und ein Knopf, dessen
-        // Beschriftung auf zwei Zeilen steht, sieht kaputt aus.
-        listOf(
-            listOf("Kaffee" to 80, "Espresso" to 60),
-            listOf("Tee" to 40, "Energy" to 80),
-        ).forEach { paar ->
-            val zeile = ctx.reihe()
-            paar.forEach { (name, mg) ->
-                zeile.addView(ctx.knopfLeise("+ $name") { eingaben.fuegeKoffein(mg) }.apply {
-                    maxLines = 1
-                    layoutParams = LinearLayout.LayoutParams(
-                        0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
-                    ).apply {
-                        marginEnd = ctx.dp(6f)
-                        topMargin = ctx.dp(4f)
-                    }
-                })
-            }
-            k.addView(zeile)
-        }
-        k.addView(ctx.zart(
-            "Kaffee 80 mg, Espresso 60, Tee 40, Energydrink 80 — Hausnummern " +
-                "für eine übliche Portion. Geht in die Gesundheitsakte, ist " +
-                "also auch für andere Apps da. Für die Frage »Koffein nach 16 " +
-                "Uhr gegen Tiefschlaf« zählt ohnehin vor allem der Zeitpunkt."
-        ))
         return k
-    }
-
-    /**
-     * "3 / 5" statt einer nackten Zahl.
-     *
-     * Drei genommene Praeparate sind ein Erfolg oder eine Luecke, je nachdem,
-     * wie viele anstanden. Die Zahl allein sagt das nicht.
-     */
-    private fun quote(stand: Gesundheit.Stand): String? {
-        val genommen = stand.suppGenommen.zahl ?: return null
-        val faellig = stand.suppFaellig.zahl ?: return null
-        return (Zahlen.ganz(genommen) ?: "") + " / " + (Zahlen.ganz(faellig) ?: "")
     }
 
     /**
@@ -356,7 +259,7 @@ object GesundheitTab {
     private fun Context.wert(w: Gesundheit.Wert, text: String?, einheit: String) =
         messwert(
             w.name,
-            if (text != null && w.geschaetzt) "≈$text" else text,
+            if (text != null && w.geschaetzt) "≈" + text else text,
             einheit,
             w.balkenAnteil,
             w.ziel != null && w.da,

@@ -114,9 +114,16 @@ object Aufgaben {
      */
     private fun artAlsSatzart(art: Long): Pair<Int, String> = when (art.toInt()) {
         0 -> ExerciseSessionRecord.EXERCISE_TYPE_RUNNING to "Laufen"
-        1 -> ExerciseSessionRecord.EXERCISE_TYPE_BIKING to "Velo"
+        1 -> ExerciseSessionRecord.EXERCISE_TYPE_BIKING to "Velo Strasse"
         2 -> ExerciseSessionRecord.EXERCISE_TYPE_HIKING to "Wandern"
         3 -> ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING to "Kraft"
+        // DREIMAL DIESELBE SATZART, DREI NAMEN. Die Gesundheitsakte kennt
+        // nur "Velo" - kein Gravel, kein Mountainbike. Die Unterscheidung
+        // traegt deshalb der Titel; sie ganz wegzulassen hiesse, drei sehr
+        // verschiedene Ausfahrten in einen Topf zu werfen.
+        4 -> ExerciseSessionRecord.EXERCISE_TYPE_BIKING to "Velo Gravel"
+        5 -> ExerciseSessionRecord.EXERCISE_TYPE_BIKING to "Velo MTB"
+        6 -> ExerciseSessionRecord.EXERCISE_TYPE_YOGA to "Yoga"
         else -> ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT to "Training"
     }
 

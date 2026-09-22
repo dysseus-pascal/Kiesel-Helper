@@ -202,9 +202,9 @@
             android:exported="false"
             android:parentActivityName=".HauptActivity" />
 
-        <!-- Die Trainings samt Strecke auf der Karte. -->
+        <!-- Der Trend hinter einer Karte: die Antwort auf "ist das viel?". -->
         <activity
-            android:name=".TrainingActivity"
+            android:name=".TrendActivity"
             android:exported="false"
             android:parentActivityName=".HauptActivity" />
 
