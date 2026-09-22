@@ -110,4 +110,77 @@ object Einstellungen {
         context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
             .edit().putBoolean(FUEHRT, fuehrt).apply()
     }
+    // --- Die Sicherung ---
+
+    private const val DAV_URL = "sicherung_url"
+    private const val DAV_NUTZER = "sicherung_nutzer"
+    private const val DAV_TAEGLICH = "sicherung_taeglich"
+    private const val DAV_ZULETZT = "sicherung_zuletzt"
+    private const val DAV_SPUREN = "sicherung_spuren"
+
+    fun sicherungUrl(context: Context): String =
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
+            .getString(DAV_URL, "").orEmpty()
+
+    fun sicherungNutzer(context: Context): String =
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
+            .getString(DAV_NUTZER, "").orEmpty()
+
+    fun setzeSicherungZugang(context: Context, url: String, nutzer: String) {
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE).edit()
+            .putString(DAV_URL, url.trim())
+            .putString(DAV_NUTZER, nutzer.trim())
+            .apply()
+    }
+
+    fun sicherungTaeglich(context: Context): Boolean =
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
+            .getBoolean(DAV_TAEGLICH, false)
+
+    fun setzeSicherungTaeglich(context: Context, an: Boolean) {
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
+            .edit().putBoolean(DAV_TAEGLICH, an).apply()
+    }
+
+    /** Wann zuletzt gesichert wurde, in Millisekunden. 0 = noch nie. */
+    fun sicherungZuletzt(context: Context): Long =
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
+            .getLong(DAV_ZULETZT, 0L)
+
+    fun setzeSicherungZuletzt(context: Context, wann: Long) {
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
+            .edit().putLong(DAV_ZULETZT, wann).apply()
+    }
+
+    /**
+     * Welche Spuren schon oben liegen.
+     *
+     * DAMIT NICHT JEDEN TAG DASSELBE MEGABYTE HINAUFGEHT. Eine Spur aendert
+     * sich nach dem Training nicht mehr; einmal hochgeladen ist sie fertig.
+     */
+    fun gesicherteSpuren(context: Context): Set<String> =
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
+            .getStringSet(DAV_SPUREN, emptySet()).orEmpty()
+
+    fun merkeGesicherteSpur(context: Context, beginn: Long) {
+        val laden = context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
+        // Die Menge muss KOPIERT werden: getStringSet gibt die gespeicherte
+        // Menge selbst zurueck, und wer sie aendert, aendert sie hinter dem
+        // Ruecken der Ablage - beim naechsten Start stuende der alte Stand da.
+        val neu = laden.getStringSet(DAV_SPUREN, emptySet()).orEmpty().toMutableSet()
+        neu += beginn.toString()
+        laden.edit().putStringSet(DAV_SPUREN, neu).apply()
+    }
+
+    /**
+     * Die Einstellungen als Text - fuer die Sicherung.
+     *
+     * OHNE ZUGANGSDATEN. Eine Sicherung, die das Passwort ihres eigenen
+     * Ablageorts enthaelt, waere ein Schluessel, der im Schloss steckt.
+     */
+    fun alsText(context: Context): Map<String, String> = mapOf(
+        SCHLAF to schlafziel(context).toString(),
+        GRENZE to tagesgrenze(context).toString(),
+        FUEHRT to kartenlinkFuehrt(context).toString(),
+    )
 }

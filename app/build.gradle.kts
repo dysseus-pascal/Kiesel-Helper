@@ -17,8 +17,8 @@ android {
         // und deckt jedes Telefon ab, das die Pebble-App ueberhaupt betreibt.
         minSdk = 28
         targetSdk = 36
-        versionCode = 34
-        versionName = "0.28.0"
+        versionCode = 35
+        versionName = "0.29.0"
     }
 
     buildTypes {
@@ -76,6 +76,15 @@ dependencies {
     // der OsmAnd seine Karten baut.
     implementation("org.osmdroid:osmdroid-android:6.1.20")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+
+    // Fuer die Sicherung in einen WebDAV-Ordner. HttpURLConnection kennt
+    // MKCOL nicht - ihre Liste erlaubter Methoden ist fest eingebaut, und
+    // alles daneben endet in einer ProtocolException.
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // Die taegliche Sicherung. Ein Wecker, den Android im Stromsparen
+    // verschluckt, waere eine Sicherung, die es nur gibt, wenn man daran
+    // denkt - und dann haette man sie auch von Hand angestossen.
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 
     // Der Zettelleser ist reine Logik und laesst sich ohne Telefon pruefen.
     // org.json steckt zwar in android.jar, dort aber nur als Attrappe, die

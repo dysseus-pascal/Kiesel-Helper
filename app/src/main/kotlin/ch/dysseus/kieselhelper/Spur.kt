@@ -91,6 +91,31 @@ object Spur {
 
     fun vorhanden(context: Context, beginn: Long): Boolean = datei(context, beginn).exists()
 
+    /**
+     * Die Datei, wie sie ist - fuer die Sicherung.
+     *
+     * UNVERAENDERT UND NICHT UMGERECHNET: was gesichert und zurueckgeholt
+     * wird, muss Zeichen fuer Zeichen dasselbe sein. Ein Umweg ueber Punkte
+     * und zurueck verlore Genauigkeit an einer Stelle, an der es keinen
+     * Grund dafuer gibt.
+     */
+    fun roh(context: Context, beginn: Long): String? = try {
+        val d = datei(context, beginn)
+        if (d.exists()) d.readText() else null
+    } catch (e: Exception) {
+        Log.w(PebbleEmpfaenger.TAG, "Spur lesen: " + e.message)
+        null
+    }
+
+    /** Eine zurueckgeholte Spur ablegen - nur, wenn hier keine liegt. */
+    fun schreibeRoh(context: Context, beginn: Long, inhalt: String): Boolean = try {
+        val d = datei(context, beginn)
+        if (d.exists()) false else { d.writeText(inhalt); true }
+    } catch (e: Exception) {
+        Log.w(PebbleEmpfaenger.TAG, "Spur schreiben: " + e.message)
+        false
+    }
+
     /** Welche Spuren es gibt, jüngste zuerst. */
     fun alle(context: Context): List<Long> {
         val ordner = File(context.filesDir, ORDNER)

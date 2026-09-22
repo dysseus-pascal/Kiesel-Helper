@@ -124,6 +124,35 @@ class Speicher(context: Context) : SQLiteOpenHelper(context, NAME, null, FASSUNG
         merke(tag, mapOf(spalte to bisher + wieviel))
     }
 
+    /**
+     * Alles, was in der Tabelle steht - fuer die Sicherung.
+     *
+     * EIN JAHR SIND 365 ZEILEN mit je zwei Dutzend Zahlen. Das passt in den
+     * Speicher, und eine Sicherung, die stueckweise liest, waere zwischen
+     * zwei Stuecken nicht mehr derselbe Stand.
+     */
+    fun alleTage(): List<Pair<LocalDate, Map<String, Double>>> {
+        val aus = mutableListOf<Pair<LocalDate, Map<String, Double>>>()
+        try {
+            readableDatabase.rawQuery(
+                "SELECT * FROM tag ORDER BY datum", null
+            ).use { z ->
+                while (z.moveToNext()) {
+                    val datum = z.getString(z.getColumnIndexOrThrow("datum"))
+                    val werte = mutableMapOf<String, Double>()
+                    SPALTEN.forEach { spalte ->
+                        val i = z.getColumnIndex(spalte)
+                        if (i >= 0 && !z.isNull(i)) werte[spalte] = z.getDouble(i)
+                    }
+                    aus += LocalDate.parse(datum) to werte.toMap()
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(PebbleEmpfaenger.TAG, "Tabelle lesen: " + e.message)
+        }
+        return aus
+    }
+
     /** Welche Tage schon eine Zeile haben - um nur die Luecken nachzutragen. */
     fun bekannteTage(): Set<LocalDate> = frage(
         "SELECT datum FROM tag", { es -> LocalDate.parse(es) }

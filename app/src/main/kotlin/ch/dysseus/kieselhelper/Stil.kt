@@ -693,3 +693,43 @@ private fun Context.zeigeHinweis(anker: View, lang: String) {
     // Zeichen einer Karte aufginge, laege halb ausserhalb des Schirms.
     fenster.showAtLocation(anker.rootView, Gravity.CENTER, 0, 0)
 }
+
+/**
+ * Nachfragen, bevor etwas Grosses geschieht.
+ *
+ * DERSELBE KASTEN WIE DER HINWEIS, nur mit zwei Knoepfen. Ein AlertDialog
+ * naehme das Thema des Systems an - und stuende als rosa Kasten mitten in
+ * dieser App.
+ */
+fun Context.bestaetige(frage: String, tue: () -> Unit) {
+    val inhalt = karte().apply { setPadding(dp(18f), dp(16f), dp(18f), dp(12f)) }
+    inhalt.addView(fliesstext(frage))
+
+    val fenster = android.widget.PopupWindow(
+        inhalt,
+        (resources.displayMetrics.widthPixels - dp(48f)).coerceAtMost(dp(360f)),
+        ViewGroup.LayoutParams.WRAP_CONTENT,
+        true,
+    )
+    fenster.elevation = dp(10f).toFloat()
+    fenster.isOutsideTouchable = true
+
+    val reihe = reihe()
+    reihe.addView(knopfLeise("Abbrechen") { fenster.dismiss() }.apply {
+        layoutParams = LinearLayout.LayoutParams(
+            0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+        ).apply { marginEnd = dp(6f); topMargin = dp(8f) }
+    })
+    reihe.addView(knopfHaupt("Weiter") {
+        fenster.dismiss()
+        tue()
+    }.apply {
+        layoutParams = LinearLayout.LayoutParams(
+            0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+        ).apply { topMargin = dp(8f) }
+    })
+    inhalt.addView(reihe)
+
+    val wurzel = (this as? android.app.Activity)?.window?.decorView ?: return
+    fenster.showAtLocation(wurzel, Gravity.CENTER, 0, 0)
+}

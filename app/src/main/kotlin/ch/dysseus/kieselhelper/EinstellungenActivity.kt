@@ -97,6 +97,10 @@ class EinstellungenActivity : ComponentActivity() {
         wurzel.addView(spurkarte())
 
         wurzel.luft(8f)
+        wurzel.addView(abschnitt("SICHERUNG"))
+        wurzel.addView(sicherungskarte())
+
+        wurzel.luft(8f)
         wurzel.addView(abschnitt("KARTENLINKS"))
         wurzel.addView(linkkarte())
 
@@ -457,6 +461,153 @@ class EinstellungenActivity : ComponentActivity() {
                 this, "Einstellungen nicht erreichbar", android.widget.Toast.LENGTH_SHORT
             ).show()
         }
+    }
+
+    /**
+     * Die Sicherung in einen WebDAV-Ordner.
+     *
+     * WARUM ES SIE GIBT: die Gesundheitsakte hält rund dreissig Tage. Alles,
+     * was diese App an Wochenprofilen und Zusammenhängen rechnet, steht danach
+     * nur noch in ihrer eigenen Tabelle - und die liegt in den App-Daten eines
+     * einzigen Telefons.
+     *
+     * WEBDAV, WEIL ES ÜBERALL SCHON DA IST: Nextcloud, Synology, ein Webspace
+     * mit mod_dav. Kein Konto bei jemandem Neuen, kein Schlüssel, kein Dienst,
+     * der in zwei Jahren eingestellt wird.
+     */
+    private fun sicherungskarte(): LinearLayout {
+        val k = karte()
+        k.addView(kartentitel("Sicherung"))
+
+        val zuletzt = Einstellungen.sicherungZuletzt(this)
+        k.addView(schild(
+            zuletzt > 0,
+            if (zuletzt > 0) "Zuletzt " + java.text.DateFormat
+                .getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
+                .format(java.util.Date(zuletzt))
+            else "Noch nie gesichert"
+        ))
+        k.addView(zartMitHinweis(
+            "Tagestabelle und Strecken in einen WebDAV-Ordner",
+            "Die Gesundheitsakte hält rund dreissig Tage. Alles, was diese App " +
+                "an Wochenprofilen und Zusammenhängen rechnet, steht danach nur " +
+                "noch in ihrer eigenen Tabelle — und die liegt in den App-Daten " +
+                "eines einzigen Telefons. Gesichert wird als lesbares JSON: das " +
+                "ist auch dann noch etwas wert, wenn es diese App nicht mehr " +
+                "gibt. Die Strecken liegen daneben, eine Datei je Training, und " +
+                "gehen nur einmal hinauf."
+        ))
+
+        val adresse = feld(
+            "https://wolke.example/remote.php/dav/files/ich/Kiesel/",
+            Einstellungen.sicherungUrl(this),
+        )
+        val nutzer = feld("Benutzername", Einstellungen.sicherungNutzer(this))
+        val geheim = feld(
+            if (Tresor.hatGeheimnis(this)) "Passwort (gespeichert)" else "Passwort",
+            "",
+            geheim = true,
+        )
+        k.addView(adresse)
+        k.addView(nutzer)
+        k.addView(geheim)
+        k.addView(zartMitHinweis(
+            "Nur https, und das Passwort liegt verschlüsselt",
+            "Über eine unverschlüsselte Verbindung gingen Passwort und ein Jahr " +
+                "Gesundheitsdaten im Klartext durchs Netz. Das Passwort selbst " +
+                "liegt nicht in einer Einstellungsdatei, sondern mit einem " +
+                "Schlüssel aus dem Android-Schlüsselbund verschlossen — der " +
+                "verlässt dieses Telefon nie. Nach einem Zurücksetzen ist er " +
+                "weg, und das Passwort wird einmal neu eingetippt."
+        ))
+
+        k.addView(knopfHaupt("Speichern und prüfen", breit = true) {
+            Einstellungen.setzeSicherungZugang(
+                this, adresse.text(), nutzer.text()
+            )
+            val neu = geheim.text()
+            if (neu.isNotBlank()) Tresor.merke(this, neu)
+            geheim.leeren()
+            lifecycleScope.launch {
+                melde(Sichern.pruefe(this@EinstellungenActivity))
+                auffrischen()
+            }
+        })
+
+        val reihe = reihe()
+        reihe.addView(knopfLeise("Jetzt sichern") {
+            lifecycleScope.launch {
+                melde("Sichere …")
+                melde(Sichern.jetzt(this@EinstellungenActivity))
+                setContentView(baueAnsicht())
+            }
+        }.breitInReihe())
+        reihe.addView(knopfLeise("Zurückholen") {
+            // ZWEIMAL FRAGEN, WEIL ES DIE TABELLE ANFASST. Zurueckholen
+            // schreibt zwar nur in Luecken - aber das muss jemand wissen,
+            // bevor er tippt, und nicht danach.
+            bestaetige(
+                "Zurückholen ergänzt nur, was hier fehlt — vorhandene Tage und " +
+                    "Strecken bleiben, wie sie sind. Weiter?"
+            ) {
+                lifecycleScope.launch {
+                    melde("Hole …")
+                    melde(Sichern.zurueck(this@EinstellungenActivity))
+                }
+            }
+        }.breitInReihe())
+        k.addView(reihe)
+
+        val taeglich = Einstellungen.sicherungTaeglich(this)
+        k.addView(knopfLeise(
+            if (taeglich) "Tägliche Sicherung: an" else "Tägliche Sicherung: aus"
+        ) {
+            val neu = !taeglich
+            Einstellungen.setzeSicherungTaeglich(this, neu)
+            if (neu) Sichern.planen(this) else Sichern.abbestellen(this)
+            setContentView(baueAnsicht())
+        })
+        return k
+    }
+
+    /** Ein Eingabefeld im Stil der Karten. */
+    private fun feld(
+        hinweis: String,
+        wert: String,
+        geheim: Boolean = false,
+    ): android.widget.EditText = android.widget.EditText(this).apply {
+        hint = hinweis
+        setText(wert)
+        setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 15f)
+        setTextColor(farbe(R.color.schrift))
+        setHintTextColor(farbe(R.color.schrift_zart))
+        maxLines = 1
+        setSingleLine()
+        if (geheim) {
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+        } else {
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                android.text.InputType.TYPE_TEXT_VARIATION_URI
+        }
+        setPadding(dp(12f), dp(10f), dp(12f), dp(10f))
+        background = android.graphics.drawable.GradientDrawable().apply {
+            setColor(farbe(R.color.grund))
+            cornerRadius = dp(8f).toFloat()
+            setStroke(dp(1f), farbe(R.color.linie))
+        }
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+        ).apply { topMargin = dp(8f) }
+    }
+
+    private fun android.widget.EditText.text(): String = text.toString().trim()
+    private fun android.widget.EditText.leeren() = setText("")
+
+    private fun android.widget.Button.breitInReihe(): android.widget.Button = apply {
+        layoutParams = LinearLayout.LayoutParams(
+            0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+        ).apply { marginEnd = dp(6f); topMargin = dp(6f) }
     }
 
     private fun aufgabenKarte(titel: String, text: String): LinearLayout {
