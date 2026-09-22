@@ -41,4 +41,16 @@
     <!-- Was ueber dem selbst gesetzten Ideal liegt. Gruenlich, aber leise:
          es ist eine Auskunft, kein Lob. -->
     <color name="ueber_ziel">#6FA88C</color>
+
+    <!-- DIE SPORTARTEN. Eine Familie warmer Erdtoene um den Trainingston,
+         dazu zwei kuehle fuer das, was nicht auf Erde stattfindet: Yoga und
+         Wasser. Jede Art erkennt man im Kalender und in der Woche an ihrer
+         Farbe, ohne die Legende zu lesen. -->
+    <color name="sport_lauf">#C0582B</color>
+    <color name="sport_bike">#B7862A</color>
+    <color name="sport_wandern">#6E7F3A</color>
+    <color name="sport_kraft">#8A3B2E</color>
+    <color name="sport_yoga">#7A4E7E</color>
+    <color name="sport_schwimmen">#2E7C8A</color>
+    <color name="sport_anderes">#7D6B5D</color>
 </resources>

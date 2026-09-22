@@ -5,7 +5,9 @@ import android.graphics.Color
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import androidx.health.connect.client.records.ExerciseSegment
+import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import kotlinx.coroutines.Dispatchers
@@ -63,7 +65,12 @@ object TrainingTab {
         val sitzung: ExerciseSessionRecord,
         val punkte: List<Spur.Punkt>,
         val meter: Double,
+        /** Der Puls waehrend des Trainings - wie die Punkte nur beim juengsten. */
+        val puls: List<Pulspunkt> = emptyList(),
     )
+
+    /** So viele stehen als Karten da; die uebrigen zaehlen nur in den Bildern. */
+    private const val LISTE = 20
 
     /**
      * Alles holen, was der Schirm braucht - und zwar hier, nicht beim Bauen.
@@ -83,14 +90,44 @@ object TrainingTab {
                         Instant.now().minus(Duration.ofDays(TAGE)), Instant.now()
                     ),
                 )
-            ).records.sortedByDescending { it.startTime }.take(20)
+            ).records.sortedByDescending { it.startTime }
         } catch (e: Exception) {
             emptyList()
         }
+        // ALLE FUER DIE BILDER, ZWANZIG FUER DIE LISTE. Kalender und Wochen
+        // brauchen jedes Training des Vierteljahres, aber nur Dauer und Art;
+        // die Spurdateien werden nur fuer die gelesen, die als Karte dastehen.
         sitzungen.mapIndexed { i, sitzung ->
+            if (i >= LISTE) return@mapIndexed Eintrag(sitzung, emptyList(), 0.0)
             val punkte = Spur.lies(ctx, sitzung.startTime.epochSecond)
-            Eintrag(sitzung, if (i == 0) punkte else emptyList(), Spur.laenge(punkte))
+            Eintrag(
+                sitzung,
+                if (i == 0) punkte else emptyList(),
+                Spur.laenge(punkte),
+                if (i == 0) puls(klient, sitzung) else emptyList(),
+            )
         }
+    }
+
+    /**
+     * Die Pulsmessungen waehrend eines Trainings.
+     *
+     * Aus der Akte, nicht von der Uhr direkt: dort stehen sie ohnehin, und so
+     * bekommt auch ein Training einer anderen App seine Kurve.
+     */
+    private suspend fun puls(
+        klient: HealthConnectClient,
+        s: ExerciseSessionRecord,
+    ): List<Pulspunkt> = try {
+        klient.readRecords(
+            ReadRecordsRequest(HeartRateRecord::class, TimeRangeFilter.between(s.startTime, s.endTime))
+        ).records
+            .flatMap { it.samples }
+            .filter { !it.time.isBefore(s.startTime) && !it.time.isAfter(s.endTime) }
+            .sortedBy { it.time }
+            .map { Pulspunkt(Duration.between(s.startTime, it.time).seconds, it.beatsPerMinute) }
+    } catch (e: Exception) {
+        emptyList()
     }
 
     fun baue(ctx: Context, eintraege: List<Eintrag>): LinearLayout {
@@ -110,16 +147,34 @@ object TrainingTab {
             return s
         }
 
+        val alle = eintraege.map { it.sitzung }
+        val heute = java.time.LocalDate.now()
+
         s.addView(ctx.abschnitt("DIE LETZTEN SIEBEN TAGE"))
         s.addView(wochenkarte(ctx, eintraege))
 
-        // DAS JUENGSTE GROSS, die anderen als Liste. Was man sucht, wenn man
+        // DAS JUENGSTE GROSS, gleich unter der Woche. Was man sucht, wenn man
         // diesen Schirm oeffnet, ist fast immer das letzte Training.
         s.addView(ctx.abschnitt("ZULETZT"))
         s.addView(sitzungskarte(ctx, eintraege.first(), gross = true))
+
+        s.addView(ctx.abschnitt("ACHT WOCHEN"))
+        s.addView(ctx.karte().apply {
+            addView(ctx.zart("Minuten je Woche, gestapelt nach Art"))
+            addView(ctx.wochenstapel(alle, heute))
+        })
+
+        s.addView(ctx.abschnitt("WORAUS ES BESTEHT"))
+        s.addView(ctx.karte().apply {
+            addView(ctx.zart("Die letzten drei Monate, nach Zeit"))
+            addView(ctx.verteilung(alle))
+        })
+
         if (eintraege.size > 1) {
             s.addView(ctx.abschnitt("DAVOR"))
-            eintraege.drop(1).forEach { s.addView(sitzungskarte(ctx, it, gross = false)) }
+            eintraege.drop(1).take(LISTE - 1).forEach {
+                s.addView(sitzungskarte(ctx, it, gross = false))
+            }
         }
         return s
     }
@@ -166,6 +221,11 @@ object TrainingTab {
             "Strecke", if (meter > 100) Zahlen.eine(meter / 1000) else null, "km", 0f, false
         ))
         k.addView(reihe)
+        k.addView(ctx.kalenderbild(alle.map { it.sitzung }, java.time.LocalDate.now()))
+        k.addView(ctx.zart(
+            "Vier Wochen. Die Farbe ist die Art mit der meisten Zeit, je " +
+                "kräftiger, desto länger; umrandet ist heute."
+        ))
         if (woche.isEmpty()) {
             k.addView(ctx.zart("In den letzten sieben Tagen keines."))
         } else if (meter <= 100) {
@@ -186,17 +246,32 @@ object TrainingTab {
         gross: Boolean,
     ): LinearLayout {
         val sitzung = eintrag.sitzung
+        val art = Sportart.von(sitzung)
+        val ton = ctx.farbe(art.farbe)
         val k = ctx.karte()
         val dauer = Duration.between(sitzung.startTime, sitzung.endTime).toMinutes()
-        k.addView(ctx.kartentitel((sitzung.title ?: "Training") + ", " + dauer + " min"))
-        k.addView(ctx.zart(
+        k.addView(ctx.sportkopf(
+            art,
+            (sitzung.title ?: art.name) + (if (gross) "" else ", " + (Zahlen.dauer(dauer.toDouble()) ?: "")),
             DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
-                .format(Date(sitzung.startTime.toEpochMilli()))
+                .format(Date(sitzung.startTime.toEpochMilli())),
+            gross,
         ))
         sitzung.notes?.let { k.addView(ctx.fliesstext(it)) }
 
         if (gross) {
-            saetzeUndBahnen(ctx, sitzung)?.let { k.addView(it) }
+            k.addView(ctx.reihe().apply {
+                setPadding(0, ctx.dp(12f), 0, 0)
+                val mittel = eintrag.puls.takeIf { it.isNotEmpty() }?.map { it.bpm }?.average()
+                val spitze = eintrag.puls.maxOfOrNull { it.bpm }
+                addView(ctx.messwert("Dauer", Zahlen.dauer(dauer.toDouble()), "", 0f, false))
+                addView(ctx.messwert("Puls Ø", mittel?.let { Zahlen.ganz(it) }, "bpm", 0f, false))
+                addView(ctx.messwert("Puls max", spitze?.toString(), "bpm", 0f, false))
+            })
+            if (eintrag.puls.size >= 2) {
+                k.addView(ctx.trainingspuls(eintrag.puls, ton))
+            }
+            saetzeUndBahnen(ctx, sitzung, ton)?.let { k.addView(it) }
         }
 
         val punkte = eintrag.punkte
@@ -227,7 +302,7 @@ object TrainingTab {
      * Gesundheitsakte zurueck. Steht es dort nicht, steht es auch hier
      * nicht - und dann hat die Uhr es nicht geschickt.
      */
-    private fun saetzeUndBahnen(ctx: Context, sitzung: ExerciseSessionRecord): LinearLayout? {
+    private fun saetzeUndBahnen(ctx: Context, sitzung: ExerciseSessionRecord, ton: Int): LinearLayout? {
         val saetze = sitzung.segments.filter { it.repetitions > 0 }
         val pausen = sitzung.segments.filter {
             it.segmentType == ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST
@@ -237,22 +312,43 @@ object TrainingTab {
 
         val s = ctx.spalte()
         if (saetze.isNotEmpty()) {
-            saetze.forEachIndexed { i, satz ->
-                val dauer = Duration.between(satz.startTime, satz.endTime).seconds
-                val pause = pausen.getOrNull(i)?.let {
-                    Duration.between(it.startTime, it.endTime).seconds
-                }
-                s.addView(ctx.zart(
-                    "Satz " + (i + 1) + ": " + satz.repetitions + " Wdh., " + dauer + " s" +
-                        (if (pause != null) "  ·  Pause " + pause + " s" else "")
-                ))
-            }
+            // EIN BILD STATT EINER ZEILE JE SATZ. Hoehe die Wiederholungen,
+            // Breite die Dauer, dazwischen die Pause - so wie es war.
+            s.addView(ctx.satzbild(
+                saetze.map {
+                    Satz(
+                        Duration.between(sitzung.startTime, it.startTime).seconds,
+                        Duration.between(it.startTime, it.endTime).seconds,
+                        it.repetitions,
+                    )
+                },
+                ton,
+            ))
+            val pausenSek = pausen.map { Duration.between(it.startTime, it.endTime).seconds }
+            s.addView(ctx.zart(
+                saetze.size.toString() + " Sätze  ·  " + saetze.sumOf { it.repetitions } + " Wdh." +
+                    (if (pausenSek.isNotEmpty()) "  ·  Pause Ø " + pausenSek.average().toLong() + " s" else "") +
+                    ". Hoch heisst viele Wiederholungen, breit heisst lang."
+            ))
         } else {
             // BEI DEN BAHNEN ZAEHLT DIE ZEIT JE BAHN, nicht jede einzeln als
             // Zeile: zwanzig Zeilen liest niemand. Die schnellste und die
             // langsamste sagen, wie gleichmaessig es war.
             val zeiten = bahnen.map { Duration.between(it.startTime, it.endTime).seconds }
             val schnitt = if (zeiten.isNotEmpty()) zeiten.sum() / zeiten.size else 0
+            // Jede Bahn ein Balken, die schnellste hervorgehoben: so sieht
+            // man, wo die Kraft nachliess.
+            val schnellste = zeiten.minOrNull()
+            s.addView(ctx.saeulenbild(
+                zeiten.mapIndexed { i, sek ->
+                    Saeule(
+                        if (i == 0 || (i + 1) % 5 == 0) (i + 1).toString() else "",
+                        sek.toDouble(),
+                        hervor = sek == schnellste,
+                    )
+                },
+                ziel = schnitt.toDouble(),
+            ))
             s.addView(ctx.zart(
                 bahnen.size.toString() + " Bahnen, je " + schnitt + " s im Schnitt " +
                     "(" + (zeiten.minOrNull() ?: 0) + " bis " + (zeiten.maxOrNull() ?: 0) + " s)"

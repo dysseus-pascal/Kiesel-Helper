@@ -36,4 +36,13 @@
 
     <!-- Bei Nacht heller, sonst verschwindet es im dunklen Balken. -->
     <color name="ueber_ziel">#84C4A4</color>
+
+    <!-- Bei Nacht heller als der Grund, sonst verschwinden sie. -->
+    <color name="sport_lauf">#E08A5F</color>
+    <color name="sport_bike">#D9AE5B</color>
+    <color name="sport_wandern">#A3B66A</color>
+    <color name="sport_kraft">#D07A68</color>
+    <color name="sport_yoga">#B58BB9</color>
+    <color name="sport_schwimmen">#6FB8C4</color>
+    <color name="sport_anderes">#B3A294</color>
 </resources>

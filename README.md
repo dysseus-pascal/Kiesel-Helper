@@ -114,9 +114,24 @@ Zeit, wie viele Kilometer. Nicht der Monat und nicht das Jahr — eine
 Trainingswoche ist die Einheit, in der man plant; was im August war, sagt
 heute nichts mehr.
 
-Darunter **das jüngste Training gross**, mit Strecke, Tempo, Aufstieg und
-Karte, und die davor als Zeilen. Was man sucht, wenn man diesen Schirm öffnet,
-ist fast immer das letzte.
+Unter den Zahlen **vier Wochen als Kalender**: ein Feld je Tag, gefärbt in der
+Art, die an dem Tag die meiste Zeit hatte, und je kräftiger, desto länger. Ein
+leerer Tag bleibt ein leeres Feld, keine Null.
+
+Darunter **das jüngste Training gross**: der Puls als Fläche über die Zeit, mit
+Schnitt und Spitze. Beim Krafttraining stehen die Sätze auf der Zeitachse,
+hoch für viele Wiederholungen, breit für lange Sätze, dazwischen die Pause.
+Beim Schwimmen steht jede Bahn als Balken da, die schnellste hervorgehoben.
+Dazu Strecke, Tempo, Aufstieg und die Karte.
+
+Dann **acht Wochen**, gestapelt nach Art, und **woraus es besteht**: die Arten
+eines Vierteljahres als ein Band nach Zeit. Ein Band und kein Kuchen, weil man
+Anteile an Längen besser liest als an Winkeln. Zuletzt die älteren Trainings
+als Zeilen.
+
+**Jede Art hat ihre Farbe** und ihr Zeichen — warme Erdtöne für das, was auf
+dem Boden stattfindet, kühle für Yoga und Wasser. Man erkennt sie im Kalender
+und in der Woche, ohne die Legende zu lesen.
 
 Die Liste kommt **aus der Gesundheitsakte**, nicht aus einer eigenen Tabelle.
 Dort stehen die Sitzungen ohnehin; eine zweite Liste daneben wäre eine zweite
