@@ -32,9 +32,16 @@
          dabei eine Meldung in der Leiste - wer den Standort eines Menschen
          aufzeichnet, soll das nicht lautlos tun koennen.
 
-         KEIN ACCESS_BACKGROUND_LOCATION: der Vordergrunddienst genuegt,
-         und das Hintergrundrecht waere die Erlaubnis, immer mitzulesen. -->
+         ACCESS_BACKGROUND_LOCATION, schweren Herzens. Es war zuerst nicht
+         da, mit dem Gedanken, der Vordergrunddienst genuege. Er genuegt
+         nicht: das Training beginnt auf der UHR, das Telefon liegt dabei in
+         der Tasche und die App ist zu. In diesem Zustand laesst Android
+         einen Ortungsdienst ohne dieses Recht nicht zu - die Strecke bliebe
+         leer, und niemand wuesste warum. Es wird einzeln erfragt, erst wenn
+         jemand eine Strecke will, und geortet wird trotzdem nur zwischen
+         Start und Stop: ohne Training keine Messung. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.health.READ_NUTRITION" />

@@ -39,6 +39,7 @@ class EinstellungenActivity : ComponentActivity() {
     private lateinit var linkbefund: TextView
     private var erlaubnisStarter: ActivityResultLauncher<Set<String>>? = null
     private var ortStarter: ActivityResultLauncher<Array<String>>? = null
+    private var wartetAufEinstellungen = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,6 +54,12 @@ class EinstellungenActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // ZURUECK AUS DEN SYSTEMEINSTELLUNGEN: dort kann sich die Standort-
+        // erlaubnis geaendert haben, und der Schirm zeigte sonst den alten Stand.
+        if (wartetAufEinstellungen) {
+            wartetAufEinstellungen = false
+            setContentView(baueAnsicht())
+        }
         // Nochmal bei OsmAnd anklopfen. Wer dort eben den Schalter umgelegt
         // hat, kommt als Naechstes hierher und will sehen, dass es wirkt.
         OsmandNavigation.versucheErneut(this)
@@ -384,9 +391,16 @@ class EinstellungenActivity : ComponentActivity() {
         val k = karte()
         k.addView(kartentitel("Strecke aufzeichnen"))
 
-        val erlaubt = checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) ==
-            android.content.pm.PackageManager.PERMISSION_GRANTED
-        k.addView(schild(erlaubt, if (erlaubt) "Standort erlaubt" else "Standort nicht erlaubt"))
+        val erlaubt = SpurDienst.darfOrten(this)
+        val immer = SpurDienst.darfImmerOrten(this)
+        k.addView(schild(
+            erlaubt && immer,
+            when {
+                !erlaubt -> "Standort nicht erlaubt"
+                !immer -> "Nur während der Nutzung — zu wenig"
+                else -> "Standort immer erlaubt"
+            }
+        ))
         k.addView(zart(
             "Die Uhr hat kein GPS. Während eines Trainings zeichnet das Telefon " +
                 "die Strecke auf — mit sichtbarer Meldung in der Leiste, und nur " +
@@ -400,11 +414,49 @@ class EinstellungenActivity : ComponentActivity() {
                     android.Manifest.permission.ACCESS_COARSE_LOCATION,
                 ))
             })
+        } else if (!immer) {
+            // DAS IST DER HAEUFIGE FALL, und er sieht aus wie ein Fehler der
+            // App: die Erlaubnis steht da, die Karte bleibt leer.
+            k.addView(fliesstext(
+                "»Nur während der Nutzung« genügt hier nicht. Das Training " +
+                    "beginnt auf der Uhr, während das Telefon in der Tasche " +
+                    "liegt und diese App zu ist — in diesem Zustand lässt " +
+                    "Android keine Ortung zu, und die Strecke bliebe leer. " +
+                    "Nötig ist »Immer erlauben«. Gemessen wird trotzdem nur " +
+                    "zwischen Start und Stop eines Trainings."
+            ))
+            k.addView(knopfHaupt("Immer erlauben", breit = true) {
+                oeffneAppEinstellungen()
+            })
         }
         k.addView(knopfLeise("Trainings ansehen") {
             startActivity(Intent(this, TrainingActivity::class.java))
         })
         return k
+    }
+
+    /**
+     * Zu den Systemeinstellungen dieser App.
+     *
+     * DAS HINTERGRUNDRECHT GIBT ES NICHT ALS DIALOG. Seit Android 11 zeigt das
+     * System dafuer kein Fenster mehr; »Immer erlauben« steht nur in den
+     * Einstellungen, und dorthin kann eine App nur den Weg zeigen. Sie soll
+     * ihn wenigstens zeigen, statt den Menschen suchen zu lassen.
+     */
+    private fun oeffneAppEinstellungen() {
+        wartetAufEinstellungen = true
+        try {
+            startActivity(
+                Intent(
+                    android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    android.net.Uri.fromParts("package", packageName, null),
+                )
+            )
+        } catch (e: Exception) {
+            android.widget.Toast.makeText(
+                this, "Einstellungen nicht erreichbar", android.widget.Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 
     private fun aufgabenKarte(titel: String, text: String): LinearLayout {

@@ -17,8 +17,8 @@ android {
         // und deckt jedes Telefon ab, das die Pebble-App ueberhaupt betreibt.
         minSdk = 28
         targetSdk = 36
-        versionCode = 29
-        versionName = "0.25.0"
+        versionCode = 30
+        versionName = "0.25.1"
     }
 
     buildTypes {

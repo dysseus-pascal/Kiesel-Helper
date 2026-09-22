@@ -599,6 +599,30 @@ soll nicht nach seinem Standort gefragt werden; gefragt wird, wer eine Strecke
 will. Ohne sie läuft alles andere weiter — das Training wird eingetragen, nur
 ohne Karte.
 
+**Nötig ist »Immer erlauben«**, und das war eine unangenehme Einsicht. Der
+erste Entwurf verzichtete bewusst auf `ACCESS_BACKGROUND_LOCATION` — ein
+Vordergrunddienst mit sichtbarer Meldung schien zu genügen. Er genügt nicht:
+das Training beginnt **auf der Uhr**, während das Telefon in der Tasche liegt
+und diese App zu ist. In diesem Zustand lässt Android einen Ortungsdienst ohne
+das Hintergrundrecht gar nicht erst zu. Die Strecke bliebe leer, und niemand
+wüsste warum.
+
+Gemessen wird trotzdem nur zwischen Start und Stop. Das Recht erlaubt die
+Ortung bei geschlossener App — es schaltet sie nicht ein.
+
+Das Hintergrundrecht gibt es seit Android 11 **nicht als Dialog**. »Immer
+erlauben« steht nur in den Systemeinstellungen; die App kann dorthin nur den
+Weg zeigen, und der Knopf in der Karte tut genau das.
+
+**Der Dienst darf nie abstürzen.** Er wird aus dem Nichts gestartet, oft bei
+dunklem Schirm. Die erste Fassung prüfte die Berechtigung erst *nach*
+`startForeground` — zu spät: Android prüft sie seit 14 **innerhalb** dieses
+Aufrufs und wirft, statt Nein zu sagen. Der erste Start ohne erteilte Erlaubnis
+riss deshalb die ganze App mit. Jetzt wird vorher gefragt, an beiden Enden
+(bevor der Dienst überhaupt startet und noch einmal im Dienst selbst), und
+alles Übrige wird gefangen und in den Verlauf geschrieben — wer eine leere
+Karte sieht, soll nachlesen können, warum.
+
 **Kein Google-Standortdienst.** Der `LocationManager` des Systems genügt,
 kostet keine Abhängigkeit und läuft auch auf einem Telefon ohne Play-Dienste.
 Gemessen wird alle drei Sekunden oder alle fünf Meter; dichter macht die Linie

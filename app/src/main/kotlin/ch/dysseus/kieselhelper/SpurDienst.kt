@@ -31,6 +31,12 @@ import androidx.core.app.ServiceCompat
  *
  * KEIN GOOGLE-STANDORTDIENST. Der LocationManager des Systems genügt, kostet
  * keine Abhängigkeit und läuft auch auf einem Telefon ohne Play-Dienste.
+ *
+ * ER DARF NIEMALS ABSTÜRZEN. Gestartet wird er von einer Rundmeldung der Uhr,
+ * also aus dem Nichts und oft mit dunklem Schirm. Beim ersten Versuch riss ein
+ * Absturz hier die ganze App mit: Android prüft die Standortberechtigung seit
+ * 14 INNERHALB von startForeground und wirft, statt Nein zu sagen. Deshalb
+ * wird vorher gefragt und alles Übrige gefangen.
  */
 class SpurDienst : android.app.Service(), LocationListener {
 
@@ -53,25 +59,36 @@ class SpurDienst : android.app.Service(), LocationListener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            AUS -> {
-                halt()
-                return START_NOT_STICKY
-            }
-            else -> {
-                beginn = intent?.getLongExtra(EXTRA_BEGINN, 0L) ?: 0L
-                if (beginn <= 0L) beginn = System.currentTimeMillis() / 1000
-                starteVordergrund(intent?.getStringExtra(EXTRA_ART) ?: "Training")
-                horche()
-            }
+        if (intent?.action == AUS) {
+            halt()
+            return START_NOT_STICKY
         }
+
+        // ZUERST DIE ERLAUBNIS, DANN DER VORDERGRUND. Andersherum wirft das
+        // System, bevor irgendeine eigene Prüfung greift: ein Dienst der Art
+        // location darf ohne Standortberechtigung gar nicht erst in den
+        // Vordergrund gehen.
+        if (!darfOrten(this)) {
+            Log.w(PebbleEmpfaenger.TAG, "Keine Standortberechtigung - Spur entfällt")
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
+        beginn = intent?.getLongExtra(EXTRA_BEGINN, 0L) ?: 0L
+        if (beginn <= 0L) beginn = System.currentTimeMillis() / 1000
+        if (!starteVordergrund(intent?.getStringExtra(EXTRA_ART) ?: "Training")) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        horche()
+
         // NICHT STICKY. Startet Android den Dienst nach einem Abschuss neu,
         // wuesste er weder, welches Training laeuft, noch ob ueberhaupt eines
         // laeuft - und zeichnete ins Leere.
         return START_NOT_STICKY
     }
 
-    private fun starteVordergrund(art: String) {
+    private fun starteVordergrund(art: String): Boolean {
         val tippen = PendingIntent.getActivity(
             this, 0, Intent(this, HauptActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE,
@@ -84,32 +101,32 @@ class SpurDienst : android.app.Service(), LocationListener {
             .setOngoing(true)
             .build()
 
-        // Ab Android 14 muss die Art des Dienstes beim Start mitgegeben
-        // werden; ohne sie wirft das System eine Ausnahme.
-        if (Build.VERSION.SDK_INT >= 34) {
-            ServiceCompat.startForeground(
-                this, MELDUNG_ID, meldung,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION,
+        return try {
+            // Ab Android 14 muss die Art des Dienstes beim Start mitgegeben
+            // werden; ohne sie wirft das System eine Ausnahme.
+            if (Build.VERSION.SDK_INT >= 34) {
+                ServiceCompat.startForeground(
+                    this, MELDUNG_ID, meldung,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION,
+                )
+            } else {
+                startForeground(MELDUNG_ID, meldung)
+            }
+            true
+        } catch (e: Exception) {
+            // DAS IST KEIN FEHLER, DEN MAN VERSCHWEIGEN DARF. Wer nach dem
+            // Lauf eine leere Karte sieht, soll nachlesen können, warum.
+            Log.w(PebbleEmpfaenger.TAG, "Vordergrunddienst: " + e.message)
+            Verlauf(this).merkeMeldung(
+                "Strecke nicht aufgezeichnet — Android liess den Dienst nicht zu: " +
+                    (e.message ?: e.javaClass.simpleName)
             )
-        } else {
-            startForeground(MELDUNG_ID, meldung)
+            false
         }
     }
 
     private fun horche() {
         if (laeuft) return
-        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            // OHNE ERLAUBNIS KEINE SPUR, aber auch kein Absturz: das Training
-            // wird trotzdem eingetragen, nur ohne Strecke.
-            Log.w(PebbleEmpfaenger.TAG, "Keine Standortberechtigung - Spur entfällt")
-            Verlauf(this).merkeMeldung(
-                "Training ohne Strecke — Standortberechtigung fehlt"
-            )
-            halt()
-            return
-        }
         val verwalter = getSystemService(LocationManager::class.java) ?: return
         try {
             verwalter.requestLocationUpdates(
@@ -161,11 +178,53 @@ class SpurDienst : android.app.Service(), LocationListener {
         private const val EXTRA_BEGINN = "beginn"
         private const val EXTRA_ART = "art"
 
+        /**
+         * Darf überhaupt geortet werden?
+         *
+         * FEIN, NICHT GROB. Grob ist der Funkmast; daraus eine Laufstrecke zu
+         * zeichnen wäre eine Behauptung, keine Messung.
+         */
+        fun darfOrten(context: Context): Boolean =
+            context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
+                PackageManager.PERMISSION_GRANTED
+
+        /**
+         * Darf auch geortet werden, wenn die App zu ist?
+         *
+         * DAS IST DER NORMALFALL UND NICHT DIE AUSNAHME: das Training beginnt
+         * auf der Uhr, das Telefon liegt in der Tasche, die App ist zu. Ohne
+         * "Immer erlauben" lässt Android einen Ortungsdienst in diesem Zustand
+         * nicht zu — die Strecke bliebe leer, und niemand wüsste warum.
+         */
+        fun darfImmerOrten(context: Context): Boolean =
+            Build.VERSION.SDK_INT < 29 ||
+                context.checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) ==
+                PackageManager.PERMISSION_GRANTED
+
         fun starte(context: Context, beginn: Long, art: String) {
+            // OHNE ERLAUBNIS WIRD DER DIENST GAR NICHT ERST GESTARTET. Ein
+            // Vordergrunddienst, der beim Start scheitert, reisst die App mit.
+            if (!darfOrten(context)) {
+                Log.w(PebbleEmpfaenger.TAG, "Keine Standortberechtigung - Spur entfällt")
+                Verlauf(context).merkeMeldung(
+                    "Training ohne Strecke — Standort nicht erlaubt (Einstellungen, Training)"
+                )
+                return
+            }
             val i = Intent(context, SpurDienst::class.java)
                 .putExtra(EXTRA_BEGINN, beginn)
                 .putExtra(EXTRA_ART, art)
-            context.startForegroundService(i)
+            try {
+                context.startForegroundService(i)
+            } catch (e: Exception) {
+                // Android 12 und neuer lassen einen Vordergrunddienst aus dem
+                // Hintergrund heraus nicht in jedem Fall zu. Das Training wird
+                // trotzdem eingetragen - nur ohne Strecke.
+                Log.w(PebbleEmpfaenger.TAG, "Spurdienst nicht gestartet: " + e.message)
+                Verlauf(context).merkeMeldung(
+                    "Training ohne Strecke — " + (e.message ?: e.javaClass.simpleName)
+                )
+            }
         }
 
         fun stoppe(context: Context) {
