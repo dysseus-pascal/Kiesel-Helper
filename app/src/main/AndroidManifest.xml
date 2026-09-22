@@ -22,6 +22,21 @@
     <uses-permission android:name="android.permission.health.WRITE_NUTRITION" />
     <!-- Trainingssitzungen von Kieselsport. -->
     <uses-permission android:name="android.permission.health.WRITE_EXERCISE" />
+    <!-- Die Strecke gehoert an die Trainingssitzung; dafuer verlangt die
+         Akte ein eigenes Recht. -->
+    <uses-permission android:name="android.permission.health.WRITE_EXERCISE_ROUTE" />
+
+    <!-- STANDORT: NUR WAEHREND EINES TRAININGS. Die Uhr hat kein GPS; die
+         Strecke kann nur das Telefon aufzeichnen. Der Dienst dafuer laeuft
+         ausschliesslich zwischen Start und Stop eines Trainings und zeigt
+         dabei eine Meldung in der Leiste - wer den Standort eines Menschen
+         aufzeichnet, soll das nicht lautlos tun koennen.
+
+         KEIN ACCESS_BACKGROUND_LOCATION: der Vordergrunddienst genuegt,
+         und das Hintergrundrecht waere die Erlaubnis, immer mitzulesen. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.health.READ_NUTRITION" />
 
     <uses-permission android:name="android.permission.health.READ_STEPS" />
@@ -180,6 +195,12 @@
             android:exported="false"
             android:parentActivityName=".HauptActivity" />
 
+        <!-- Die Trainings samt Strecke auf der Karte. -->
+        <activity
+            android:name=".TrainingActivity"
+            android:exported="false"
+            android:parentActivityName=".HauptActivity" />
+
         <!-- Was die App getan hat, als niemand hinsah. -->
         <activity
             android:name=".VerlaufActivity"
@@ -223,6 +244,12 @@
                 <action android:name="com.getpebble.action.app.RECEIVE" />
             </intent-filter>
         </receiver>
+
+        <!-- Zeichnet die Strecke auf, solange ein Training laeuft. -->
+        <service
+            android:name=".SpurDienst"
+            android:exported="false"
+            android:foregroundServiceType="location" />
 
         <!-- Das Widget. exported="true" ist Pflicht: den Broadcast schickt
              der Startbildschirm, also ein fremder Prozess. -->

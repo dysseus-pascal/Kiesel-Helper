@@ -17,8 +17,8 @@ android {
         // und deckt jedes Telefon ab, das die Pebble-App ueberhaupt betreibt.
         minSdk = 28
         targetSdk = 36
-        versionCode = 28
-        versionName = "0.24.0"
+        versionCode = 29
+        versionName = "0.25.0"
     }
 
     buildTypes {
@@ -71,6 +71,10 @@ dependencies {
     // Abbruchbedingungen und ein Zusammenspiel mit dem Roller, das man
     // nicht nachbaut, sondern nachbaut und dann falsch hat.
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+    // Die Karte fuer die Trainingsstrecke. OpenStreetMap statt Google Maps:
+    // kein Schluessel, keine Play-Dienste, und dieselbe Datengrundlage, aus
+    // der OsmAnd seine Karten baut.
+    implementation("org.osmdroid:osmdroid-android:6.1.20")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
     // Der Zettelleser ist reine Logik und laesst sich ohne Telefon pruefen.

@@ -82,6 +82,11 @@ object GesundheitTab {
                 Einstellungen.tagesgrenze(ctx) * 60,
             ))
         }
+        // Der Weg zu den Trainings: dort liegt die Strecke auf der Karte,
+        // und die passt in keine Kachel hier.
+        bewegung.addView(ctx.knopfLeise("Trainings ansehen") {
+            ctx.startActivity(android.content.Intent(ctx, TrainingActivity::class.java))
+        })
         s.addView(bewegung)
 
         // --- Schlaf ---

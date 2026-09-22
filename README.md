@@ -519,7 +519,7 @@ Drei feste Aufgaben, **im Code**, nicht in einer Datei aus dem Netz:
 |---|---|---|
 | Drinktervall | Gesundheitsakte | jedes getrunkene Glas als Wassermenge, mit dem Zeitpunkt von der Uhr |
 | Herzintervall | Gesundheitsakte | die nächtliche RMSSD-Messung als Herzratenvariabilität |
-| Kieselsport | Gesundheitsakte | ein beendetes Training als Trainingssitzung — **nur die Sitzung**, nicht die Zahlen darin |
+| Kieselsport | Gesundheitsakte | ein beendetes Training als Trainingssitzung — **nur die Sitzung**, nicht die Zahlen darin; die Strecke kommt vom Telefon dazu |
 | SupCycle | Gesundheitsakte + eigener Speicher | jedes genommene Präparat als Ernährungssatz mit Namen; die Quote bleibt für den Trend lokal |
 | OsmAnd | Kieselstrasse | Abbiegeart, Entfernung, Strasse, Ankunftszeit |
 
@@ -565,6 +565,95 @@ Mit dem Zettelsystem ging auch der `NotificationListenerService` — und mit ihm
 die unangenehmste Freigabe, die diese App je verlangt hat: Zugriff auf **jede**
 Benachrichtigung des Telefons, für eine Handvoll Zahlen. Seit OsmAnd über seine
 eigene Schnittstelle antwortet, braucht es ihn nicht mehr.
+
+## Die Strecke kommt vom Telefon
+
+Die Uhr hat **kein GPS**. Jede Pebble hat keins, auch die Time 2 nicht — was
+sie kann, ist zählen: Schritte, Puls, Kalorien. Wo jemand gelaufen ist, weiss
+sie nicht und kann es nicht wissen.
+
+Das Telefon weiss es. Es liegt ohnehin in der Tasche, und dieser Weg ist der
+Weg, den auch grosse Hersteller gehen, wenn eine Uhr keinen eigenen Empfänger
+hat: die Uhr misst den Körper, das Telefon misst den Ort, am Ende liegt beides
+übereinander.
+
+**Der Dienst läuft nur, solange ein Training läuft.** Das ist der ganze
+Unterschied zu einer App, die dauernd den Standort kennt. Kieselsport meldet
+den Start — der Dienst geht an; es meldet das Ende — der Dienst geht aus.
+Dazwischen liegt genau die Zeit, für die jemand eine Strecke sehen will.
+
+| Auf der Uhr | Auf dem Telefon |
+|---|---|
+| Start gedrückt | Aufzeichnung an, Meldung in der Leiste |
+| Pause | Aufzeichnung aus |
+| Weiter | Aufzeichnung an, dieselbe Datei |
+| Stop | Aufzeichnung aus, Strecke an die Trainingssitzung |
+
+**Mit sichtbarer Meldung**, und das ist keine Formalie: Android verlangt sie
+für Ortung im Hintergrund, und wer den Standort eines Menschen aufzeichnet,
+soll das nicht lautlos tun können.
+
+**Die Erlaubnis wird nicht beim ersten Start erfragt**, sondern in den
+Einstellungen unter »Training«. Wer die App öffnet, um seinen Schlaf zu sehen,
+soll nicht nach seinem Standort gefragt werden; gefragt wird, wer eine Strecke
+will. Ohne sie läuft alles andere weiter — das Training wird eingetragen, nur
+ohne Karte.
+
+**Kein Google-Standortdienst.** Der `LocationManager` des Systems genügt,
+kostet keine Abhängigkeit und läuft auch auf einem Telefon ohne Play-Dienste.
+Gemessen wird alle drei Sekunden oder alle fünf Meter; dichter macht die Linie
+nicht genauer, nur die Datei grösser und den Akku leerer.
+
+### Was aussortiert wird
+
+Drei Regeln, und jede steht für einen Fehler, den man auf der Karte sieht:
+
+* **Über 50 Meter gemeldete Unsicherheit** — dieser Punkt kommt aus dem
+  Mobilfunknetz, nicht von Satelliten. Ihn mitzunehmen hiesse, Sprünge quer
+  durch die Stadt zu zeichnen.
+* **Über 200 Meter zwischen zwei Punkten** — verlorener und wiedergefundener
+  Empfang. Kein Mensch legt das in drei Sekunden zurück; der Abschnitt zählt
+  nicht in die Länge.
+* **Unter 3 Metern Höhenunterschied** — GPS-Höhen schwanken im Stehen um
+  mehrere Meter. Ohne diese Schwelle sammelte ein Spaziergang in der Ebene
+  hundert Höhenmeter.
+
+Die Rechnung dahinter ist **reine Mathematik ohne Android** — Haversine statt
+`Location.distanceTo` — und damit ohne Telefon prüfbar: 10 Prüfungen, darunter
+der bekannte Meridianbogen von 111,19 km je Breitengrad. Die Zahlen unter einer
+Karte rechnet nämlich niemand nach; steht da »8,2 km«, glaubt man es.
+
+### Als Datei, nicht in der Tabelle
+
+Eine Stunde Laufen sind bei einem Punkt alle drei Sekunden gut tausend Zeilen.
+Die Tagestabelle trägt je Tag **eine**. Jede Strecke liegt deshalb als eigene
+Datei unter `spuren/spur-<beginn>.jsonl`, eine Zeile je Punkt — und wird
+**sofort** geschrieben, nicht am Ende: ein Dienst, den das System während eines
+Laufs beendet, nähme sonst die ganze Strecke mit.
+
+Aus derselben Datei entsteht auf Wunsch **GPX**, das Format, das jede
+Karten-App liest.
+
+### Die Karte gehört aufs Telefon
+
+Sie war zwischendurch für die Uhr gedacht. Kartenkacheln, Zoom und
+Speicherverwaltung auf 128 KB RAM wären ein eigenes Projekt — und auf 200×228
+Punkten sähe man nichts, was man nicht hier besser sieht. Die Uhr misst, das
+Telefon zeigt.
+
+»Trainings ansehen« öffnet die Liste: das jüngste gross mit Strecke, Tempo,
+Aufstieg und Karte, die davor als Zeilen. Was man sucht, wenn man diesen Schirm
+öffnet, ist fast immer das letzte Training.
+
+Die Liste kommt **aus der Gesundheitsakte**, nicht aus einer eigenen Tabelle.
+Dort stehen die Sitzungen ohnehin; eine zweite Liste daneben wäre eine zweite
+Wahrheit. Gezeichnet wird mit **OpenStreetMap** (osmdroid): kein Schlüssel,
+keine Play-Dienste — und dieselbe Datengrundlage, aus der auch OsmAnd seine
+Karten baut.
+
+Die Strecke geht ausserdem als `ExerciseRoute` **mit in die Gesundheitsakte**.
+Damit sieht sie auch, wer dort nachschaut, und sie hängt an derselben Sitzung
+wie Puls und Dauer.
 
 ## OsmAnd
 
@@ -662,6 +751,14 @@ gradle test
 * **Ohne Leseerlaubnis schweigt die Akte**, sie sagt nicht Nein. Die Felder
   blieben leer und sähen aus wie ein Fehler der App — deshalb steht auf dem
   Gesundheits-Schirm eine Karte, die es benennt.
+* **Die Strecke ist so gut wie der Empfang.** Im Wald, zwischen Häusern und
+  mit dem Telefon in der Gesässtasche wird die Linie eckig; ein Tunnel
+  hinterlässt eine Lücke. Aussortiert wird nur, was offensichtlich falsch ist,
+  nicht, was ungenau ist.
+* **Ohne die Startmeldung der Uhr keine Strecke.** Kieselsport meldet den Start
+  erst ab 0.2.0. Mit einer älteren Fassung kommt das Training an, die Strecke
+  nicht — das Telefon erführe erst am Ende davon und hätte nichts
+  aufgezeichnet.
 * Health Connect gibt es ab Android 14 im System; davor braucht es die App aus
   dem Play Store.
 

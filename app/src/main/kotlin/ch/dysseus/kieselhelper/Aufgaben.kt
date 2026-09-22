@@ -3,6 +3,7 @@ package ch.dysseus.kieselhelper
 import android.content.Context
 import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ExerciseRoute
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.HealthConnectClient
@@ -13,6 +14,7 @@ import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import androidx.health.connect.client.units.Length
 import androidx.health.connect.client.units.Mass
 import androidx.health.connect.client.units.Volume
 import kotlinx.coroutines.Dispatchers
@@ -118,21 +120,42 @@ object Aufgaben {
         else -> ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT to "Training"
     }
 
+    private const val SP_ZUSTAND = 10009
+
     /**
-     * Ein Training in die Akte eintragen.
+     * Ein Training - Zustandsmeldung oder Zusammenfassung.
      *
-     * NUR DIE SITZUNG, NICHT DIE ZAHLEN DARIN. Schritte, Distanz und Kalorien
-     * eines Trainings sind bei Kieselsport die DIFFERENZ der Tageszaehler der
-     * Uhr - und die traegt die Pebble-App laengst selbst in die Akte ein. Sie
-     * hier noch einmal zu schreiben, zaehlte denselben Kilometer zweimal, und
-     * die Tagessumme im Gesundheits-Reiter waere falsch.
-     *
-     * Die Trainingssitzung dagegen schreibt sonst niemand. Sie ist genau das,
-     * was der Spalte "Aktiv" bisher gefehlt hat.
+     * ZWEI ARTEN VON NACHRICHT IN EINER AUFGABE. Beim Start, bei Pause und
+     * beim Weiter kommt nur ein Zustand; am Ende die ganze Zusammenfassung.
+     * Zu unterscheiden sind sie an der Dauer: die gibt es nur am Ende.
      */
     private suspend fun training(context: Context, felder: Map<Int, Long>): String? {
+        val zustand = felder[SP_ZUSTAND]
+        val dauer = felder[SP_DAUER]
+
+        if (dauer == null) {
+            // Eine blosse Zustandsmeldung: sie steuert nur die Aufzeichnung.
+            val beginn = felder[SP_BEGINN] ?: return null
+            val (_, name) = artAlsSatzart(felder[SP_ART] ?: -1)
+            return when (zustand) {
+                1L -> { SpurDienst.starte(context, beginn, name); "$name begonnen" }
+                2L -> { SpurDienst.stoppe(context); "$name pausiert" }
+                3L -> { SpurDienst.starte(context, beginn, name); "$name fortgesetzt" }
+                0L -> { SpurDienst.stoppe(context); null }
+                else -> null
+            }
+        }
+
+        SpurDienst.stoppe(context)
+        return trage_ein(context, felder, dauer)
+    }
+
+    private suspend fun trage_ein(
+        context: Context,
+        felder: Map<Int, Long>,
+        dauer: Long,
+    ): String? {
         val beginn = felder[SP_BEGINN] ?: return null
-        val dauer = felder[SP_DAUER] ?: return null
         if (beginn <= 0 || dauer < 60) return null
         if (!Riegel.neu(context, "kieselsport", beginn.toString())) return null
 
@@ -150,6 +173,25 @@ object Aufgaben {
         val puls = felder[SP_PULS_MITTEL] ?: 0
         val kcal = felder[SP_KCAL] ?: 0
 
+        // DIE STRECKE KOMMT VOM TELEFON, nicht von der Uhr. Sie geht als Route
+        // an die Sitzung - dort gehoert sie hin, und von dort liest sie jede
+        // App, die Routen zeigt.
+        val punkte = withContext(Dispatchers.IO) { Spur.lies(context, beginn) }
+        val strecke = if (punkte.size >= 2) Spur.laenge(punkte) else 0.0
+        val route = if (punkte.size >= 2) {
+            ExerciseRoute(punkte.map { p ->
+                ExerciseRoute.Location(
+                    time = Instant.ofEpochSecond(p.zeit),
+                    latitude = p.lat,
+                    longitude = p.lon,
+                    horizontalAccuracy = Length.meters(p.genauigkeit.toDouble()),
+                    altitude = p.hoehe?.let { Length.meters(it) },
+                )
+            })
+        } else {
+            null
+        }
+
         val satz = ExerciseSessionRecord(
             startTime = anfang,
             startZoneOffset = null,
@@ -157,19 +199,31 @@ object Aufgaben {
             endZoneOffset = null,
             exerciseType = satzart,
             title = name,
-            // Was nicht in die Akte geht, steht wenigstens daneben: die
-            // Zahlen der Uhr, unveraendert, als Notiz am Satz.
+            // Was nicht als eigener Satz in die Akte geht, steht wenigstens
+            // daneben: die Zahlen der Uhr, unveraendert.
             notes = buildString {
                 if (puls > 0) append("Puls ⌀ $puls")
                 felder[SP_PULS_MAX]?.takeIf { it > 0 }?.let { append(", max $it") }
-                felder[SP_METER]?.takeIf { it > 0 }?.let {
-                    append(", ${it / 1000},${(it % 1000) / 100} km")
+                if (strecke > 0) {
+                    append(", ")
+                    append(Zahlen.eine(strecke / 1000) ?: "")
+                    append(" km (GPS)")
+                } else {
+                    felder[SP_METER]?.takeIf { it > 0 }?.let {
+                        append(", ${it / 1000},${(it % 1000) / 100} km")
+                    }
                 }
                 if (kcal > 0) append(", $kcal kcal")
             }.ifBlank { null },
             metadata = vonDerUhr("kieselsport-" + beginn),
+            exerciseRoute = route,
         )
-        return schreibe(context, satz, "$name, ${dauer / 60} min eingetragen")
+        val meldung = schreibe(context, satz, buildString {
+            append("$name, ${dauer / 60} min")
+            if (strecke > 0) append(", " + (Zahlen.eine(strecke / 1000) ?: "") + " km")
+            append(" eingetragen")
+        })
+        return meldung
     }
 
     /** Alle Uhr-Apps, von denen diese App ueberhaupt etwas annimmt. */

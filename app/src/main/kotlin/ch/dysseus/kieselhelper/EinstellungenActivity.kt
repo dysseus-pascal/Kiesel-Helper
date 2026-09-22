@@ -38,12 +38,16 @@ class EinstellungenActivity : ComponentActivity() {
     private lateinit var linkfeld: android.widget.EditText
     private lateinit var linkbefund: TextView
     private var erlaubnisStarter: ActivityResultLauncher<Set<String>>? = null
+    private var ortStarter: ActivityResultLauncher<Array<String>>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val vertrag: ActivityResultContract<Set<String>, Set<String>> =
             PermissionController.createRequestPermissionResultContract()
         erlaubnisStarter = registerForActivityResult(vertrag) { auffrischen() }
+        ortStarter = registerForActivityResult(
+            androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+        ) { setContentView(baueAnsicht()) }
         setContentView(baueAnsicht())
     }
 
@@ -77,6 +81,10 @@ class EinstellungenActivity : ComponentActivity() {
         wurzel.luft(8f)
         wurzel.addView(abschnitt("DER TAG"))
         wurzel.addView(grenzkarte())
+
+        wurzel.luft(8f)
+        wurzel.addView(abschnitt("TRAINING"))
+        wurzel.addView(spurkarte())
 
         wurzel.luft(8f)
         wurzel.addView(abschnitt("KARTENLINKS"))
@@ -364,6 +372,41 @@ class EinstellungenActivity : ComponentActivity() {
             }
         }
     }
+    /**
+     * Die Standortberechtigung - fuer die Strecke, und nur dafuer.
+     *
+     * SIE STEHT HIER UND NICHT BEIM ERSTEN START. Wer die App oeffnet, um
+     * seinen Schlaf zu sehen, soll nicht nach seinem Standort gefragt werden;
+     * gefragt wird, wer eine Strecke will. Ohne sie laeuft alles andere
+     * weiter - das Training wird eingetragen, nur ohne Karte.
+     */
+    private fun spurkarte(): LinearLayout {
+        val k = karte()
+        k.addView(kartentitel("Strecke aufzeichnen"))
+
+        val erlaubt = checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        k.addView(schild(erlaubt, if (erlaubt) "Standort erlaubt" else "Standort nicht erlaubt"))
+        k.addView(zart(
+            "Die Uhr hat kein GPS. Während eines Trainings zeichnet das Telefon " +
+                "die Strecke auf — mit sichtbarer Meldung in der Leiste, und nur " +
+                "zwischen Start und Stop. Ohne die Erlaubnis wird das Training " +
+                "trotzdem eingetragen, nur ohne Karte."
+        ))
+        if (!erlaubt) {
+            k.addView(knopfHaupt("Standort erlauben", breit = true) {
+                ortStarter?.launch(arrayOf(
+                    android.Manifest.permission.ACCESS_FINE_LOCATION,
+                    android.Manifest.permission.ACCESS_COARSE_LOCATION,
+                ))
+            })
+        }
+        k.addView(knopfLeise("Trainings ansehen") {
+            startActivity(Intent(this, TrainingActivity::class.java))
+        })
+        return k
+    }
+
     private fun aufgabenKarte(titel: String, text: String): LinearLayout {
         val k = karte()
         k.addView(kartentitel(titel))
