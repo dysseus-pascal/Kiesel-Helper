@@ -106,6 +106,13 @@ class EinstellungenActivity : ComponentActivity() {
                 "Milligramm."
         ))
         wurzel.addView(aufgabenKarte(
+            "Kieselsport → Gesundheitsakte",
+            "Ein beendetes Training wird als Trainingssitzung eingetragen — " +
+                "nur die Sitzung, nicht die Zahlen darin. Schritte, Distanz " +
+                "und Kalorien trägt die Pebble-App längst selbst ein; sie hier " +
+                "zu wiederholen zählte denselben Kilometer zweimal."
+        ))
+        wurzel.addView(aufgabenKarte(
             "Koffein → Gesundheitsakte",
             "Was du in der App antippst, wird als Ernährungssatz mit " +
                 "Koffeinmenge eingetragen. Die Akte ist damit auch hier die " +

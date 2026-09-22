@@ -3,6 +3,7 @@ package ch.dysseus.kieselhelper
 import android.content.Context
 import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.HydrationRecord
@@ -88,8 +89,91 @@ object Aufgaben {
      */
     private const val SC_NAMES = 10044
 
+
+    // --- Kieselsport: ein beendetes Training ---
+
+    private val KIESELSPORT: UUID =
+        UUID.fromString("6c386250-a6d7-4a19-a485-52541b5d7c0d")
+
+    private const val SP_ART = 10000
+    private const val SP_BEGINN = 10001
+    private const val SP_DAUER = 10002
+    private const val SP_SCHRITTE = 10003
+    private const val SP_METER = 10004
+    private const val SP_KCAL = 10005
+    private const val SP_PULS_MITTEL = 10006
+    private const val SP_PULS_MAX = 10007
+
+    /**
+     * Die Sportarten in der Reihenfolge, in der Kieselsport sie zaehlt.
+     *
+     * Wer sie dort umsortiert, macht hier aus jedem Wandern ein
+     * Krafttraining - rueckwirkend und lautlos.
+     */
+    private fun artAlsSatzart(art: Long): Pair<Int, String> = when (art.toInt()) {
+        0 -> ExerciseSessionRecord.EXERCISE_TYPE_RUNNING to "Laufen"
+        1 -> ExerciseSessionRecord.EXERCISE_TYPE_BIKING to "Velo"
+        2 -> ExerciseSessionRecord.EXERCISE_TYPE_HIKING to "Wandern"
+        3 -> ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING to "Kraft"
+        else -> ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT to "Training"
+    }
+
+    /**
+     * Ein Training in die Akte eintragen.
+     *
+     * NUR DIE SITZUNG, NICHT DIE ZAHLEN DARIN. Schritte, Distanz und Kalorien
+     * eines Trainings sind bei Kieselsport die DIFFERENZ der Tageszaehler der
+     * Uhr - und die traegt die Pebble-App laengst selbst in die Akte ein. Sie
+     * hier noch einmal zu schreiben, zaehlte denselben Kilometer zweimal, und
+     * die Tagessumme im Gesundheits-Reiter waere falsch.
+     *
+     * Die Trainingssitzung dagegen schreibt sonst niemand. Sie ist genau das,
+     * was der Spalte "Aktiv" bisher gefehlt hat.
+     */
+    private suspend fun training(context: Context, felder: Map<Int, Long>): String? {
+        val beginn = felder[SP_BEGINN] ?: return null
+        val dauer = felder[SP_DAUER] ?: return null
+        if (beginn <= 0 || dauer < 60) return null
+        if (!Riegel.neu(context, "kieselsport", beginn.toString())) return null
+
+        val klient = Akte(context).bereit() ?: return "Gesundheitsakte nicht verfügbar"
+        val anfang = Instant.ofEpochSecond(beginn)
+        val ende = anfang.plusSeconds(dauer)
+
+        // Traegt schon jemand anders eine Sitzung ueber dieselbe Zeit ein?
+        schonDa(context, klient, ExerciseSessionRecord::class, anfang, FENSTER_TRAINING)?.let {
+            Log.i(TAG, "Training steht schon da, von " + it)
+            return "Übersprungen — $it hat das Training schon eingetragen"
+        }
+
+        val (satzart, name) = artAlsSatzart(felder[SP_ART] ?: -1)
+        val puls = felder[SP_PULS_MITTEL] ?: 0
+        val kcal = felder[SP_KCAL] ?: 0
+
+        val satz = ExerciseSessionRecord(
+            startTime = anfang,
+            startZoneOffset = null,
+            endTime = ende,
+            endZoneOffset = null,
+            exerciseType = satzart,
+            title = name,
+            // Was nicht in die Akte geht, steht wenigstens daneben: die
+            // Zahlen der Uhr, unveraendert, als Notiz am Satz.
+            notes = buildString {
+                if (puls > 0) append("Puls ⌀ $puls")
+                felder[SP_PULS_MAX]?.takeIf { it > 0 }?.let { append(", max $it") }
+                felder[SP_METER]?.takeIf { it > 0 }?.let {
+                    append(", ${it / 1000},${(it % 1000) / 100} km")
+                }
+                if (kcal > 0) append(", $kcal kcal")
+            }.ifBlank { null },
+            metadata = vonDerUhr("kieselsport-" + beginn),
+        )
+        return schreibe(context, satz, "$name, ${dauer / 60} min eingetragen")
+    }
+
     /** Alle Uhr-Apps, von denen diese App ueberhaupt etwas annimmt. */
-    val BEKANNTE_UHREN = setOf(DRINKTERVALL, HERZINTERVALL, SUPCYCLE)
+    val BEKANNTE_UHREN = setOf(DRINKTERVALL, HERZINTERVALL, SUPCYCLE, KIESELSPORT)
 
     /** Die Berechtigungen, die dafuer noetig sind. */
     val BERECHTIGUNGEN: Set<String> = setOf(
@@ -97,6 +181,8 @@ object Aufgaben {
         HealthPermission.getWritePermission(HeartRateVariabilityRmssdRecord::class),
         // Fuer Koffein und Praeparate: die Akte fuehrt beides als Ernaehrung.
         HealthPermission.getWritePermission(NutritionRecord::class),
+        // Fuer die Trainingssitzungen von Kieselsport.
+        HealthPermission.getWritePermission(ExerciseSessionRecord::class),
     )
 
     /**
@@ -116,6 +202,7 @@ object Aufgaben {
             DRINKTERVALL -> wasser(context, felder)
             HERZINTERVALL -> herz(context, felder)
             SUPCYCLE -> supplemente(context, felder, texte)
+            KIESELSPORT -> training(context, felder)
             else -> null
         }
 
@@ -380,6 +467,8 @@ object Aufgaben {
      */
     private val FENSTER_HRV: Duration = Duration.ofMinutes(5)
     private val FENSTER_WASSER: Duration = Duration.ofMinutes(1)
+    // Ein Training beginnt man nicht zweimal in derselben Viertelstunde.
+    private val FENSTER_TRAINING: Duration = Duration.ofMinutes(15)
 
     private suspend fun schreibe(context: Context, satz: Record, meldung: String): String {
         val klient = Akte(context).bereit()

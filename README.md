@@ -519,6 +519,7 @@ Drei feste Aufgaben, **im Code**, nicht in einer Datei aus dem Netz:
 |---|---|---|
 | Drinktervall | Gesundheitsakte | jedes getrunkene Glas als Wassermenge, mit dem Zeitpunkt von der Uhr |
 | Herzintervall | Gesundheitsakte | die nächtliche RMSSD-Messung als Herzratenvariabilität |
+| Kieselsport | Gesundheitsakte | ein beendetes Training als Trainingssitzung — **nur die Sitzung**, nicht die Zahlen darin |
 | SupCycle | Gesundheitsakte + eigener Speicher | jedes genommene Präparat als Ernährungssatz mit Namen; die Quote bleibt für den Trend lokal |
 | OsmAnd | Kieselstrasse | Abbiegeart, Entfernung, Strasse, Ankunftszeit |
 

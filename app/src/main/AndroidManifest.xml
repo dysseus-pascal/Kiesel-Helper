@@ -3,7 +3,7 @@
 
     <!-- WAS DIE APP MIT DER GESUNDHEITSAKTE TUT.
          ================================
-         Vier Dinge SCHREIBEN, zehn LESEN. Frueher standen hier 22
+         Fuenf Dinge SCHREIBEN, zehn LESEN. Frueher standen hier 22
          Schreibrechte als Vorrat: die App konnte damals Beschreibungen
          nachladen, und was im Manifest fehlt, kann keine Beschreibung
          nachreichen. Seit die Aufgaben fest im Code stehen, ist der Vorrat
@@ -20,6 +20,8 @@
     <!-- Koffein und genommene Praeparate. Die Akte fuehrt beides als
          Ernaehrung; einen eigenen Satz fuer "genommen" hat sie nicht. -->
     <uses-permission android:name="android.permission.health.WRITE_NUTRITION" />
+    <!-- Trainingssitzungen von Kieselsport. -->
+    <uses-permission android:name="android.permission.health.WRITE_EXERCISE" />
     <uses-permission android:name="android.permission.health.READ_NUTRITION" />
 
     <uses-permission android:name="android.permission.health.READ_STEPS" />
