@@ -78,10 +78,11 @@ object GesundheitTab {
         ))
 
         if (profilHeute.isNotEmpty() || profilTypisch.isNotEmpty()) {
-            bewegung.addView(ctx.zart(
-                "Schritte über den Tag, halbstündlich. Blass dahinter der " +
-                    "Schnitt der letzten zwei Wochen — so sieht man, ob die " +
-                    "Bewegung fehlt oder nur noch nicht da war."
+            bewegung.addView(ctx.zartMitHinweis(
+                "Schritte über den Tag, halbstündlich",
+                "Blass dahinter liegt der Schnitt der letzten zwei Wochen. " +
+                    "So sieht man, ob die Bewegung fehlt oder nur noch nicht " +
+                    "da war: am Vormittag ist jede Kurve niedrig."
             ))
             bewegung.addView(ctx.tagesprofil(
                 profilHeute, profilTypisch, Gesundheit.STUFE_MIN,
@@ -124,10 +125,12 @@ object GesundheitTab {
         val ideal = Einstellungen.schlafziel(ctx).toDouble()
         // OHNE DIE LETZTE NACHT, wie bei den Schritten: oben steht sie
         // ohnehin, und im Bild stuende sie neben sieben abgeschlossenen.
-        schlaf.addView(ctx.zart(
-            "Die sieben Nächte davor. Die Linie ist dein Ideal von " +
-                (Zahlen.dauer(ideal) ?: "") + "; was darüber liegt, steht " +
-                "in eigener Farbe."
+        schlaf.addView(ctx.zartMitHinweis(
+            "Die sieben Nächte davor",
+            "Die Linie ist dein Ideal von " + (Zahlen.dauer(ideal) ?: "") + ", " +
+                "einstellbar hinter dem Zahnrad. Was darüber liegt, steht in " +
+                "eigener Farbe. Die letzte Nacht fehlt hier: sie steht oben " +
+                "schon, und im Bild stünde sie neben sieben abgeschlossenen."
         ))
         schlaf.addView(ctx.wochenbild(
             stand.wocheSchlaf.dropLast(1), ziel = ideal, marke = ideal
@@ -148,10 +151,12 @@ object GesundheitTab {
             ctx.wert(stand.pulsTief, Zahlen.ganz(stand.pulsTief.zahl), "bpm"),
             ctx.wert(stand.pulsHoch, Zahlen.ganz(stand.pulsHoch.zahl), "bpm"),
         ))
-        herz.addView(ctx.zart(
-            "Die letzten 24 Stunden — die Tagesgrenze ist eine Zählgrenze, " +
-                "kein Sichtschutz. Jeder Punkt eine Messung, die Linie der " +
-                "gleitende Median, gestrichelt der Ruhepuls."
+        herz.addView(ctx.zartMitHinweis(
+            "Die letzten 24 Stunden",
+            "Jeder Punkt ist eine Messung, die Linie der gleitende Median, " +
+                "gestrichelt der Ruhepuls. Die Tagesgrenze ist eine " +
+                "Zählgrenze und kein Sichtschutz — sonst sähe man den " +
+                "Verlauf der vergangenen Nacht nicht."
         ))
         herz.addView(ctx.pulsbild(
             stand.pulsverlauf, stand.ruhepuls.zahl, beginnMinute = stand.pulsBeginn
@@ -159,12 +164,10 @@ object GesundheitTab {
         // DIE STREUUNG IST NICHT DIE HRV. Sie steht deshalb als Satz da und
         // nicht als Kachel neben ihr - und der Satz sagt, was sie misst.
         stand.nachtStreuung.zahl?.let { sd ->
-            herz.addView(ctx.fliesstext(
+            herz.addView(ctx.textMitHinweis(
                 "In der Nacht " + (Zahlen.ganz(stand.ruhepuls.zahl) ?: "") +
                     " ± " + (Zahlen.ganz(sd) ?: "") + " bpm, über " +
-                    stand.nachtProben + " Messungen."
-            ))
-            herz.addView(ctx.zart(
+                    stand.nachtProben + " Messungen.",
                 "Das ± ist die Streuung der Pulswerte über die Nacht — wie " +
                     "ruhig sie verlief. Es ist NICHT die HRV: die misst die " +
                     "Schwankung zwischen aufeinanderfolgenden Schlägen, und " +
@@ -173,10 +176,12 @@ object GesundheitTab {
         }
 
         if (stand.ruhepuls.geschaetzt) {
-            herz.addView(ctx.zart(
-                "Das ≈ beim Ruhepuls heisst: niemand hat einen eingetragen. " +
-                    "Gezeigt wird der Durchschnitt der zehn tiefsten Messungen " +
-                    "der Nacht — nah dran, aber nicht dasselbe."
+            herz.addView(ctx.zartMitHinweis(
+                "Der Ruhepuls ist geschätzt (≈)",
+                "Niemand hat einen eingetragen. Gezeigt wird der Durchschnitt " +
+                    "der zehn tiefsten Messungen der Nacht — nah dran, aber " +
+                    "nicht dasselbe. Trägt die Uhr selbst einen ein, " +
+                    "verschwindet das Zeichen."
             ))
         }
         s.addView(herz)
@@ -188,12 +193,13 @@ object GesundheitTab {
 
         // Woher die Zahlen kommen - und warum manche fehlen. Ohne diese Zeile
         // haelt man ein leeres Feld fuer einen Fehler der App.
-        s.addView(ctx.zart(
-            "Alles aus Health Connect. Ein Strich heisst: dort steht nichts — " +
-                "nicht, dass der Wert null ist. Schritte, Puls und Schlaf " +
-                "müssen Uhr oder andere Apps liefern. Die Einschätzung von 1 " +
-                "bis 5 bleibt hier: für »wie ich mich fühle« hat die Akte " +
-                "keinen Satz. Was dort wirklich steht, sagen die Einstellungen."
+        s.addView(ctx.zartMitHinweis(
+            "Alles aus Health Connect",
+            "Ein Strich heisst: dort steht nichts — nicht, dass der Wert null " +
+                "ist. Schritte, Puls und Schlaf müssen Uhr oder andere Apps " +
+                "liefern. Die Einschätzung von 1 bis 5 bleibt hier: für »wie " +
+                "ich mich fühle« hat die Akte keinen Satz. Was dort wirklich " +
+                "steht, sagen die Einstellungen."
         ))
         return s
     }

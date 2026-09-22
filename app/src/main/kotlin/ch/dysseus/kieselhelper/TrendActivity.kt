@@ -37,8 +37,19 @@ class TrendActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         wahl = intent.getIntExtra(EXTRA_GRUPPE, 0).coerceIn(0, TrendTab.GRUPPEN.size - 1)
+        toenen()
         setContentView(baueAnsicht())
         lifecycleScope.launch { lade() }
+    }
+
+    /**
+     * Den Ton der Karte behalten, aus der man kam.
+     *
+     * WER AUF EINE GRUENE KARTE TIPPT, soll nicht auf einem blauen Schirm
+     * landen - der Weg dorthin waere sonst nicht mehr zu sehen.
+     */
+    private fun toenen() {
+        Ton.setze(if (wahl == ERNAEHRUNG) Ton.ERNAEHRUNG else Ton.GESUNDHEIT)
     }
 
     /**
@@ -62,6 +73,7 @@ class TrendActivity : ComponentActivity() {
 
         leiste = TrendTab.leiste(this) { gewaehlt ->
             wahl = gewaehlt
+            toenen()
             leiste.male(gewaehlt)
             lifecycleScope.launch { lade() }
         }

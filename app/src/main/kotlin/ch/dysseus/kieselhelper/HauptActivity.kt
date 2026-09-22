@@ -69,6 +69,7 @@ class HauptActivity : ComponentActivity(), Eingaben {
             requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
         }
 
+        Ton.setze(Ton.GESUNDHEIT)
         setContentView(baueAnsicht())
         EmpfangsDienst.starte(this)
 
@@ -129,7 +130,7 @@ class HauptActivity : ComponentActivity(), Eingaben {
         wischer = SwipeRefreshLayout(this).apply {
             addView(roller)
             setOnRefreshListener { auffrischen() }
-            setColorSchemeColors(farbe(R.color.akzent))
+            setColorSchemeColors(akzentfarbe())
             setProgressBackgroundColorSchemeColor(farbe(R.color.karte))
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
@@ -144,6 +145,9 @@ class HauptActivity : ComponentActivity(), Eingaben {
             gesundheit.visibility = if (welcher == 0) View.VISIBLE else View.GONE
             training.visibility = if (welcher == 1) View.VISIBLE else View.GONE
             ernaehrung.visibility = if (welcher == 2) View.VISIBLE else View.GONE
+            // Auch der Kreisel beim Ziehen nimmt den Ton des Reiters an.
+            Ton.setze(welcher)
+            wischer.setColorSchemeColors(akzentfarbe())
             roller.scrollTo(0, 0)
         })
 
@@ -163,6 +167,9 @@ class HauptActivity : ComponentActivity(), Eingaben {
             try {
                 standLaden()
                 trainingLaden()
+                // Zurueck auf den Reiter, den man gerade sieht: sonst baute
+                // das naechste Stueck im Ton des zuletzt geladenen.
+                Ton.setze(sichtbarerReiter())
             } finally {
                 wischer.isRefreshing = false
             }
@@ -211,9 +218,13 @@ class HauptActivity : ComponentActivity(), Eingaben {
         // Schnitt der letzten zwei Wochen.
         val profilHeute = Gesundheit(ich).bewegungsprofil(1)
         val profilTypisch = Gesundheit(ich).bewegungsprofil(14)
+        // JEDER REITER WIRD IN SEINEM TON GEBAUT. Die Farbe steckt bis in die
+        // Balken der Diagramme; sie muss stehen, BEVOR gebaut wird.
+        Ton.setze(Ton.GESUNDHEIT)
         gesundheit.addView(GesundheitTab.baue(ich, stand, profilHeute, profilTypisch, ich))
 
         ernaehrung.removeAllViews()
+        Ton.setze(Ton.ERNAEHRUNG)
         ernaehrung.addView(ErnaehrungTab.baue(ich, stand, ich))
 
         // Die Zahlen sind eben gelesen; das Widget soll nicht aelteres zeigen
@@ -225,6 +236,7 @@ class HauptActivity : ComponentActivity(), Eingaben {
     private suspend fun trainingLaden() {
         val sitzungen = TrainingTab.hole(this@HauptActivity)
         training.removeAllViews()
+        Ton.setze(Ton.TRAINING)
         training.addView(TrainingTab.baue(this@HauptActivity, sitzungen))
     }
 
@@ -276,6 +288,12 @@ class HauptActivity : ComponentActivity(), Eingaben {
             }
             standLaden()
         }
+    }
+
+    private fun sichtbarerReiter(): Int = when {
+        training.visibility == View.VISIBLE -> Ton.TRAINING
+        ernaehrung.visibility == View.VISIBLE -> Ton.ERNAEHRUNG
+        else -> Ton.GESUNDHEIT
     }
 
     private fun melde(text: String) {

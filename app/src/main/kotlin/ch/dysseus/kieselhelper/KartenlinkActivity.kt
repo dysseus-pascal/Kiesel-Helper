@@ -33,6 +33,9 @@ class KartenlinkActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // AUSDRUECKLICH ZURUECK: sonst traegt dieser Schirm den Ton des
+        // Reiters, aus dem er geoeffnet wurde.
+        Ton.setze(Ton.GESUNDHEIT)
         setContentView(baueAnsicht("Link wird gelesen …"))
 
         val roh = intent?.dataString

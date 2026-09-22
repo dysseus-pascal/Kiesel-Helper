@@ -70,6 +70,39 @@ und ein Balken ohne Ziel wäre eine Behauptung darüber, was gut ist.
 Reiter zu holen hiesse, die teuerste Stelle der App doppelt zu bezahlen, und
 die beiden Schirme könnten auseinanderlaufen.
 
+### Farbe sagt, wo man ist
+
+Jeder Reiter hat seinen eigenen Ton — Gesundheit den Wasserton, der von
+Anfang an da war, Training einen warmen Erdton, Ernährung ein Moosgrün. Er
+steckt bis in die Balken der Diagramme und in den Kreisel beim Ziehen, und
+unten trägt ihn der Name des Reiters, auf dem man steht.
+
+Die drei sind **gleich tief und gleich leise**: kein Reiter soll lauter sein
+als die anderen, nur unterscheidbar. Und gefärbt ist immer nur der gewählte —
+drei farbige Wörter nebeneinander wären ein Farbkasten, eines ist eine
+Auskunft.
+
+Der Trend-Schirm **behält den Ton der Karte**, aus der man kam. Wer auf eine
+grüne Karte tippt, soll nicht auf einem blauen Schirm landen; der Weg dorthin
+wäre sonst nicht mehr zu sehen.
+
+### Das lange Warum steht hinter einem Zeichen
+
+Diese App erklärt viel, und das bleibt so: eine Zahl ohne ihre Herkunft ist
+eine Behauptung. Nur standen die Erklärungen bisher alle **offen** unter den
+Bildern — und wer sie zum dritten Mal liest, liest sie gar nicht mehr. Sie
+wurden zu grauem Rauschen, durch das man zur nächsten Zahl scrollt.
+
+Jetzt steht dort ein **ⓘ**. Der kurze Satz bleibt sichtbar, weil er sagt,
+*was* man sieht; das lange *Warum* kommt auf Tippen und geht auf Tippen
+wieder weg.
+
+**Ein eigenes Fenster, kein Systemdialog.** Ein `AlertDialog` nimmt das Thema
+des Systems an — auf neueren Telefonen also Material You, und damit stünde
+mitten in dieser App ein rosa Kasten. Dasselbe Kartenbild wie überall sonst
+kostet zehn Zeilen mehr und passt. Es ist derselbe Grund, aus dem die App
+ihre Farben selbst mitbringt.
+
 ### Der Trainings-Reiter
 
 Oben die **letzten sieben Tage** in drei Zahlen: wie viele Trainings, wie viel

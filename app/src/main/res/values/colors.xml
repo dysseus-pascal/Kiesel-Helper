@@ -11,9 +11,19 @@
     <color name="schrift">#1C2226</color>
     <color name="schrift_zart">#5D666C</color>
 
+    <!-- DREI AKZENTE, EINER JE REITER. Der Wasserton bleibt der der
+         Gesundheit; Training bekommt einen warmen Erdton, Ernaehrung einen
+         Moosgruen. Sie sind gleich tief und gleich leise - es soll kein
+         Reiter lauter sein als die anderen, nur unterscheidbar. -->
     <color name="akzent">#3A6B79</color>
     <color name="akzent_gedrueckt">#2C5361</color>
     <color name="akzent_schrift">#FFFFFF</color>
+
+    <color name="akzent_training">#8A5A2B</color>
+    <color name="akzent_training_gedrueckt">#6C4620</color>
+
+    <color name="akzent_ernaehrung">#41693B</color>
+    <color name="akzent_ernaehrung_gedrueckt">#31512D</color>
 
     <color name="gut_grund">#E2EFE8</color>
     <color name="gut_schrift">#1F6244</color>

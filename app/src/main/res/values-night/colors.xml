@@ -15,6 +15,14 @@
     <color name="akzent_gedrueckt">#8FC9D8</color>
     <color name="akzent_schrift">#0D1214</color>
 
+    <!-- Auch die beiden anderen muessen bei Nacht HELLER sein als der
+         Grund, sonst verschwinden sie. -->
+    <color name="akzent_training">#D2A05E</color>
+    <color name="akzent_training_gedrueckt">#E2B87F</color>
+
+    <color name="akzent_ernaehrung">#8FBE7A</color>
+    <color name="akzent_ernaehrung_gedrueckt">#A8D296</color>
+
     <color name="gut_grund">#1A3129</color>
     <color name="gut_schrift">#86D6AC</color>
     <color name="warn_grund">#372219</color>

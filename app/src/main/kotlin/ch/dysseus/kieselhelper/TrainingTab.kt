@@ -303,7 +303,7 @@ object TrainingTab {
         ).apply { topMargin = ctx.dp(10f) }
 
         val linie = Polyline(ansicht).apply {
-            outlinePaint.color = ctx.farbe(R.color.akzent)
+            outlinePaint.color = ctx.akzentfarbe()
             outlinePaint.strokeWidth = ctx.dp(4f).toFloat()
             setPoints(punkte.map { GeoPoint(it.lat, it.lon) })
         }

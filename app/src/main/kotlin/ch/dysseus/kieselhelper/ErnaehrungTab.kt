@@ -68,15 +68,26 @@ object ErnaehrungTab {
             }
             karte.addView(liste)
         }
-        karte.addView(ctx.zart("Wasser, sieben Tage"))
+        karte.addView(ctx.zartMitHinweis(
+            "Wasser, sieben Tage",
+            "Jedes Glas meldet Drinktervall von der Uhr, mit dem Zeitpunkt. " +
+            "Der Balken ist voll bei acht Gläsern à 3 dl — eine Hausnummer, " +
+            "keine Vorschrift. Heute zählt mit, anders als bei Schritten und " +
+            "Schlaf: ein halber Tag Wasser ist kein schwacher Tag, sondern " +
+            "der Stand, nach dem man greift."
+        ))
         karte.addView(ctx.wochenbild(
             stand.wocheWasser.takeLast(Gesundheit.TAGE), 8 * 300.0
         ))
 
         if (stand.wocheSuppFaellig.any { it.zahl != null }) {
-            karte.addView(ctx.zart("Supplemente: hell geplant, dunkel genommen"))
-            // Der genommene Teil sitzt IM geplanten. Zwei Balken nebeneinander
-            // liessen offen, ob "3 genommen" von drei oder von acht war.
+            karte.addView(ctx.zartMitHinweis(
+                "Supplemente: hell geplant, dunkel genommen",
+                "Der genommene Teil sitzt IM geplanten. Zwei Balken " +
+                "nebeneinander liessen offen, ob »3 genommen« von drei oder " +
+                "von acht war. Was heute ansteht, weiss SupCycle; hier steht " +
+                "nur, was davon abgehakt wurde."
+            ))
             val genommen = stand.wocheSuppGenommen.associate { it.tag to it.zahl }
             karte.addView(ctx.saeulenbild(
                 stand.wocheSuppFaellig.takeLast(Gesundheit.TAGE).map { t ->
@@ -106,11 +117,13 @@ object ErnaehrungTab {
             s.addView(koffeinkarte(ctx, stand, eingaben))
         }
 
-        s.addView(ctx.zart(
-            "Wasser, Koffein und Präparate trägt diese App selbst in die " +
-                "Gesundheitsakte ein — sie sind damit auch für andere Apps da " +
-                "und überleben eine Neuinstallation. Das Wasser meldet " +
-                "Drinktervall von der Uhr, die Präparate SupCycle."
+        s.addView(ctx.zartMitHinweis(
+            "Alles geht in die Gesundheitsakte",
+            "Wasser, Koffein und Präparate trägt diese App selbst dort ein — " +
+                "sie sind damit auch für andere Apps da und überleben eine " +
+                "Neuinstallation. Das Wasser meldet Drinktervall von der Uhr, " +
+                "die Präparate SupCycle. Auf jedem Eintrag liegt ein Riegel " +
+                "gegen Doppelte."
         ))
         return s
     }
@@ -154,11 +167,13 @@ object ErnaehrungTab {
             }
             k.addView(zeile)
         }
-        k.addView(ctx.zart(
-            "Kaffee 80 mg, Espresso 60, Tee 40, Energydrink 80 — Hausnummern " +
-                "für eine übliche Portion. Für die Frage »Koffein nach 16 Uhr " +
-                "gegen Tiefschlaf« zählt ohnehin vor allem der Zeitpunkt; den " +
-                "merkt die App sich selbst."
+        k.addView(ctx.zartMitHinweis(
+            "Kaffee 80 mg, Espresso 60, Tee 40, Energy 80",
+            "Hausnummern für eine übliche Portion — auf zehn Milligramm kommt " +
+                "es nicht an. Für die Frage »Koffein nach 16 Uhr gegen " +
+                "Tiefschlaf« zählt ohnehin vor allem der Zeitpunkt des " +
+                "letzten, und den merkt die App sich selbst. Alles geht auch " +
+                "in die Gesundheitsakte."
         ))
         return k
     }

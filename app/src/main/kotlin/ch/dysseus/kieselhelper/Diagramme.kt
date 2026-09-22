@@ -95,7 +95,7 @@ class SaeulenView(
     private val markenstift = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = context.dp(1.5f).toFloat()
-        color = context.farbe(R.color.akzent)
+        color = context.akzentfarbe()
     }
 
     private fun sp(wert: Float) = TypedValue.applyDimension(
@@ -137,7 +137,7 @@ class SaeulenView(
             if (zahl != null && zahl > 0) {
                 val anteil = (zahl / spitze).coerceIn(0.0, 1.0).toFloat()
                 val oben = kopfHoehe + hoehe * (1f - anteil)
-                stift.color = context.farbe(R.color.akzent)
+                stift.color = context.akzentfarbe()
                 stift.alpha = if (saeule.hervor) 255 else 150
                 leinwand.drawRoundRect(
                     RectF(links, oben, links + balken, kopfHoehe + hoehe), ecke, ecke, stift
@@ -327,7 +327,7 @@ class SpannenView(
             )
             if (s.tief == null || s.hoch == null) return@forEachIndexed
 
-            stift.color = context.farbe(R.color.akzent)
+            stift.color = context.akzentfarbe()
             stift.alpha = if (s.hervor) 255 else 130
             leinwand.drawRoundRect(
                 RectF(mitte - balken / 2, y(s.hoch), mitte + balken / 2, y(s.tief)),
@@ -511,7 +511,7 @@ class PulsView(
 
     private val tupfen = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = context.farbe(R.color.akzent)
+        color = context.akzentfarbe()
         alpha = 110
     }
     private val schatten = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -524,7 +524,7 @@ class PulsView(
         strokeWidth = context.dp(2f).toFloat()
         strokeJoin = Paint.Join.ROUND
         strokeCap = Paint.Cap.ROUND
-        color = context.farbe(R.color.akzent)
+        color = context.akzentfarbe()
     }
     private val gitter = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -664,13 +664,13 @@ class StreuView(
 
     private val tupfen = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = ctx.farbe(R.color.akzent)
+        color = ctx.akzentfarbe()
         alpha = 150
     }
     private val gerade = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = ctx.dp(2f).toFloat()
-        color = ctx.farbe(R.color.akzent)
+        color = ctx.akzentfarbe()
     }
     private val schrift = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = TypedValue.applyDimension(
@@ -821,7 +821,7 @@ class TagesprofilView(
         }
         stift.alpha = 255
         heute.forEach { p ->
-            stift.color = context.farbe(R.color.akzent)
+            stift.color = context.akzentfarbe()
             val h = (boden * (p.wert / spitze)).toFloat()
             leinwand.drawRect(x(p.minute), boden - h, x(p.minute) + balken, boden, stift)
         }

@@ -43,6 +43,9 @@ class EinstellungenActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // AUSDRUECKLICH ZURUECK: sonst traegt dieser Schirm den Ton des
+        // Reiters, aus dem er geoeffnet wurde.
+        Ton.setze(Ton.GESUNDHEIT)
         val vertrag: ActivityResultContract<Set<String>, Set<String>> =
             PermissionController.createRequestPermissionResultContract()
         erlaubnisStarter = registerForActivityResult(vertrag) { auffrischen() }

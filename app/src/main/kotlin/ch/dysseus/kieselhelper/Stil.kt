@@ -153,9 +153,9 @@ fun Context.knopfHaupt(text: String, breit: Boolean = false, tue: () -> Unit): B
     baueKnopf(text, breit, tue).apply {
         setTextColor(farbe(R.color.akzent_schrift))
         background = RippleDrawable(
-            ColorStateList.valueOf(farbe(R.color.akzent_gedrueckt)),
+            ColorStateList.valueOf(farbe(Ton.gedrueckt)),
             GradientDrawable().apply {
-                setColor(farbe(R.color.akzent))
+                setColor(akzentfarbe())
                 cornerRadius = dp(10f).toFloat()
             },
             null,
@@ -165,7 +165,7 @@ fun Context.knopfHaupt(text: String, breit: Boolean = false, tue: () -> Unit): B
 /** Umrandeter Knopf fuer alles Weitere. */
 fun Context.knopfLeise(text: String, warnend: Boolean = false, tue: () -> Unit): Button =
     baueKnopf(text, false, tue).apply {
-        val ton = farbe(if (warnend) R.color.warn_schrift else R.color.akzent)
+        val ton = if (warnend) farbe(R.color.warn_schrift) else akzentfarbe()
         setTextColor(ton)
         background = RippleDrawable(
             ColorStateList.valueOf(farbe(R.color.linie)),
@@ -326,7 +326,7 @@ fun Context.messwert(
                     0, dp(6f), anteil.coerceAtLeast(0.001f)
                 )
                 background = GradientDrawable().apply {
-                    setColor(farbe(R.color.akzent))
+                    setColor(akzentfarbe())
                     cornerRadius = dp(3f).toFloat()
                 }
             })
@@ -388,12 +388,25 @@ fun Context.fussleiste(namen: List<String>, waehle: (Int) -> Unit): LinearLayout
     val marken = mutableListOf<View>()
     val felder = mutableListOf<TextView>()
 
+    // JEDER REITER IN SEINEM EIGENEN TON, und zwar nur der gewaehlte. Drei
+    // farbige Woerter nebeneinander waeren ein Farbkasten; eines, das die
+    // Farbe des Schirms darueber hat, ist eine Auskunft.
     fun male(gewaehlt: Int) {
         felder.forEachIndexed { i, feld ->
-            feld.setTextColor(farbe(if (i == gewaehlt) R.color.akzent else R.color.schrift_zart))
+            feld.setTextColor(
+                if (i == gewaehlt) farbe(Ton.REITERFARBEN.getOrElse(i) { R.color.akzent })
+                else farbe(R.color.schrift_zart)
+            )
         }
         marken.forEachIndexed { i, marke ->
             marke.visibility = if (i == gewaehlt) View.VISIBLE else View.INVISIBLE
+            // Auch der Strich traegt den Ton des Reiters - er wird beim
+            // Faerben neu gesetzt und nicht beim Bauen, sonst haette jeder
+            // den Ton, der gerade zufaellig galt.
+            marke.background = GradientDrawable().apply {
+                setColor(farbe(Ton.REITERFARBEN.getOrElse(i) { R.color.akzent }))
+                cornerRadius = dp(2f).toFloat()
+            }
         }
     }
 
@@ -415,7 +428,7 @@ fun Context.fussleiste(namen: List<String>, waehle: (Int) -> Unit): LinearLayout
                 bottomMargin = dp(5f)
             }
             background = GradientDrawable().apply {
-                setColor(farbe(R.color.akzent))
+                setColor(akzentfarbe())
                 cornerRadius = dp(2f).toFloat()
             }
         }
@@ -537,8 +550,146 @@ fun Context.abschnittTipp(text: String, tue: () -> Unit): LinearLayout = reihe()
         this.text = "Trend ›"
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
         setTypeface(typeface, Typeface.BOLD)
-        setTextColor(farbe(R.color.akzent))
+        setTextColor(akzentfarbe())
         setPadding(dp(8f), dp(20f), dp(4f), dp(8f))
     })
     setOnClickListener { tue() }
+}
+
+/**
+ * Welcher Reiter gerade gilt - und damit, welche Farbe.
+ *
+ * DREI REITER, DREI TOENE. Ein Blick auf den Schirm soll sagen, wo man ist,
+ * ohne dass man unten nachsehen muss. Der Wasserton bleibt der der
+ * Gesundheit - er war zuerst da und passt; Training bekommt einen warmen
+ * Erdton, Ernaehrung ein Moosgruen.
+ *
+ * ALS GLOBALE STELLE UND NICHT ALS PARAMETER, weil die Farbe tief unten in
+ * den Bildern gebraucht wird: ein Saeulendiagramm faerbt seine Balken selbst.
+ * Sie durch zwanzig Funktionen durchzureichen waere sauberer und niemand
+ * haette es je gepflegt.
+ *
+ * WER EINEN SCHIRM BAUT, SETZT SIE VORHER. Wer es vergisst, bekommt den Ton
+ * des zuletzt gebauten Reiters - deshalb setzen die eigenen Schirme
+ * (Einstellungen, Verlauf, Kartenlink) ihn ausdruecklich zurueck.
+ */
+object Ton {
+    var akzent: Int = R.color.akzent
+        private set
+    var gedrueckt: Int = R.color.akzent_gedrueckt
+        private set
+
+    const val GESUNDHEIT = 0
+    const val TRAINING = 1
+    const val ERNAEHRUNG = 2
+
+    fun setze(reiter: Int) {
+        when (reiter) {
+            TRAINING -> {
+                akzent = R.color.akzent_training
+                gedrueckt = R.color.akzent_training_gedrueckt
+            }
+            ERNAEHRUNG -> {
+                akzent = R.color.akzent_ernaehrung
+                gedrueckt = R.color.akzent_ernaehrung_gedrueckt
+            }
+            else -> {
+                akzent = R.color.akzent
+                gedrueckt = R.color.akzent_gedrueckt
+            }
+        }
+    }
+
+    /** Die Farben der Reiter, in ihrer Reihenfolge - fuer die Fussleiste. */
+    val REITERFARBEN = listOf(
+        R.color.akzent, R.color.akzent_training, R.color.akzent_ernaehrung
+    )
+}
+
+/** Der Akzent des gerade gebauten Reiters. */
+fun Context.akzentfarbe(): Int = farbe(Ton.akzent)
+
+/**
+ * Das Info-Zeichen - und der lange Satz dahinter.
+ *
+ * DIESE APP ERKLAERT VIEL, und das ist Absicht: eine Zahl ohne ihre Herkunft
+ * ist eine Behauptung. Nur standen die Erklaerungen bisher alle offen unter
+ * den Bildern, und wer sie zum dritten Mal liest, liest sie gar nicht mehr -
+ * sie wurden zu grauem Rauschen, durch das man zur naechsten Zahl scrollt.
+ *
+ * JETZT STEHT DA EIN ZEICHEN. Der kurze Satz bleibt sichtbar, weil er sagt,
+ * WAS man sieht; das lange Warum kommt auf Tippen. Wer es schon kennt,
+ * scrollt daran vorbei, ohne es wegzuwischen.
+ *
+ * EIN EIGENES FENSTER UND KEIN SYSTEMDIALOG. Ein AlertDialog nimmt das Thema
+ * des Systems an - auf neueren Telefonen also Material You, und damit stuende
+ * mitten in dieser App ein rosa Kasten. Dasselbe Kartenbild wie ueberall
+ * sonst kostet zehn Zeilen mehr und passt.
+ */
+fun Context.hinweiszeichen(lang: String): TextView = TextView(this).apply {
+    text = "i"
+    gravity = Gravity.CENTER
+    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+    setTypeface(typeface, Typeface.BOLD)
+    setTextColor(farbe(R.color.schrift_zart))
+    background = GradientDrawable().apply {
+        shape = GradientDrawable.OVAL
+        setColor(farbe(R.color.grund))
+        setStroke(dp(1f), farbe(R.color.linie))
+    }
+    // VIERUNDZWANZIG PUNKTE, nicht sechzehn: kleiner trifft im Gehen
+    // niemand, und was man dreimal danebentippt, tippt man nicht mehr an.
+    layoutParams = LinearLayout.LayoutParams(dp(24f), dp(24f)).apply {
+        marginStart = dp(8f)
+        topMargin = dp(2f)
+    }
+    contentDescription = "Erklärung"
+    setOnClickListener { zeigeHinweis(it, lang) }
+}
+
+/**
+ * Ein kurzer Satz mit dem Zeichen dahinter.
+ *
+ * DER KURZE BLEIBT STEHEN. Er benennt, was man sieht - ohne ihn waere das
+ * Bild darunter ein Raetsel, und ein Raetsel mit Info-Zeichen ist keine
+ * Verbesserung.
+ */
+fun Context.zartMitHinweis(kurz: String, lang: String): LinearLayout = reihe().apply {
+    gravity = Gravity.CENTER_VERTICAL
+    addView(zart(kurz).apply {
+        layoutParams = LinearLayout.LayoutParams(
+            0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+        )
+    })
+    addView(hinweiszeichen(lang))
+}
+
+/** Dasselbe mit einem gewoehnlichen Satz statt einem zarten. */
+fun Context.textMitHinweis(kurz: String, lang: String): LinearLayout = reihe().apply {
+    gravity = Gravity.CENTER_VERTICAL
+    addView(fliesstext(kurz).apply {
+        layoutParams = LinearLayout.LayoutParams(
+            0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+        )
+    })
+    addView(hinweiszeichen(lang))
+}
+
+private fun Context.zeigeHinweis(anker: View, lang: String) {
+    val inhalt = karte().apply {
+        setPadding(dp(18f), dp(16f), dp(18f), dp(16f))
+        addView(fliesstext(lang))
+        addView(zart("Tippen schliesst"))
+    }
+    val breite = resources.displayMetrics.widthPixels - dp(48f)
+    val fenster = android.widget.PopupWindow(
+        inhalt, breite.coerceAtMost(dp(360f)),
+        ViewGroup.LayoutParams.WRAP_CONTENT, true,
+    )
+    fenster.elevation = dp(10f).toFloat()
+    fenster.isOutsideTouchable = true
+    inhalt.setOnClickListener { fenster.dismiss() }
+    // IN DER MITTE, nicht am Zeichen: ein Fenster, das unter dem letzten
+    // Zeichen einer Karte aufginge, laege halb ausserhalb des Schirms.
+    fenster.showAtLocation(anker.rootView, Gravity.CENTER, 0, 0)
 }
