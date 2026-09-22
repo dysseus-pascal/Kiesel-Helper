@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Color
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import androidx.health.connect.client.records.ExerciseSegment
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -194,6 +195,10 @@ object TrainingTab {
         ))
         sitzung.notes?.let { k.addView(ctx.fliesstext(it)) }
 
+        if (gross) {
+            saetzeUndBahnen(ctx, sitzung)?.let { k.addView(it) }
+        }
+
         val punkte = eintrag.punkte
         if (gross && punkte.size >= 2) {
             k.addView(streckendaten(ctx, punkte))
@@ -209,6 +214,51 @@ object TrainingTab {
             ))
         }
         return k
+    }
+
+    /**
+     * Die Saetze eines Krafttrainings oder die Bahnen einer Schwimmeinheit.
+     *
+     * SIE STEHEN EINZELN IN DER AKTE, seit die Uhr sie mitschickt - aber
+     * kein Schirm zeigt sie so. "12 Wdh, 90 s Pause" ist die Zeile, wegen
+     * der man das Training ueberhaupt nachschlaegt.
+     *
+     * GELESEN, NICHT GERECHNET: was hier steht, kommt aus der
+     * Gesundheitsakte zurueck. Steht es dort nicht, steht es auch hier
+     * nicht - und dann hat die Uhr es nicht geschickt.
+     */
+    private fun saetzeUndBahnen(ctx: Context, sitzung: ExerciseSessionRecord): LinearLayout? {
+        val saetze = sitzung.segments.filter { it.repetitions > 0 }
+        val pausen = sitzung.segments.filter {
+            it.segmentType == ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST
+        }
+        val bahnen = sitzung.laps
+        if (saetze.isEmpty() && bahnen.isEmpty()) return null
+
+        val s = ctx.spalte()
+        if (saetze.isNotEmpty()) {
+            saetze.forEachIndexed { i, satz ->
+                val dauer = Duration.between(satz.startTime, satz.endTime).seconds
+                val pause = pausen.getOrNull(i)?.let {
+                    Duration.between(it.startTime, it.endTime).seconds
+                }
+                s.addView(ctx.zart(
+                    "Satz " + (i + 1) + ": " + satz.repetitions + " Wdh., " + dauer + " s" +
+                        (if (pause != null) "  ·  Pause " + pause + " s" else "")
+                ))
+            }
+        } else {
+            // BEI DEN BAHNEN ZAEHLT DIE ZEIT JE BAHN, nicht jede einzeln als
+            // Zeile: zwanzig Zeilen liest niemand. Die schnellste und die
+            // langsamste sagen, wie gleichmaessig es war.
+            val zeiten = bahnen.map { Duration.between(it.startTime, it.endTime).seconds }
+            val schnitt = if (zeiten.isNotEmpty()) zeiten.sum() / zeiten.size else 0
+            s.addView(ctx.zart(
+                bahnen.size.toString() + " Bahnen, je " + schnitt + " s im Schnitt " +
+                    "(" + (zeiten.minOrNull() ?: 0) + " bis " + (zeiten.maxOrNull() ?: 0) + " s)"
+            ))
+        }
+        return s
     }
 
     /** Die Zahlen, die erst aus der Strecke entstehen. */

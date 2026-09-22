@@ -86,6 +86,34 @@ Dort stehen die Sitzungen ohnehin; eine zweite Liste daneben wäre eine zweite
 Wahrheit. Trainings anderer Apps erscheinen deshalb mit, sobald sie dort
 stehen.
 
+### Sätze, Pausen, Bahnen
+
+Seit Kieselsport 0.5.0 zählt die Uhr beim Krafttraining Wiederholungen und
+misst die Pausen, und beim Schwimmen zählt sie Bahnen über den Kompass. Sie
+schickt beides als Liste mit — `beginn:anzahl:dauer` je Abschnitt — und hier
+wird daraus, was die Gesundheitsakte dafür hat:
+
+| Von der Uhr | In der Akte |
+|---|---|
+| ein Satz mit 12 Wiederholungen | ein **Segment** mit `repetitions = 12` |
+| die Lücke zum nächsten Satz | ein Segment vom Typ **Pause** |
+| eine Bahn | eine **Runde** mit ihrer Länge in Metern |
+
+**Die Pausen stehen nicht in der Liste** — sie ergeben sich aus den Lücken
+dazwischen. Das ist der ganze Grund, die Zeiten mitzuschicken: »vier Sätze«
+sagt wenig, »vier Sätze mit anderthalb Minuten dazwischen« ist die Aussage.
+
+**Alles oder nichts.** Die Akte weist einen Eintrag zurück, dessen Segmente
+ausserhalb der Sitzung liegen oder sich überschneiden — und zwar den *ganzen*
+Eintrag. Lieber ohne Abschnitte eintragen als das Training verlieren: deshalb
+wird geprüft, und im Zweifel bleibt die Liste leer. Eine halb angekommene
+Zeile (der Postausgang der Uhr bricht ab, statt zu kürzen) fällt schon beim
+Zerlegen weg. 7 Prüfungen decken das ab.
+
+Welche Übung es war, weiss die Uhr nicht — sie sieht eine Bewegung, keine
+Hantelbank. In der Akte steht deshalb »anderes Training« und nicht
+»Bankdrücken«.
+
 **Die Spuren werden beim Laden gelesen, nicht beim Zeichnen** — und die Punkte
 nur für das oberste Training. Eine Stunde Laufen sind tausend Zeilen JSON;
 zwanzig solche Dateien beim Zusammensetzen der Ansicht zu lesen hielte den
@@ -569,6 +597,7 @@ Drei feste Aufgaben, **im Code**, nicht in einer Datei aus dem Netz:
 | Herzintervall | Gesundheitsakte | die nächtliche RMSSD-Messung als Herzratenvariabilität |
 | Kieselsport | Gesundheitsakte | ein beendetes Training als Trainingssitzung — **nur die Sitzung**, nicht die Zahlen darin; die Strecke kommt vom Telefon dazu |
 | Kieselsport | Trainings-Reiter | dieselben Sitzungen, aus der Akte zurückgelesen, mit Strecke auf der Karte |
+| Kieselsport | Gesundheitsakte | jeder **Satz** mit seinen Wiederholungen, jede **Pause** dazwischen, jede **Bahn** mit ihrer Länge |
 | SupCycle | Gesundheitsakte + eigener Speicher | jedes genommene Präparat als Ernährungssatz mit Namen; die Quote bleibt für den Trend lokal |
 | OsmAnd | Kieselstrasse | Abbiegeart, Entfernung, Strasse, Ankunftszeit |
 
@@ -582,8 +611,8 @@ Abhak-Bitmaske ohnehin nach jeder Einnahme, für seine eigenen Timeline-Pins.
 Gezählt wird, was **fällig war** und davon genommen wurde — ein Präparat, das
 heute pausiert, gehört in keine Quote.
 
-**Sechs Sportarten, zwei davon Bike.** Kieselsport unterscheidet seit 0.4.0
-Strasse/Gravel und MTB; dazu kam Yoga. Die Gesundheitsakte kennt diese
+**Sieben Sportarten, zwei davon Bike.** Kieselsport unterscheidet seit 0.4.0
+Strasse/Gravel und MTB; dazu kamen Yoga und Schwimmen. Die Gesundheitsakte kennt diese
 Unterscheidung nicht — sie hat ein einziges Radfahren und kein Mountainbike.
 Beide gehen deshalb als Radfahren hinein, und der **Titel** trägt, was es
 war: »Bike Strasse/Gravel«, »Bike MTB«. Ihn wegzulassen hiesse, eine Ausfahrt

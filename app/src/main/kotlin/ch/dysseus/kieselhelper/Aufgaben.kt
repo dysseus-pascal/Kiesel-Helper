@@ -3,7 +3,9 @@ package ch.dysseus.kieselhelper
 import android.content.Context
 import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ExerciseLap
 import androidx.health.connect.client.records.ExerciseRoute
+import androidx.health.connect.client.records.ExerciseSegment
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.HealthConnectClient
@@ -123,7 +125,165 @@ object Aufgaben {
         3 -> ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING to "Kraft"
         4 -> ExerciseSessionRecord.EXERCISE_TYPE_BIKING to "Bike MTB"
         5 -> ExerciseSessionRecord.EXERCISE_TYPE_YOGA to "Yoga"
+        6 -> ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL to "Schwimmen"
         else -> ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT to "Training"
+    }
+
+    private const val SP_SAETZE = 10013
+    private const val SP_REPS = 10014
+    private const val SP_BAHNEN = 10015
+    private const val SP_ABSCHNITTE = 10016
+
+    /**
+     * Ein Abschnitt eines Trainings: ein Satz beim Kraft, eine Bahn beim
+     * Schwimmen.
+     */
+    internal data class Abschnitt(val ab: Long, val anzahl: Int, val dauer: Long)
+
+    /**
+     * Die Abschnittsliste der Uhr zerlegen: "beginn:anzahl:dauer;...".
+     *
+     * SIE KOMMT ALS TEXT, weil eine Liste in kein Zahlenfeld passt. Zerlegt
+     * wird streng: was nicht aus drei Zahlen besteht, faellt weg. Eine halb
+     * angekommene Zeile - der Postausgang der Uhr bricht ab, statt zu kuerzen -
+     * waere sonst ein erfundener Satz.
+     */
+    internal fun abschnitteAus(text: String?): List<Abschnitt> {
+        if (text.isNullOrBlank()) return emptyList()
+        return text.split(";").mapNotNull { stueck ->
+            if (stueck.isBlank()) return@mapNotNull null
+            val teile = stueck.split(":")
+            if (teile.size != 3) return@mapNotNull null
+            val ab = teile[0].toLongOrNull() ?: return@mapNotNull null
+            val anzahl = teile[1].toIntOrNull() ?: return@mapNotNull null
+            val dauer = teile[2].toLongOrNull() ?: return@mapNotNull null
+            if (ab < 0 || anzahl < 0 || dauer < 0) return@mapNotNull null
+            Abschnitt(ab, anzahl, dauer)
+        }
+    }
+
+    /**
+     * Aus den Abschnitten Saetze fuer die Gesundheitsakte machen - samt Pausen.
+     *
+     * DIE PAUSEN STEHEN NICHT IN DER LISTE, sie ergeben sich aus den Luecken
+     * dazwischen. Das ist der ganze Grund, die Zeiten mitzuschicken: "vier
+     * Saetze" sagt wenig, "vier Saetze mit anderthalb Minuten dazwischen" ist
+     * die Aussage.
+     *
+     * ALLES ODER NICHTS. Die Akte weist einen Satz zurueck, der ausserhalb der
+     * Sitzung liegt oder sich mit dem naechsten ueberschneidet - und zwar den
+     * GANZEN Eintrag. Lieber ohne Abschnitte eintragen als das Training
+     * verlieren; deshalb wird am Ende geprueft und im Zweifel geleert.
+     */
+    private fun alsSegmente(
+        abschnitte: List<Abschnitt>,
+        anfang: Instant,
+        ende: Instant,
+    ): List<ExerciseSegment> {
+        val aus = mutableListOf<ExerciseSegment>()
+        var vorheriges: Instant? = null
+        abschnitte.forEach { a ->
+            val von = anfang.plusSeconds(a.ab)
+            val bis = von.plusSeconds(a.dauer)
+            if (von.isBefore(anfang) || bis.isAfter(ende) || !bis.isAfter(von)) return emptyList()
+            vorheriges?.let { letztes ->
+                if (von.isBefore(letztes)) return emptyList()
+                // Die Pause dazwischen, aber nur wenn sie eine ist.
+                if (von.isAfter(letztes)) {
+                    aus += ExerciseSegment(
+                        startTime = letztes,
+                        endTime = von,
+                        segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST,
+                    )
+                }
+            }
+            aus += ExerciseSegment(
+                startTime = von,
+                endTime = bis,
+                // WELCHE UEBUNG ES WAR, WEISS DIE UHR NICHT. Sie sieht eine
+                // Bewegung, keine Hantelbank; hier "Bankdruecken" hinzuschreiben
+                // waere geraten.
+                segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT,
+                repetitions = a.anzahl,
+            )
+            vorheriges = bis
+        }
+        return aus
+    }
+
+    /** Aus den Abschnitten Bahnen machen - jede mit ihrer Laenge. */
+    private fun alsBahnen(
+        abschnitte: List<Abschnitt>,
+        anfang: Instant,
+        ende: Instant,
+        beckenMeter: Double,
+    ): List<ExerciseLap> {
+        val aus = mutableListOf<ExerciseLap>()
+        var vorheriges: Instant? = null
+        abschnitte.forEach { a ->
+            val von = anfang.plusSeconds(a.ab)
+            val bis = von.plusSeconds(a.dauer)
+            if (von.isBefore(anfang) || bis.isAfter(ende) || !bis.isAfter(von)) return emptyList()
+            vorheriges?.let { if (von.isBefore(it)) return emptyList() }
+            aus += ExerciseLap(
+                startTime = von,
+                endTime = bis,
+                length = if (beckenMeter > 0) Length.meters(beckenMeter) else null,
+            )
+            vorheriges = bis
+        }
+        return aus
+    }
+
+    /**
+     * Was in der Notiz steht, wenn die Uhr mehr wusste als Zeit und Puls.
+     *
+     * DIE LISTE GEHOERT DAZU. In der Akte stehen die Saetze einzeln, aber kein
+     * Schirm zeigt sie so; "12/10/8/8" in einer Zeile liest jeder.
+     */
+    private fun abschnittsnotiz(
+        satzart: Int,
+        felder: Map<Int, Long>,
+        abschnitte: List<Abschnitt>,
+    ): String? {
+        val saetze = felder[SP_SAETZE] ?: 0
+        val bahnen = felder[SP_BAHNEN] ?: 0
+        return when {
+            bahnen > 0 -> {
+                val meter = felder[SP_METER] ?: 0
+                val je = if (bahnen > 0) meter / bahnen else 0
+                "$bahnen Bahnen" + (if (je > 0) " à $je m" else "")
+            }
+            saetze > 0 -> {
+                val reps = felder[SP_REPS] ?: 0
+                val liste = abschnitte.filter { it.anzahl > 0 }
+                    .joinToString("/") { it.anzahl.toString() }
+                val pausen = pausenSchnitt(abschnitte)
+                buildString {
+                    append("$saetze Sätze")
+                    if (liste.isNotBlank()) append(" ($liste)")
+                    if (reps > 0) append(", $reps Wdh.")
+                    if (pausen > 0) append(", Pause ⌀ $pausen s")
+                }
+            }
+            else -> null
+        }
+    }
+
+    /** Der Schnitt der Luecken zwischen den Saetzen, in Sekunden. */
+    internal fun pausenSchnitt(abschnitte: List<Abschnitt>): Long {
+        if (abschnitte.size < 2) return 0
+        var summe = 0L
+        var zahl = 0
+        for (i in 1 until abschnitte.size) {
+            val ende = abschnitte[i - 1].ab + abschnitte[i - 1].dauer
+            val luecke = abschnitte[i].ab - ende
+            if (luecke in 1..1800) {
+                summe += luecke
+                zahl++
+            }
+        }
+        return if (zahl > 0) summe / zahl else 0
     }
 
     private const val SP_ZUSTAND = 10009
@@ -135,7 +295,11 @@ object Aufgaben {
      * beim Weiter kommt nur ein Zustand; am Ende die ganze Zusammenfassung.
      * Zu unterscheiden sind sie an der Dauer: die gibt es nur am Ende.
      */
-    private suspend fun training(context: Context, felder: Map<Int, Long>): String? {
+    private suspend fun training(
+        context: Context,
+        felder: Map<Int, Long>,
+        texte: Map<Int, String>,
+    ): String? {
         val zustand = felder[SP_ZUSTAND]
         val dauer = felder[SP_DAUER]
 
@@ -153,12 +317,13 @@ object Aufgaben {
         }
 
         SpurDienst.stoppe(context)
-        return trage_ein(context, felder, dauer)
+        return trage_ein(context, felder, texte, dauer)
     }
 
     private suspend fun trage_ein(
         context: Context,
         felder: Map<Int, Long>,
+        texte: Map<Int, String>,
         dauer: Long,
     ): String? {
         val beginn = felder[SP_BEGINN] ?: return null
@@ -198,6 +363,17 @@ object Aufgaben {
             null
         }
 
+        // WAS DIE UHR GEZAEHLT HAT, jeder Abschnitt einzeln: ein Satz beim
+        // Krafttraining, eine Bahn beim Schwimmen. Die Akte hat fuer beides
+        // ein Feld - Wiederholungen am Satz, Laenge an der Bahn.
+        val abschnitte = abschnitteAus(texte[SP_ABSCHNITTE])
+        val bahnen = felder[SP_BAHNEN] ?: 0
+        val becken = if (bahnen > 0) (felder[SP_METER] ?: 0).toDouble() / bahnen else 0.0
+        val segmente =
+            if (bahnen > 0) emptyList() else alsSegmente(abschnitte, anfang, ende)
+        val runden =
+            if (bahnen > 0) alsBahnen(abschnitte, anfang, ende, becken) else emptyList()
+
         val satz = ExerciseSessionRecord(
             startTime = anfang,
             startZoneOffset = null,
@@ -220,13 +396,21 @@ object Aufgaben {
                     }
                 }
                 if (kcal > 0) append(", $kcal kcal")
+                abschnittsnotiz(satzart, felder, abschnitte)?.let {
+                    if (isNotEmpty()) append(" — ")
+                    append(it)
+                }
             }.ifBlank { null },
             metadata = vonDerUhr("kieselsport-" + beginn),
+            segments = segmente,
+            laps = runden,
             exerciseRoute = route,
         )
         val meldung = schreibe(context, satz, buildString {
             append("$name, ${dauer / 60} min")
             if (strecke > 0) append(", " + (Zahlen.eine(strecke / 1000) ?: "") + " km")
+            if (bahnen > 0) append(", $bahnen Bahnen")
+            if (segmente.isNotEmpty()) append(", ${felder[SP_SAETZE] ?: 0} Sätze")
             append(" eingetragen")
         })
         return meldung
@@ -262,7 +446,7 @@ object Aufgaben {
             DRINKTERVALL -> wasser(context, felder)
             HERZINTERVALL -> herz(context, felder)
             SUPCYCLE -> supplemente(context, felder, texte)
-            KIESELSPORT -> training(context, felder)
+            KIESELSPORT -> training(context, felder, texte)
             else -> null
         }
 
