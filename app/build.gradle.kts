@@ -21,6 +21,21 @@ android {
         versionName = "0.30.0"
     }
 
+    // EIN DEBUG-SCHLUESSEL IM REPO, nicht einer je Lauf. Jeder GitHub-Lauf
+    // legte sich sonst einen eigenen an, und Android installiert eine anders
+    // signierte Fassung nicht ueber die alte - nur nach dem Deinstallieren,
+    // und das loescht den eigenen Speicher. Es ist ein Debug-Schluessel mit
+    // dem ueblichen Passwort "android", kein Geheimnis: er sorgt nur dafuer,
+    // dass jede Fassung dieselbe Unterschrift traegt.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             // Nicht verkleinern: die Health-Connect-Bibliothek arbeitet mit

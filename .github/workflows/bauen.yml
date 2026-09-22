@@ -12,8 +12,8 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Schreibrecht nur fuer das Release: ein Tag v* legt es an und haengt die
-# APK dazu.
+# Schreibrecht nur fuer das Release: eine neue Fassung auf main legt es an
+# und haengt die APK dazu.
 permissions:
   contents: write
 
@@ -51,26 +51,32 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
-      # EIN TAG IST EIN RELEASE. Gibt es das Release schon - von Hand
-      # angelegt, mit eigenem Text -, wird nur die APK ersetzt und der Text
-      # nicht angeruehrt. Sonst entsteht es aus dem Commit: die erste Zeile
-      # wird der Titel, der Rest der Text.
+      # EINE NEUE FASSUNG AUF MAIN IST EIN RELEASE. Steht in build.gradle.kts
+      # eine versionName, zu der es noch kein Release gibt, legt der Lauf es
+      # an - samt Tag und APK. Ein Tag von Hand braucht es nicht.
+      #
+      # Der Text kommt aus .github/release/<fassung>.md (erste Zeile Titel,
+      # der Rest Text), sonst aus dem Commit. Ein bestehendes Release wird
+      # nicht angeruehrt: was einmal heruntergeladen wurde, bleibt so.
       - name: Release anlegen
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
         run: |
-          # Tag und Fassung im Code muessen uebereinstimmen - sonst hiesse
-          # das Release anders als das, was darin steckt.
-          IM_CODE="$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)"
-          [ "$IM_CODE" = "${TAG#v}" ] || { echo "Tag $TAG, im Code $IM_CODE"; exit 1; }
-          cp app/build/outputs/apk/debug/*.apk kiesel-helper.apk
+          FASSUNG="$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)"
+          TAG="v$FASSUNG"
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" kiesel-helper.apk --clobber
-          else
-            git log -1 --format=%b HEAD | sed '/^Co-Authored-By:/d;/^Claude-Session:/d' > notizen.md
-            gh release create "$TAG" kiesel-helper.apk \
-              --title "${TAG#v} - $(git log -1 --format=%s HEAD)" \
-              --notes-file notizen.md
+            echo "Release $TAG gibt es schon."
+            exit 0
           fi
+          cp app/build/outputs/apk/debug/*.apk kiesel-helper.apk
+          NOTIZ=".github/release/$FASSUNG.md"
+          if [ -f "$NOTIZ" ]; then
+            TITEL="$FASSUNG - $(head -1 "$NOTIZ")"
+            tail -n +2 "$NOTIZ" > notizen.md
+          else
+            TITEL="$FASSUNG - $(git log -1 --format=%s)"
+            git log -1 --format=%b | sed '/^Co-Authored-By:/d;/^Claude-Session:/d' > notizen.md
+          fi
+          gh release create "$TAG" kiesel-helper.apk \
+            --target "$GITHUB_SHA" --title "$TITEL" --notes-file notizen.md
