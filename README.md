@@ -398,6 +398,14 @@ zurücklesen lässt, merkt es genau einmal: dann, wenn er sie braucht.
 
 ## Der Trend
 
+**Nach einer Neuinstallation** ist die eigene Tabelle leer. Die App holt beim
+Start von selbst den letzten Monat aus Health Connect — mehr gibt die Akte ohne
+weitere Erlaubnis nicht heraus. Unter *Einstellungen → Frühere Daten →
+Nachladen* fragt sie nach der Erlaubnis für ältere Daten
+(`READ_HEALTH_DATA_HISTORY`) und holt dann ein Jahr, in Fenstern zu dreissig
+Tagen: eine Abfrage liefert nur eine Seite Sätze, und ein Jahr HRV-Messungen
+passte nicht hinein.
+
 Die Frage, die ein Tageswert nicht beantwortet: *7985 Schritte — ist das viel?*
 
 | Bild | Antwort |

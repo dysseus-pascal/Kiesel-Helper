@@ -40,6 +40,10 @@ class EinstellungenActivity : ComponentActivity() {
     private var erlaubnisStarter: ActivityResultLauncher<Set<String>>? = null
     private var ortStarter: ActivityResultLauncher<Array<String>>? = null
     private var wartetAufEinstellungen = false
+    /** Das Nachladen wartet auf die Antwort zur Erlaubnis fuer aeltere Daten. */
+    private var ladeNachErlaubnis = false
+    /** Einmal je Schirm fragen; wer ablehnt, bekommt trotzdem den Monat. */
+    private var historieGefragt = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,7 +52,13 @@ class EinstellungenActivity : ComponentActivity() {
         Ton.setze(Ton.GESUNDHEIT)
         val vertrag: ActivityResultContract<Set<String>, Set<String>> =
             PermissionController.createRequestPermissionResultContract()
-        erlaubnisStarter = registerForActivityResult(vertrag) { auffrischen() }
+        erlaubnisStarter = registerForActivityResult(vertrag) {
+            auffrischen()
+            if (ladeNachErlaubnis) {
+                ladeNachErlaubnis = false
+                lifecycleScope.launch { ladeNach() }
+            }
+        }
         ortStarter = registerForActivityResult(
             androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
         ) { setContentView(baueAnsicht()) }
@@ -99,6 +109,10 @@ class EinstellungenActivity : ComponentActivity() {
         wurzel.luft(8f)
         wurzel.addView(abschnitt("SICHERUNG"))
         wurzel.addView(sicherungskarte())
+
+        wurzel.luft(8f)
+        wurzel.addView(abschnitt("FRÜHERE DATEN"))
+        wurzel.addView(historienkarte())
 
         wurzel.luft(8f)
         wurzel.addView(abschnitt("KARTENLINKS"))
@@ -461,6 +475,60 @@ class EinstellungenActivity : ComponentActivity() {
                 this, "Einstellungen nicht erreichbar", android.widget.Toast.LENGTH_SHORT
             ).show()
         }
+    }
+
+    /**
+     * Die Vergangenheit aus Health Connect in die eigene Tabelle holen.
+     *
+     * NACH EINER NEUINSTALLATION IST DIE TABELLE LEER, die Akte aber nicht.
+     * Von allein holt die App nur einen Monat; mit der Erlaubnis fuer
+     * aeltere Daten ein Jahr. Die Erlaubnis wird erst hier erfragt und nicht
+     * beim Start: sie ist eine eigene Frage, und wer sie nicht versteht,
+     * lehnt am Start alles ab.
+     */
+    private fun historienkarte(): LinearLayout {
+        val k = karte()
+        k.addView(kartentitel("Aus Health Connect nachladen"))
+        k.addView(zartMitHinweis(
+            "Füllt den Trend aus dem, was Health Connect gespeichert hat",
+            "Ohne weitere Erlaubnis gibt Health Connect nur die dreissig Tage " +
+                "vor der ersten Erlaubnis heraus — nach einer Neuinstallation " +
+                "also einen Monat. Mit der Erlaubnis für ältere Daten holt die " +
+                "App ein Jahr. Was nur in der App steht — die Einschätzung des " +
+                "Tages, die Präparate —, bleibt unberührt. Nicht jedes Telefon kennt " +
+                "diese Erlaubnis; dann bleibt es beim Monat."
+        ))
+        k.addView(knopfHaupt("Nachladen", breit = true) {
+            lifecycleScope.launch {
+                val erteilt = runCatching {
+                    Akte(this@EinstellungenActivity).bereit()
+                        ?.permissionController?.getGrantedPermissions()
+                }.getOrNull().orEmpty()
+                if (Gesundheit.HISTORIE !in erteilt && !historieGefragt) {
+                    // Erst fragen, dann holen - das Holen haengt am Ergebnis.
+                    historieGefragt = true
+                    ladeNachErlaubnis = true
+                    erlaubnisStarter?.launch(setOf(Gesundheit.HISTORIE))
+                } else {
+                    ladeNach()
+                }
+            }
+        })
+        return k
+    }
+
+    private suspend fun ladeNach() {
+        melde("Hole aus Health Connect …")
+        val erteilt = runCatching {
+            Akte(this).bereit()?.permissionController?.getGrantedPermissions()
+        }.getOrNull().orEmpty()
+        val tage = Gesundheit(this).nachtragen()
+        melde(
+            if (tage == 0) "Nichts gefunden. Fehlt die Lese-Erlaubnis?"
+            else "$tage Tage geholt" +
+                if (Gesundheit.HISTORIE in erteilt) "."
+                else " — ältere gibt Health Connect ohne die Erlaubnis nicht frei."
+        )
     }
 
     /**

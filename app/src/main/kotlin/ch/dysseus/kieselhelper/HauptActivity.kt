@@ -183,9 +183,13 @@ class HauptActivity : ComponentActivity(), Eingaben {
             // Unterschied zwischen "in drei Wochen sagt dir die App etwas"
             // und "jetzt". ERST NACH DEM ERSTEN BILD - vorher stuende es mit
             // dreissig Tagen Abfragen vor den Zahlen von heute in der Schlange.
+            //
+            // ABGEHAKT WIRD ES ERST, WENN ETWAS KAM. Nach einer Neuinstallation
+            // fehlt beim ersten Laden noch die Erlaubnis; wer das Nachtragen
+            // dann als erledigt abhakte, holte die Vergangenheit nie - und
+            // der Trend bliebe leer.
             if (!nachgetragen) {
-                nachgetragen = true
-                Gesundheit(this@HauptActivity).nachtragen()
+                nachgetragen = Gesundheit(this@HauptActivity).nachtragen() > 0
             }
         }
     }

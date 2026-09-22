@@ -239,6 +239,19 @@ class Gesundheit(private val context: Context) {
         const val NAECHTE_NACH = 3
 
         /**
+         * Die Erlaubnis, aeltere Daten als dreissig Tage zu lesen.
+         *
+         * OHNE SIE gibt die Akte nur heraus, was in den dreissig Tagen vor der
+         * ersten Erlaubnis lag - nach einer Neuinstallation also einen Monat,
+         * egal wie viel dort liegt. Nicht jedes Telefon kennt sie; wo sie
+         * fehlt, bleibt es bei dem Monat.
+         */
+        val HISTORIE: String = HealthPermission.PERMISSION_READ_HEALTH_DATA_HISTORY
+        const val TAGE_OHNE_HISTORIE = 30
+        const val TAGE_MIT_HISTORIE = 365
+        private const val FENSTER_TAGE = 30L
+
+        /**
          * Ab wann eine Nacht zaehlt.
          *
          * Wer um 23 Uhr ins Bett geht, hat seinen Schlaf am Vortag begonnen -
@@ -452,27 +465,67 @@ class Gesundheit(private val context: Context) {
 
 
     /**
-     * Die Vergangenheit einmal aus der Akte holen.
+     * Die Vergangenheit aus der Akte holen.
      *
-     * BEIM ERSTEN START IST DIE EIGENE TABELLE LEER, die Akte aber nicht: dort
-     * liegen meist die letzten dreissig Tage. Sie einmal abzuschreiben ist der
-     * Unterschied zwischen "in drei Wochen sagt dir die App etwas" und "sie
-     * sagt es jetzt".
+     * BEIM ERSTEN START IST DIE EIGENE TABELLE LEER, die Akte aber nicht. Sie
+     * abzuschreiben ist der Unterschied zwischen "in drei Wochen sagt dir die
+     * App etwas" und "sie sagt es jetzt" - und nach einer Neuinstallation
+     * der einzige Weg zurueck zum Trend.
      *
-     * DREI ABFRAGEN FUER DREISSIG TAGE, nicht dreissig mal drei: die
-     * Tagessummen kommen als Eimer zurueck, Schlaf und HRV als Saetze, die
-     * hier selbst auf Tage verteilt werden.
+     * WIE WEIT, ENTSCHEIDET HEALTH CONNECT. Ohne weitere Erlaubnis gibt die
+     * Akte nur die dreissig Tage vor der ersten Erlaubnis heraus; mit
+     * [HISTORIE] alles, was sie hat. Dann wird ein Jahr geholt.
+     *
+     * IN FENSTERN ZU DREISSIG TAGEN. Eine Abfrage liefert hoechstens eine
+     * Seite Saetze; ein Jahr HRV-Messungen passte nicht hinein, und was nicht
+     * hineinpasst, fehlte still.
      *
      * Laeuft jedes Mal ueber das ganze Fenster und nicht nur ueber die Luecken.
-     * Das kostet ein paar hundert Millisekunden im Hintergrund und erspart die
-     * Frage, ob ein Tag, der gestern halb leer eingetragen wurde, je wieder
-     * angefasst wird - [Speicher.merke] ueberschreibt nichts mit nichts.
+     * [Speicher.merke] ueberschreibt nichts mit nichts.
+     *
+     * @return wie viele Tage etwas enthielten - 0 auch dann, wenn die Akte
+     *   nicht erreichbar ist oder die Lese-Erlaubnis fehlt.
      */
-    suspend fun nachtragen(tage: Int = 30) {
-        val klient = Akte(context).bereit() ?: return
+    suspend fun nachtragen(tage: Int? = null): Int {
+        val klient = Akte(context).bereit() ?: return 0
+        val erteilt = try {
+            klient.permissionController.getGrantedPermissions()
+        } catch (e: Exception) {
+            return 0
+        }
+        if (erteilt.intersect(BERECHTIGUNGEN).isEmpty()) return 0
+
+        val umfang = tage ?: if (HISTORIE in erteilt) TAGE_MIT_HISTORIE else TAGE_OHNE_HISTORIE
         val heute = heute()
-        val von = heute.minusDays(tage.toLong())
+        val ende = heute.minusDays(umfang.toLong())
+        var bis = heute.plusDays(1)
+        var geschrieben = 0
+        while (bis.isAfter(ende)) {
+            val von = bis.minusDays(FENSTER_TAGE).let { if (it.isBefore(ende)) ende else it }
+            geschrieben += nachtrageFenster(klient, von, bis)
+            bis = von
+        }
+        nachtrageNaechte(klient, heute)
+        return geschrieben
+    }
+
+    /**
+     * Die Tage von [von] bis vor [bis], in drei Abfragen.
+     *
+     * DIE GRENZEN SIND DIE DER TAGE, NICHT DIE DER UHR. Die Summen beginnen an
+     * der Tagesgrenze, der Schlaf um 18 Uhr des Vortags - so faellt jede
+     * Nacht in genau ein Fenster, und keine wird an einer Fenstergrenze halb
+     * gezaehlt.
+     */
+    private suspend fun nachtrageFenster(
+        klient: HealthConnectClient,
+        von: LocalDate,
+        bis: LocalDate,
+    ): Int {
         val jetzt = LocalDateTime.now(zone)
+        val tagesende = tagBeginn(bis).let { if (it.isAfter(jetzt)) jetzt else it }
+        val nachtende = bis.minusDays(1).atTime(NACHT_AB).let { if (it.isAfter(jetzt)) jetzt else it }
+        if (!tagesende.isAfter(tagBeginn(von))) return 0
 
         val eimer = fange("Nachtragen: Tagessummen") {
             klient.aggregateGroupByPeriod(
@@ -486,30 +539,35 @@ class Gesundheit(private val context: Context) {
                         RestingHeartRateRecord.BPM_AVG,
                         HeartRateRecord.BPM_MIN,
                         HeartRateRecord.BPM_MAX,
+                        // Seit die App Koffein in die Akte schreibt, kommt
+                        // es von dort auch zurueck.
+                        NutritionRecord.CAFFEINE_TOTAL,
                     ),
                     // Die Eimer beginnen an der Tagesgrenze, nicht um
                     // Mitternacht: der Schnitt teilt die Reihe ab ihrem
                     // Anfang, und der liegt jetzt dort, wo der Tag anfaengt.
-                    timeRangeFilter = TimeRangeFilter.between(tagBeginn(von), jetzt),
+                    timeRangeFilter = TimeRangeFilter.between(tagBeginn(von), tagesende),
                     timeRangeSlicer = Period.ofDays(1),
                 )
             )
         } ?: emptyList()
 
-        val sitzungen = fange("Nachtragen: Schlaf") {
-            klient.readRecords(
-                ReadRecordsRequest(
-                    SleepSessionRecord::class,
-                    TimeRangeFilter.between(von.minusDays(1).atTime(NACHT_AB), jetzt),
-                )
-            ).records
-        } ?: emptyList()
+        val sitzungen = if (nachtende.isAfter(von.minusDays(1).atTime(NACHT_AB))) {
+            fange("Nachtragen: Schlaf") {
+                klient.readRecords(
+                    ReadRecordsRequest(
+                        SleepSessionRecord::class,
+                        TimeRangeFilter.between(von.minusDays(1).atTime(NACHT_AB), nachtende),
+                    )
+                ).records
+            } ?: emptyList()
+        } else emptyList()
 
         val hrvSaetze = fange("Nachtragen: HRV") {
             klient.readRecords(
                 ReadRecordsRequest(
                     HeartRateVariabilityRmssdRecord::class,
-                    TimeRangeFilter.between(tagBeginn(von), jetzt),
+                    TimeRangeFilter.between(tagBeginn(von), tagesende),
                 )
             ).records
         } ?: emptyList()
@@ -532,20 +590,7 @@ class Gesundheit(private val context: Context) {
                 satz.heartRateVariabilityMillis
         }
 
-        // Die letzten Naechte einzeln: nur hier laesst sich das Mittel der
-        // zehn tiefsten Messungen bilden, und nur so steht in der Spalte
-        // ueberall dasselbe. Drei Naechte, weil jede ein eigener Lesevorgang
-        // ist - aeltere fuellen sich von selbst, sobald die App laeuft.
-        val geschaetzt = HashMap<LocalDate, Double>()
-        val nachtsd = HashMap<LocalDate, Double>()
-        for (i in 1..NAECHTE_NACH) {
-            val nacht = heute.minusDays(i.toLong())
-            nachtpuls(klient, nachtfenster(nacht))?.let {
-                geschaetzt[nacht] = it.ruhe
-                it.streuung?.let { sd -> nachtsd[nacht] = sd }
-            }
-        }
-
+        var geschrieben = 0
         val speicher = Speicher(context)
         withContext(Dispatchers.IO) {
             eimer.forEach { e ->
@@ -557,7 +602,7 @@ class Gesundheit(private val context: Context) {
                     Duration.between(it.startTime, it.endTime).toMinutes()
                 }.toDouble().takeIf { it > 0 }
 
-                speicher.merke(tag, mapOf(
+                val werte = mapOf(
                     "schritte" to e.result[StepsRecord.COUNT_TOTAL]?.toDouble(),
                     "distanz" to e.result[DistanceRecord.DISTANCE_TOTAL]?.inKilometers,
                     "kalorien" to e.result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]
@@ -578,13 +623,37 @@ class Gesundheit(private val context: Context) {
                     // zehn tiefsten Nachtmessungen; das Tagestief waere eine
                     // andere Zahl unter demselben Namen, und im Verlauf saehe
                     // man den Sprung an dem Tag, an dem die Rechnung wechselt.
-                    // Die letzten Naechte kommen weiter unten einzeln.
+                    // Die letzten Naechte kommen in [nachtrageNaechte].
                     "puls_tief" to e.result[HeartRateRecord.BPM_MIN]?.toDouble(),
                     "puls_hoch" to e.result[HeartRateRecord.BPM_MAX]?.toDouble(),
-                    "puls_min" to geschaetzt[tag],
-                    "puls_nacht_sd" to nachtsd[tag],
                     "hrv" to hrvNachTag[tag],
-                ))
+                    "koffein_mg" to e.result[NutritionRecord.CAFFEINE_TOTAL]
+                        ?.inGrams?.times(1000),
+                )
+                if (werte.values.any { it != null }) geschrieben++
+                speicher.merke(tag, werte)
+            }
+        }
+        return geschrieben
+    }
+
+    /**
+     * Die letzten Naechte einzeln: nur hier laesst sich das Mittel der zehn
+     * tiefsten Messungen bilden, und nur so steht in der Spalte ueberall
+     * dasselbe. Wenige Naechte, weil jede ein eigener Lesevorgang ist -
+     * aeltere fuellen sich von selbst, sobald die App laeuft.
+     */
+    private suspend fun nachtrageNaechte(klient: HealthConnectClient, heute: LocalDate) {
+        val speicher = Speicher(context)
+        for (i in 1..NAECHTE_NACH) {
+            val nacht = heute.minusDays(i.toLong())
+            nachtpuls(klient, nachtfenster(nacht))?.let {
+                withContext(Dispatchers.IO) {
+                    speicher.merke(nacht, mapOf(
+                        "puls_min" to it.ruhe,
+                        "puls_nacht_sd" to it.streuung,
+                    ))
+                }
             }
         }
     }
