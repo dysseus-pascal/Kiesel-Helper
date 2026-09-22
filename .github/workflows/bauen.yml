@@ -12,6 +12,11 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Schreibrecht nur fuer das Release: ein Tag v* legt es an und haengt die
+# APK dazu.
+permissions:
+  contents: write
+
 jobs:
   bauen:
     runs-on: ubuntu-latest
@@ -45,3 +50,27 @@ jobs:
           name: kiesel-helper-debug
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+      # EIN TAG IST EIN RELEASE. Gibt es das Release schon - von Hand
+      # angelegt, mit eigenem Text -, wird nur die APK ersetzt und der Text
+      # nicht angeruehrt. Sonst entsteht es aus dem Commit: die erste Zeile
+      # wird der Titel, der Rest der Text.
+      - name: Release anlegen
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          # Tag und Fassung im Code muessen uebereinstimmen - sonst hiesse
+          # das Release anders als das, was darin steckt.
+          IM_CODE="$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)"
+          [ "$IM_CODE" = "${TAG#v}" ] || { echo "Tag $TAG, im Code $IM_CODE"; exit 1; }
+          cp app/build/outputs/apk/debug/*.apk kiesel-helper.apk
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" kiesel-helper.apk --clobber
+          else
+            git log -1 --format=%b HEAD | sed '/^Co-Authored-By:/d;/^Claude-Session:/d' > notizen.md
+            gh release create "$TAG" kiesel-helper.apk \
+              --title "${TAG#v} - $(git log -1 --format=%s HEAD)" \
+              --notes-file notizen.md
+          fi
