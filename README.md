@@ -957,6 +957,17 @@ Artefakt des Laufs ([Bauen](../../actions/workflows/bauen.yml) → letzter Lauf 
 adb install -r kiesel-helper-debug.apk
 ```
 
+**Ein Tag `v*` legt das Release an**, mit der APK daran. Titel und Text kommen
+aus dem Commit, auf den das Tag zeigt; gibt es das Release schon, wird nur die
+APK ersetzt.
+
+**Signiert wird mit einem festen Schlüssel** aus den Secrets des Repos
+(`KIESEL_KEYSTORE_BASE64`, `KIESEL_KEYSTORE_PASSWORT`, `KIESEL_KEY_ALIAS`,
+`KIESEL_KEY_PASSWORT`). Ohne ihn legte jeder Lauf einen eigenen Debug-Schlüssel
+an, und Android installiert eine anders signierte Fassung nicht über die alte —
+nur nach dem Deinstallieren, und das löscht den eigenen Speicher. Fehlen die
+Secrets, baut der Lauf trotzdem, verweigert aber das Release.
+
 Der Lauf belegt, dass die App übersetzt und ein Paket ergibt. Dass sie am
 Telefon das Richtige **tut**, belegt er nicht — das zeigt sich erst dort.
 
