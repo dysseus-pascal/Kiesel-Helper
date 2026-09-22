@@ -582,16 +582,19 @@ Abhak-Bitmaske ohnehin nach jeder Einnahme, für seine eigenen Timeline-Pins.
 Gezählt wird, was **fällig war** und davon genommen wurde — ein Präparat, das
 heute pausiert, gehört in keine Quote.
 
-**Sieben Sportarten, drei davon Velo.** Kieselsport unterscheidet seit 0.3.0
-Strasse, Gravel und MTB; dazu kam Yoga. Die Gesundheitsakte kennt diese
-Unterscheidung nicht — sie hat ein einziges »Velo« und kein Mountainbike.
-Alle drei gehen deshalb als Velo hinein, und der **Titel** trägt, was es war:
-»Velo Gravel«, »Velo MTB«. Sie wegzulassen hiesse, drei sehr verschiedene
-Ausfahrten in einen Topf zu werfen.
+**Sechs Sportarten, zwei davon Bike.** Kieselsport unterscheidet seit 0.4.0
+Strasse/Gravel und MTB; dazu kam Yoga. Die Gesundheitsakte kennt diese
+Unterscheidung nicht — sie hat ein einziges Radfahren und kein Mountainbike.
+Beide gehen deshalb als Radfahren hinein, und der **Titel** trägt, was es
+war: »Bike Strasse/Gravel«, »Bike MTB«. Ihn wegzulassen hiesse, eine Ausfahrt
+im Wald und eine auf der Landstrasse in einen Topf zu werfen.
+
+Strasse und Gravel stehen zusammen: sie unterscheiden sich im Reifen, nicht in
+dem, was die Uhr davon sieht.
 
 Die Zahl einer Art darf sich dabei **nie verschieben**: sie ist alles, was von
-der Uhr kommt. Gravel und MTB stehen deshalb hinter Kraft und nicht neben
-Strasse, wo sie hingehörten — eine eingeschobene Zeile hätte jede gespeicherte
+der Uhr kommt. MTB steht deshalb hinter Kraft und nicht neben Strasse/Gravel,
+wo es hingehörte — eine eingeschobene Zeile hätte jede gespeicherte
 Aufzeichnung um eine Art verschoben.
 
 **Die Namen kommen seit SupCycle 0.10.0 mit**, alle sechs Plätze durch
