@@ -45,4 +45,7 @@
     <color name="sport_yoga">#B58BB9</color>
     <color name="sport_schwimmen">#6FB8C4</color>
     <color name="sport_anderes">#B3A294</color>
+
+    <color name="wasser">#72B6DA</color>
+    <color name="koffein">#C4916A</color>
 </resources>

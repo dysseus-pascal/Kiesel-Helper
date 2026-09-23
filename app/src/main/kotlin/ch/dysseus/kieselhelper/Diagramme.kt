@@ -77,6 +77,8 @@ class SaeulenView(
      * Zwei graue Striche waeren zwei Aussagen in einer Farbe.
      */
     private val marke: Double? = null,
+    /** Eine eigene Farbe statt des Reitertons - Wasser ist blau, auch in Gruen. */
+    farbe: Int? = null,
 ) : View(ctx) {
 
     /**
@@ -87,7 +89,7 @@ class SaeulenView(
      * dem dieses Bild gehoert. Wer hier erst in onDraw nachfragt, malt die
      * Gesundheit gruen, sobald die Ernaehrung nach ihr geladen hat.
      */
-    private val akzent = ctx.akzentfarbe()
+    private val akzent = farbe ?: ctx.akzentfarbe()
 
     private val stift = Paint(Paint.ANTI_ALIAS_FLAG)
     private val schrift = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -233,8 +235,9 @@ fun Context.saeulenbild(
     saeulen: List<Saeule>,
     ziel: Double? = null,
     marke: Double? = null,
+    farbe: Int? = null,
 ): View =
-    SaeulenView(this, saeulen, ziel, marke).apply {
+    SaeulenView(this, saeulen, ziel, marke, farbe).apply {
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(96f)
         ).apply { topMargin = dp(10f) }
@@ -256,6 +259,7 @@ fun Context.wochenbild(
     ziel: Double? = null,
     marke: Double? = null,
     beschriftung: (Double) -> String = { Zahlen.ganz(it) ?: "" },
+    farbe: Int? = null,
 ): View {
     val heute = Einstellungen.heute(this)
     return saeulenbild(
@@ -269,6 +273,7 @@ fun Context.wochenbild(
         },
         ziel,
         marke,
+        farbe,
     )
 }
 
@@ -309,7 +314,7 @@ class SpannenView(
      * dem dieses Bild gehoert. Wer hier erst in onDraw nachfragt, malt die
      * Gesundheit gruen, sobald die Ernaehrung nach ihr geladen hat.
      */
-    private val akzent = ctx.akzentfarbe()
+    private val akzent = farbe ?: ctx.akzentfarbe()
 
     private val stift = Paint(Paint.ANTI_ALIAS_FLAG)
     private val schrift = Paint(Paint.ANTI_ALIAS_FLAG).apply {

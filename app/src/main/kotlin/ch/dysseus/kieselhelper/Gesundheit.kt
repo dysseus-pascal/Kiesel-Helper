@@ -160,7 +160,17 @@ class Gesundheit(private val context: Context) {
         /** Uhrzeit des linken Rands im Pulsbild, als Minute des Tages. */
         val pulsBeginn: Int,
         val gelesen: Instant,
+        /** Jedes Glas von heute: Minute seit Mitternacht, Milliliter. */
+        val glaeser: List<Punkt> = emptyList(),
+        /**
+         * Das Koffein der letzten 24 Stunden, einzeln. Auch das von gestern
+         * Abend: es ist heute frueh noch nicht abgebaut.
+         */
+        val koffeinDosen: List<Dosis> = emptyList(),
     )
+
+    /** Eine Portion Koffein: wann, und wie viel. */
+    data class Dosis(val zeit: Instant, val mg: Double)
 
     /** Was von einer Satzart tatsaechlich in der Akte steht, und von wem. */
     data class Befund(val name: String, val anzahl: Int, val quellen: Set<String>)
@@ -350,6 +360,34 @@ class Gesundheit(private val context: Context) {
         val wocheSchl = async { wocheSchlaf(klient, heute) }
         val verlauf = async { pulsverlauf(klient) }
 
+        // DIE EINZELNEN GLAESER UND TASSEN, nicht nur ihre Summe. Die Summe
+        // sagt, wie viel; erst die Zeitpunkte sagen, ob der Nachmittag
+        // trocken war und wie viel Koffein zur Schlafenszeit noch wirkt.
+        val glaeser = async {
+            fange("Glaeser") {
+                klient.readRecords(ReadRecordsRequest(HydrationRecord::class, tag)).records
+                    .map {
+                        val z = LocalDateTime.ofInstant(it.startTime, zone).toLocalTime()
+                        Punkt(z.hour * 60 + z.minute, it.volume.inMilliliters)
+                    }
+                    .sortedBy { it.minute }
+            } ?: emptyList()
+        }
+        val tassen = async {
+            fange("Koffein einzeln") {
+                klient.readRecords(
+                    ReadRecordsRequest(
+                        NutritionRecord::class,
+                        TimeRangeFilter.between(jetzt.minusHours(24), jetzt),
+                    )
+                ).records
+                    .mapNotNull { r ->
+                        r.caffeine?.inGrams?.times(1000)?.takeIf { it > 0 }?.let { Dosis(r.startTime, it) }
+                    }
+                    .sortedBy { it.zeit }
+            } ?: emptyList()
+        }
+
         // SUPPLEMENTE KOMMEN NICHT AUS DER AKTE, sondern aus der eigenen
         // Tabelle: die Akte kennt keine Satzart fuer "genommen". SupCycle
         // schickt seinen Stand bei jeder Einnahme, [Aufgaben] schreibt ihn
@@ -424,6 +462,8 @@ class Gesundheit(private val context: Context) {
             pulsverlauf = verlauf.await(),
             pulsBeginn = pulsBeginn(),
             gelesen = Instant.now(),
+            glaeser = glaeser.await(),
+            koffeinDosen = tassen.await(),
         )
 
         // JEDES LESEN IST EIN EINTRAG. Die Akte selbst vergisst; was hier

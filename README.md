@@ -146,6 +146,24 @@ Dort stehen die Sitzungen ohnehin; eine zweite Liste daneben wäre eine zweite
 Wahrheit. Trainings anderer Apps erscheinen deshalb mit, sobald sie dort
 stehen.
 
+### Der Ernährungs-Reiter
+
+Hier stehen die einzigen Zahlen, die man selbst macht — und die soll man
+sehen, nicht lesen.
+
+* **Wasser** ist ein Glas, das sich füllt, daneben die Gläser des Tages als
+  Reihe: »noch drei« ist eine Auskunft, nach der man handelt, »noch 900 ml«
+  muss man erst umrechnen. Darunter der Tag als Leiste mit einem Tropfen je
+  Glas — die Summe verschweigt, ob der Nachmittag trocken war. Wasser ist
+  blau, auch im grünen Reiter.
+* **Präparate** sind ein Ring, der sich schliesst, wenn alles genommen ist,
+  und daneben die Liste: ein leerer Kreis für das, was noch ansteht.
+* **Koffein** ist eine Kurve: jede Tasse ein Sprung, danach ein Abklingen mit
+  einer Halbwertszeit von rund fünf Stunden. Die Kurve sagt, was gerade wirkt
+  und wie viel zur Schlafenszeit von letzter Nacht noch da ist. 240 mg am Tag
+  sind harmlos, wenn das letzte um zehn kam, und nicht, wenn es um fünf kam.
+  Die fünf Stunden sind ein Mittel; die Kurve zeigt die Form, keine Messung.
+
 ### Sätze, Pausen, Bahnen
 
 Seit Kieselsport 0.5.0 zählt die Uhr beim Krafttraining Wiederholungen und

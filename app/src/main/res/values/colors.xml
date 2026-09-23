@@ -53,4 +53,10 @@
     <color name="sport_yoga">#7A4E7E</color>
     <color name="sport_schwimmen">#2E7C8A</color>
     <color name="sport_anderes">#7D6B5D</color>
+
+    <!-- DIE ERNAEHRUNG IN IHREN STOFFEN. Wasser blau, auch im gruenen Reiter -
+         ein gruenes Glas Wasser saehe nach etwas anderem aus. Koffein im
+         Ton von Kaffee, die Praeparate im Moos des Reiters. -->
+    <color name="wasser">#3E8EB8</color>
+    <color name="koffein">#7B4B2A</color>
 </resources>
