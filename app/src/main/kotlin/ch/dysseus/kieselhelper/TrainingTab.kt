@@ -379,7 +379,7 @@ object TrainingTab {
 
         val punkte = eintrag.punkte
         if (gross && punkte.size >= 2) {
-            k.addView(streckendaten(ctx, punkte))
+            k.addView(streckendaten(ctx, punkte, eintrag.sitzung.exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_BIKING))
             k.addView(kartenbild(ctx, punkte, karten))
         } else if (!gross && eintrag.meter > 100) {
             k.addView(ctx.zart(
@@ -461,21 +461,27 @@ object TrainingTab {
     }
 
     /** Die Zahlen, die erst aus der Strecke entstehen. */
-    private fun streckendaten(ctx: Context, punkte: List<Spur.Punkt>): LinearLayout {
+    private fun streckendaten(ctx: Context, punkte: List<Spur.Punkt>, rad: Boolean): LinearLayout {
         val meter = Spur.laenge(punkte)
         val hoehe = Spur.hoehenmeter(punkte)
         val sekunden = (punkte.last().zeit - punkte.first().zeit).coerceAtLeast(1)
-        // Tempo als Minuten je Kilometer - so liest es jeder Laeufer.
+        // Tempo als Minuten je Kilometer - so liest es jeder Laeufer. Auf dem
+        // Rad liest es niemand so: dort sind es Kilometer je Stunde.
         val tempo = if (meter > 100) (sekunden / (meter / 1000)) else 0.0
+        val kmh = if (meter > 100) (meter / 1000) / (sekunden / 3600.0) else 0.0
 
         val reihe = ctx.reihe()
         reihe.addView(ctx.messwert("Strecke", Zahlen.eine(meter / 1000), "km", 0f, false))
-        reihe.addView(ctx.messwert(
-            "Tempo",
-            if (tempo > 0) String.format("%d:%02d", (tempo / 60).toInt(), (tempo % 60).toInt())
-            else null,
-            "/km", 0f, false,
-        ))
+        if (rad) {
+            reihe.addView(ctx.messwert("Tempo", if (kmh > 0) Zahlen.eine(kmh) else null, "km/h", 0f, false))
+        } else {
+            reihe.addView(ctx.messwert(
+                "Tempo",
+                if (tempo > 0) String.format("%d:%02d", (tempo / 60).toInt(), (tempo % 60).toInt())
+                else null,
+                "/km", 0f, false,
+            ))
+        }
         reihe.addView(ctx.messwert("Aufstieg", Zahlen.ganz(hoehe), "m", 0f, false))
         return ctx.spalte().apply { addView(reihe) }
     }

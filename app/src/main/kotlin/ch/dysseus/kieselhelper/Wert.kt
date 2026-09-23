@@ -16,6 +16,9 @@ sealed class Wert {
 
     data class Text(val text: String) : Wert()
 
+    /** Rohdaten - die Pulskurve kommt so, ein Byte je Wert. */
+    class Bytes(val bytes: ByteArray) : Wert()
+
     fun alsText(): String = when (this) {
         is Zahl -> zahl.toString()
         is Text -> text

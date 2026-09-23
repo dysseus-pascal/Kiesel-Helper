@@ -71,13 +71,15 @@ class PebbleEmpfaenger : BroadcastReceiver() {
                 // mitschickt, ist das nicht mehr wahr.
                 val zahlen = mutableMapOf<Int, Long>()
                 val texte = mutableMapOf<Int, String>()
+                val rohdaten = mutableMapOf<Int, ByteArray>()
                 for ((nummer, wert) in nachNummer) {
                     when (wert) {
                         is Wert.Zahl -> zahlen[nummer] = wert.zahl
                         is Wert.Text -> texte[nummer] = wert.text
+                        is Wert.Bytes -> rohdaten[nummer] = wert.bytes
                     }
                 }
-                Aufgaben.verarbeite(context, uuid, zahlen, texte)?.let {
+                Aufgaben.verarbeite(context, uuid, zahlen, texte, rohdaten)?.let {
                     Verlauf(context).merkeMeldung(it)
                     Log.i(TAG, it)
                 }
@@ -146,13 +148,26 @@ class PebbleEmpfaenger : BroadcastReceiver() {
                     "int", "uint" -> aus[schluessel] = Wert.Zahl(eintrag.optLong("value"))
                     "string" -> eintrag.optString("value", "").takeIf { it.isNotEmpty() }
                         ?.let { aus[schluessel] = Wert.Text(it) }
-                    else -> Unit   // Rohdaten kommen nicht vor
+                    // ROHDATEN: Base64 in "value", so wie PebbleKit sie seit je
+                    // verpackt. Zur Sicherheit auch eine Zahlenliste nehmen.
+                    "bytes" -> leseBytes(eintrag.opt("value"))?.let { aus[schluessel] = Wert.Bytes(it) }
+                    else -> Unit
                 }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Nachricht nicht lesbar: $json", e)
         }
         return aus
+    }
+
+    private fun leseBytes(wert: Any?): ByteArray? = try {
+        when (wert) {
+            is String -> android.util.Base64.decode(wert, android.util.Base64.DEFAULT)
+            is JSONArray -> ByteArray(wert.length()) { i -> wert.optInt(i).toByte() }
+            else -> null
+        }
+    } catch (e: Exception) {
+        null
     }
 
     companion object {

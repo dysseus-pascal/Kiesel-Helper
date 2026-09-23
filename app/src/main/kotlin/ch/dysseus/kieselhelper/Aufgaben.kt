@@ -139,6 +139,12 @@ object Aufgaben {
     }
 
     private const val SP_HRV = 10017
+    // Die Pulskurve, stueckweise: ab welchem Wert, wie viele insgesamt, und
+    // die Werte selbst - ein Byte je zehn Sekunden.
+    private const val SP_KURVE_AB = 10020
+    private const val SP_KURVE_ANZAHL = 10021
+    private const val SP_KURVE = 10022
+    private const val KURVE_TAKT_S = 10
     private const val SP_SAETZE = 10013
     private const val SP_REPS = 10014
     private const val SP_BAHNEN = 10015
@@ -309,7 +315,26 @@ object Aufgaben {
         context: Context,
         felder: Map<Int, Long>,
         texte: Map<Int, String>,
+        rohdaten: Map<Int, ByteArray>,
     ): String? {
+        // EIN STUECK PULSKURVE - kommt nach der Zusammenfassung, in Stuecken
+        // von bis zu 300 Werten. Gesammelt wird je Training; ist das letzte
+        // Stueck da, geht die Kurve in die Akte.
+        rohdaten[SP_KURVE]?.let { werte ->
+            val beginn = felder[SP_BEGINN] ?: return null
+            val ab = (felder[SP_KURVE_AB] ?: 0).toInt()
+            val anzahl = (felder[SP_KURVE_ANZAHL] ?: 0).toInt()
+            werte.forEachIndexed { i, b ->
+                Pulskurve.anhaengen(context, beginn, (ab + i) * KURVE_TAKT_S, b.toInt() and 0xFF)
+            }
+            return if (ab + werte.size >= anzahl) {
+                if (Pulskurve.eintragen(context, beginn)) null
+                else "Pulskurve nicht eingetragen"
+            } else {
+                null
+            }
+        }
+
         val zustand = felder[SP_ZUSTAND]
         val dauer = felder[SP_DAUER]
 
@@ -511,12 +536,13 @@ object Aufgaben {
         von: UUID,
         felder: Map<Int, Long>,
         texte: Map<Int, String> = emptyMap(),
+        rohdaten: Map<Int, ByteArray> = emptyMap(),
     ): String? =
         when (von) {
             DRINKTERVALL -> wasser(context, felder)
             HERZINTERVALL -> herz(context, felder)
             SUPCYCLE -> supplemente(context, felder, texte)
-            KIESELSPORT -> training(context, felder, texte)
+            KIESELSPORT -> training(context, felder, texte, rohdaten)
             else -> null
         }
 

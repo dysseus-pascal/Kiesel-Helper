@@ -367,16 +367,16 @@ woher er kam.
 Seit 0.38.0 kommen drei Dinge nicht mehr nur über Health Connect, sondern
 direkt von der Uhr — und landen von hier aus in der Akte:
 
-- **Die Pulskurve zum Training**, von Kieselsport (ab 0.9.0) per **Data
-  Logging**: der Hintergrund-Worker der Uhr schreibt jede Sekunde einen Satz,
-  die Pebble-App holt sie ab, sobald sie die Uhr erreicht, und reicht jeden als
-  Broadcast weiter (`com.getpebble.action.dl.RECEIVE_DATA`, bestätigt mit
-  `ACK_DATA`). Die Sätze sammeln sich in einer Datei je Training und gehen als
-  Herzfrequenz-Eintrag in die Akte, sobald das Log abgeschlossen ist oder die
-  Zusammenfassung ankommt. Der Trainings-Reiter liest die Kurve ohnehin aus der
-  Akte — sie steht damit von selbst unter dem Training. *Ungeprüft mit der
-  neuen Pebble-App:* ob sie Data Logging an klassische Companion-Apps
-  weiterreicht, steht nirgends.
+- **Die Pulskurve zum Training**, von Kieselsport (ab 0.10.0) in Stücken per
+  AppMessage: ein Byte je zehn Sekunden, bis zu 300 je Nachricht, nach der
+  Zusammenfassung (`KURVE_AB`, `KURVE_ANZAHL`, `KURVE` als Rohdaten). Die
+  Werte sammeln sich in einer Datei je Training; ist das letzte Stück da, geht
+  die Kurve als Herzfrequenz-Eintrag in die Akte. Der Trainings-Reiter liest
+  sie ohnehin von dort — sie steht damit von selbst unter dem Training. Der
+  Weg über Data Logging (0.38.0) blieb leer: die neue Pebble-App reicht es
+  nicht an klassische Companion-Apps weiter. Der Empfänger dafür bleibt drin,
+  falls sich das ändert.
+- **Tempo auf dem Rad in km/h**, beim Laufen und Wandern in min/km.
 - **Die Nacht und der Ruhepuls**, von Herzintervall (ab 0.7.0): die letzte
   abgeschlossene Nacht — Schlafbeginn, Schlafende — und der mittlere Puls
   darin als Ruhepuls fahren mit dem Ergebnis der Nachtmessung mit, meist einen

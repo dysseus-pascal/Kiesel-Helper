@@ -26,9 +26,11 @@ import java.util.UUID
  * Intent), acht Byte little endian: Beginn (4), Sekunde (2), Puls (2). Jeder
  * Satz wird bestaetigt (ACK_DATA), sonst schickt die Pebble-App ihn wieder.
  *
- * UNGEPRUEFT MIT DER NEUEN PEBBLE-APP: ob die App von Core Devices Data
- * Logging an klassische Companion-Apps weiterreicht, steht nirgends. Kommt
- * nichts an, fehlt die Kurve - das Training selbst ist davon nicht betroffen.
+ * GEPRUEFT, UND ES KAM NICHTS AN: die App von Core Devices reicht Data
+ * Logging nicht an klassische Companion-Apps weiter (Stand 0.38.1). Die Kurve
+ * kommt deshalb seit Kieselsport 0.10.0 ueber AppMessage in Stuecken (siehe
+ * Aufgaben.training). Dieser Empfaenger bleibt: sollte die Pebble-App es
+ * einmal koennen, kommt die Kurve auf diesem Weg frueher.
  */
 class DatenlogEmpfaenger : BroadcastReceiver() {
 
