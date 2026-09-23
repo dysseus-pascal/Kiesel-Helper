@@ -391,10 +391,20 @@ sein. Beispiele:
 | Dienst | Adresse | Benutzername |
 |---|---|---|
 | Nextcloud | `https://wolke.example/remote.php/dav/files/BENUTZER/Kiesel/` | Benutzername |
-| mailbox.org | `https://dav.mailbox.org/servlet/webdav.infostore/Userstore/ADRESSE@mailbox.org/Kiesel/` | die E-Mail-Adresse |
+| mailbox.org | `https://dav.mailbox.org/servlet/webdav.infostore/Userstore/Vorname, Nachname/Kiesel/` | die E-Mail-Adresse |
 
-Geprüft wird mit `PROPFIND`, nicht mit `HEAD`: Open-Xchange (mailbox.org)
-antwortet auf `HEAD` zu einem Ordner mit 404, als gäbe es ihn nicht.
+**mailbox.org (Open-Xchange):** Der eigene Ordner unter `Userstore` heisst nach
+Vor- und Nachname aus den Kontodaten — »Vorname, Nachname« mit Komma und
+Leerzeichen, so wie es die mailbox-Anleitung zeigt; bei manchen Konten ohne
+Komma. `https://app.mailbox.org` ist die Webseite, kein WebDAV. Bei
+Zwei-Faktor-Anmeldung braucht es ein Anwendungspasswort.
+
+Geprüft wird mit `PROPFIND`, nicht mit `HEAD`: Open-Xchange antwortet auf
+`HEAD` zu einem Ordner mit 404, als gäbe es ihn nicht. Nur eine Antwort
+`207 Multi-Status` gilt als Ordner — eine Webseite antwortet mit 200, und das
+sähe sonst aus wie ein erreichbarer Ordner. Fehlt der Ordner und lässt er sich
+nicht anlegen, nennt die Prüfung die Ordner eine Stufe höher: so sieht man,
+wie der Server den eigenen nennt, statt zu raten.
 
 **Als Klartext, nicht als Datenbankabzug.** Ein JSON, das man öffnen und lesen
 kann, ist auch dann noch etwas wert, wenn es diese App nicht mehr gibt. Ein

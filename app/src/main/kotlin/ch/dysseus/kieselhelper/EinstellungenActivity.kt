@@ -583,8 +583,10 @@ class EinstellungenActivity : ComponentActivity() {
             "Die Adresse ist der Ordner — fehlt er, wird er angelegt",
             "Nextcloud: https://wolke.example/remote.php/dav/files/BENUTZER/Kiesel/ — " +
                 "mailbox.org: https://dav.mailbox.org/servlet/webdav.infostore/" +
-                "Userstore/ADRESSE@mailbox.org/Kiesel/ mit der E-Mail-Adresse als " +
-                "Benutzername. Nur der übergeordnete Ordner muss schon da sein."
+                "Userstore/Vorname, Nachname/Kiesel/ — der eigene Ordner heisst dort " +
+                "nach Vor- und Nachname aus den Kontodaten, mit Komma; Benutzername " +
+                "ist die E-Mail-Adresse, bei Zwei-Faktor ein Anwendungspasswort. " +
+                "Stimmt der Name nicht, nennt die Prüfung die Ordner, die es gibt."
         ))
         k.addView(zartMitHinweis(
             "Nur https, und das Passwort liegt verschlüsselt",
