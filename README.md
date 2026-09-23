@@ -114,9 +114,11 @@ Zeit, wie viele Kilometer. Nicht der Monat und nicht das Jahr — eine
 Trainingswoche ist die Einheit, in der man plant; was im August war, sagt
 heute nichts mehr.
 
-Unter den Zahlen **vier Wochen als Kalender**: ein Feld je Tag, gefärbt in der
-Art, die an dem Tag die meiste Zeit hatte, und je kräftiger, desto länger. Ein
-leerer Tag bleibt ein leeres Feld, keine Null.
+Unter den Zahlen **vier Wochen als Kalender**: ein Punkt je Tag. Ein
+Trainingstag ist ein Kreis in der Farbe seiner Art, und die Grösse sagt, wie
+lang es war; kam eine zweite Art dazu, liegt ihr Ring aussen. Punkte und keine
+Kacheln: ein Raster voller Felder mit Zahlen darin war laut und sah nach
+Tabelle aus.
 
 Darunter **das jüngste Training gross**: der Puls als Fläche über die Zeit, mit
 Schnitt und Spitze. Beim Krafttraining stehen die Sätze auf der Zeitachse,

@@ -115,103 +115,113 @@ fun Context.sportkopf(art: Sportart.Art, titel: String, unter: String, gross: Bo
 
 // --- Vier Wochen als Kalender ------------------------------------------------
 
+/** Ein Trainingstag: die Farben seiner Arten, die laengste zuerst, und die Minuten. */
+data class Trainingstag(val farben: List<Int>, val minuten: Long)
+
 /**
- * Vier Wochen, ein Feld je Tag.
+ * Vier Wochen, ein Punkt je Tag.
  *
- * DIE FARBE IST DIE ART, DIE DEUTLICHKEIT DIE DAUER. Ein Tag mit zwanzig
- * Minuten Yoga und einer mit zwei Stunden Rad sollen nicht gleich laut sein;
- * ein leerer Tag bleibt ein leeres Feld und keine Null.
+ * PUNKTE STATT KACHELN. Ein Raster aus vollen Feldern mit Zahlen darin war
+ * laut und sah nach Tabelle aus - achtundzwanzig Kaesten, von denen die
+ * meisten grau waren. Jetzt ist ein leerer Tag ein kleiner Punkt, ein
+ * Trainingstag ein Kreis in der Farbe seiner Art, und die GROESSE sagt, wie
+ * lang: zwanzig Minuten Yoga sind ein kleiner Kreis, zwei Stunden Rad ein
+ * grosser. Kam an einem Tag eine zweite Art dazu, liegt ihr Ring aussen.
  */
 class KalenderView(
     ctx: Context,
     private val heute: LocalDate,
-    /** Je Tag die Art mit der meisten Zeit und die Minuten insgesamt. */
-    private val tage: Map<LocalDate, Pair<Int, Long>>,
+    private val tage: Map<LocalDate, Trainingstag>,
 ) : View(ctx) {
 
     private val wochen = 4
-    private val abstand = ctx.dp(5f).toFloat()
-    private val kopfHoehe = ctx.dp(18f).toFloat()
+    private val zeile = ctx.dp(34f).toFloat()
+    private val kopfHoehe = ctx.dp(20f).toFloat()
+    private val randLinks = ctx.dp(34f).toFloat()
     private val start = heute.with(DayOfWeek.MONDAY).minusWeeks((wochen - 1).toLong())
 
-    private val feld = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val rahmen = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val fuellung = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = ctx.dp(2f).toFloat()
-        color = ctx.farbe(R.color.schrift)
     }
-    private val kopf = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = sp(10f)
+    private val heuteRing = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = ctx.dp(1.5f).toFloat()
         color = ctx.farbe(R.color.schrift_zart)
-        textAlign = Paint.Align.CENTER
     }
-    private val zahl = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = sp(11f)
-        textAlign = Paint.Align.CENTER
+    private val leer = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = ctx.farbe(R.color.schrift_zart)
+        alpha = 70
     }
-    private val leer = ctx.farbe(R.color.linie)
-    private val zart = ctx.farbe(R.color.schrift_zart)
-
-    private fun sp(wert: Float) = TypedValue.applyDimension(
-        TypedValue.COMPLEX_UNIT_SP, wert, context.resources.displayMetrics
-    )
-
-    private fun zelle(breite: Int): Float =
-        minOf((breite - abstand * 6) / 7f, context.dp(46f).toFloat())
+    private val schrift = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 10f, ctx.resources.displayMetrics)
+        color = ctx.farbe(R.color.schrift_zart)
+    }
+    private val fett = Paint(schrift).apply {
+        color = ctx.farbe(R.color.schrift)
+        typeface = Typeface.DEFAULT_BOLD
+    }
 
     override fun onMeasure(breiteSpec: Int, hoeheSpec: Int) {
-        val breite = MeasureSpec.getSize(breiteSpec)
-        val z = zelle(breite)
-        setMeasuredDimension(breite, (kopfHoehe + wochen * z + (wochen - 1) * abstand).toInt() + 2)
+        setMeasuredDimension(MeasureSpec.getSize(breiteSpec), (kopfHoehe + wochen * zeile).toInt())
     }
 
     override fun onDraw(leinwand: Canvas) {
-        val z = zelle(width)
-        val links = (width - (z * 7 + abstand * 6)) / 2
-        val ecke = z * 0.28f
+        val fach = (width - randLinks) / 7f
+        val gross = minOf(fach, zeile) / 2f - context.dp(3f)
+        val klein = gross * 0.42f
 
+        schrift.textAlign = Paint.Align.CENTER
+        fett.textAlign = Paint.Align.CENTER
         DayOfWeek.values().forEachIndexed { i, tag ->
-            val x = links + i * (z + abstand) + z / 2
-            leinwand.drawText(
-                tag.getDisplayName(TextStyle.NARROW, Locale.GERMAN), x, kopfHoehe - context.dp(6f), kopf
-            )
+            val x = randLinks + fach * i + fach / 2
+            val name = tag.getDisplayName(TextStyle.SHORT, Locale.GERMAN).take(2)
+            leinwand.drawText(name, x, kopfHoehe - context.dp(7f), if (tag == heute.dayOfWeek) fett else schrift)
         }
 
-        for (w in 0 until wochen) for (t in 0 until 7) {
-            val datum = start.plusDays((w * 7 + t).toLong())
-            val x = links + t * (z + abstand)
-            val y = kopfHoehe + w * (z + abstand)
-            val rechteck = RectF(x, y, x + z, y + z)
-            val eintrag = tage[datum]
+        for (w in 0 until wochen) {
+            val montag = start.plusWeeks(w.toLong())
+            val my = kopfHoehe + w * zeile + zeile / 2
 
-            when {
-                datum.isAfter(heute) -> {
-                    feld.color = leer
-                    feld.alpha = 70
-                }
-                eintrag == null -> {
-                    feld.color = leer
-                    feld.alpha = 255
-                }
-                else -> {
-                    // Ab neunzig Minuten voll - darueber unterscheidet das
-                    // Auge ohnehin nichts mehr.
-                    val anteil = (eintrag.second / 90f).coerceIn(0f, 1f)
-                    feld.color = eintrag.first
-                    feld.alpha = (110 + 145 * anteil).toInt()
-                }
-            }
-            leinwand.drawRoundRect(rechteck, ecke, ecke, feld)
-            if (datum == heute) {
-                val r = RectF(rechteck).apply { inset(rahmen.strokeWidth / 2, rahmen.strokeWidth / 2) }
-                leinwand.drawRoundRect(r, ecke, ecke, rahmen)
-            }
-
-            zahl.color = if (eintrag != null) android.graphics.Color.WHITE else zart
-            zahl.alpha = if (datum.isAfter(heute)) 90 else 255
+            // Die Kalenderwoche links, klein: wer plant, plant in Wochen.
+            schrift.textAlign = Paint.Align.LEFT
             leinwand.drawText(
-                datum.dayOfMonth.toString(), x + z / 2, y + z / 2 + zahl.textSize / 3, zahl
+                "KW " + montag.get(WeekFields.ISO.weekOfWeekBasedYear()),
+                0f, my + schrift.textSize / 3, schrift,
             )
+
+            for (t in 0 until 7) {
+                val datum = montag.plusDays(t.toLong())
+                val mx = randLinks + fach * t + fach / 2
+                val tag = tage[datum]
+
+                when {
+                    datum.isAfter(heute) -> {
+                        leer.alpha = 30
+                        leinwand.drawCircle(mx, my, context.dp(2f).toFloat(), leer)
+                    }
+                    tag == null -> {
+                        leer.alpha = 70
+                        leinwand.drawCircle(mx, my, context.dp(2.5f).toFloat(), leer)
+                    }
+                    else -> {
+                        // Die Flaeche waechst mit der Zeit, nicht der Radius:
+                        // doppelt so lang soll doppelt so viel Farbe sein.
+                        val anteil = Math.sqrt((tag.minuten / 120.0).coerceIn(0.0, 1.0)).toFloat()
+                        val r = klein + (gross - klein) * anteil
+                        fuellung.color = tag.farben.first()
+                        leinwand.drawCircle(mx, my, r, fuellung)
+                        tag.farben.getOrNull(1)?.let { zweite ->
+                            ring.color = zweite
+                            leinwand.drawCircle(mx, my, r + ring.strokeWidth * 1.3f, ring)
+                        }
+                    }
+                }
+                if (datum == heute) {
+                    leinwand.drawCircle(mx, my, gross + context.dp(1.5f), heuteRing)
+                }
+            }
         }
     }
 }
@@ -219,16 +229,19 @@ class KalenderView(
 /** Den Kalender aus den Sitzungen bauen. */
 fun Context.kalenderbild(sitzungen: List<ExerciseSessionRecord>, heute: LocalDate): View {
     val zone = ZoneId.systemDefault()
-    val jeTag = sitzungen.groupBy { it.startTime.atZone(zone).toLocalDate() }
-    val tage = jeTag.mapValues { (_, liste) ->
-        val staerkste = liste.groupBy { Sportart.von(it) }
-            .maxByOrNull { (_, s) -> s.sumOf { Sportart.minuten(it) } }!!.key
-        farbe(staerkste.farbe) to liste.sumOf { Sportart.minuten(it) }
-    }
+    val tage = sitzungen.groupBy { it.startTime.atZone(zone).toLocalDate() }
+        .mapValues { (_, liste) ->
+            val farben = liste.groupBy { Sportart.von(it) }
+                .map { (art, s) -> art to s.sumOf { Sportart.minuten(it) } }
+                .sortedByDescending { it.second }
+                .map { farbe(it.first.farbe) }
+                .distinct()
+            Trainingstag(farben, liste.sumOf { Sportart.minuten(it) })
+        }
     return KalenderView(this, heute, tage).apply {
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-        ).apply { topMargin = dp(14f) }
+        ).apply { topMargin = dp(16f); bottomMargin = dp(4f) }
     }
 }
 

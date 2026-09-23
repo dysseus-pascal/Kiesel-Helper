@@ -223,8 +223,8 @@ object TrainingTab {
         k.addView(reihe)
         k.addView(ctx.kalenderbild(alle.map { it.sitzung }, java.time.LocalDate.now()))
         k.addView(ctx.zart(
-            "Vier Wochen. Die Farbe ist die Art mit der meisten Zeit, je " +
-                "kräftiger, desto länger; umrandet ist heute."
+            "Vier Wochen. Die Farbe ist die Art, die Grösse die Dauer; ein " +
+                "Ring aussen heisst, es kam eine zweite Art dazu."
         ))
         if (woche.isEmpty()) {
             k.addView(ctx.zart("In den letzten sieben Tagen keines."))
