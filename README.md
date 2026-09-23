@@ -377,10 +377,12 @@ direkt von der Uhr — und landen von hier aus in der Akte:
   Akte — sie steht damit von selbst unter dem Training. *Ungeprüft mit der
   neuen Pebble-App:* ob sie Data Logging an klassische Companion-Apps
   weiterreicht, steht nirgends.
-- **Die Nacht und der Ruhepuls**, von Drinktervall (ab 1.10.0): Schlafbeginn,
-  Schlafende und Ruhepuls der Uhr fahren bei jeder Standmeldung mit. Schlaf
-  wird nur eingetragen, wenn nicht schon eine andere App dieselbe Nacht
-  geschrieben hat; der Ruhepuls einmal am Tag.
+- **Die Nacht und der Ruhepuls**, von Herzintervall (ab 0.7.0): die letzte
+  abgeschlossene Nacht — Schlafbeginn, Schlafende — und der mittlere Puls
+  darin als Ruhepuls fahren mit dem Ergebnis der Nachtmessung mit, meist einen
+  Tag versetzt, aber mit den echten Zeiten. Schlaf wird nur eingetragen, wenn
+  nicht schon eine andere App dieselbe Nacht geschrieben hat; der Ruhepuls
+  einmal je Nacht, zu ihrem Ende.
 - **HRV aus dem Yoga**, von Kieselsport: der RMSSD des Trainings, als eigener
   Satz zum Trainingsende — wie die nächtliche Messung von Herzintervall.
 

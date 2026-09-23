@@ -62,12 +62,6 @@ object Aufgaben {
      */
     private const val DT_GLASS_ML = 10008
     private const val DT_DRANK_AT = 10009
-    // Die Nacht, von der Uhr gemessen - Drinktervall schickt sie mit, weil
-    // es ohnehin mehrmals am Tag mit dem Telefon redet.
-    private const val DT_SLEEP_START = 10011
-    private const val DT_SLEEP_END = 10012
-    private const val DT_SLEEP_RESTFUL = 10013
-    private const val DT_RESTING_HR = 10014
 
     // --- Herzintervall: naechtliche RMSSD-Messung ---
 
@@ -76,6 +70,12 @@ object Aufgaben {
 
     private const val HZ_RMSSD = 10000
     private const val HZ_WHEN = 10005
+    // Die letzte abgeschlossene Nacht, von der Uhr gemessen - Herzintervall
+    // schickt sie mit dem Ergebnis, weil es ohnehin nachts misst.
+    private const val HZ_SLEEP_START = 10006
+    private const val HZ_SLEEP_END = 10007
+    private const val HZ_SLEEP_RESTFUL = 10008
+    private const val HZ_RESTING_HR = 10009
 
     // --- SupCycle: was heute ansteht und was davon genommen ist ---
 
@@ -595,12 +595,9 @@ object Aufgaben {
      * natuerliche Schluessel dafuer.
      */
     private suspend fun wasser(context: Context, felder: Map<Int, Long>): String? {
-        // Die Nacht faehrt bei jeder Standmeldung mit; das Glas nur, wenn
-        // eines getrunken wurde. Beides unabhaengig voneinander.
-        val nacht = nacht(context, felder)
-        val ml = felder[DT_GLASS_ML] ?: return nacht
-        val wann = felder[DT_DRANK_AT] ?: return nacht
-        if (ml <= 0 || wann <= 0) return nacht
+        val ml = felder[DT_GLASS_ML] ?: return null
+        val wann = felder[DT_DRANK_AT] ?: return null
+        if (ml <= 0 || wann <= 0) return null
         if (!Riegel.neu(context, "drinktervall", wann.toString())) return null
 
         val beginn = Instant.ofEpochSecond(wann)
@@ -627,7 +624,7 @@ object Aufgaben {
     }
 
     /**
-     * Die Nacht von der Uhr: Schlafbeginn, Schlafende, Ruhepuls.
+     * Die Nacht von der Uhr (Herzintervall): Schlafbeginn, Schlafende, Ruhepuls.
      *
      * DIE PEBBLE-APP SCHREIBT SCHLAF WOMOEGLICH SELBST in die Akte. Dann
      * steht er schon da, und ein zweiter Eintrag ueber dieselbe Nacht waere
@@ -635,8 +632,8 @@ object Aufgaben {
      */
     private suspend fun nacht(context: Context, felder: Map<Int, Long>): String? {
         val meldungen = mutableListOf<String>()
-        val start = felder[DT_SLEEP_START] ?: 0
-        val ende = felder[DT_SLEEP_END] ?: 0
+        val start = felder[HZ_SLEEP_START] ?: 0
+        val ende = felder[HZ_SLEEP_END] ?: 0
         val klient = Akte(context).bereit()
 
         if (start > 0 && ende > start + 1800 && Riegel.neu(context, "schlaf", ende.toString())) {
@@ -664,12 +661,14 @@ object Aufgaben {
             }
         }
 
-        val ruhe = felder[DT_RESTING_HR] ?: 0
-        if (ruhe in 30..120 && klient != null) {
-            val tag = LocalDate.now().toString()
+        // Der Ruhepuls gehoert zu dieser Nacht: eingetragen zu ihrem Ende, und
+        // je Nacht einmal.
+        val ruhe = felder[HZ_RESTING_HR] ?: 0
+        if (ruhe in 30..120 && klient != null && ende > 0) {
+            val tag = ende.toString()
             if (Riegel.neu(context, "ruhepuls", tag)) {
                 val satz = RestingHeartRateRecord(
-                    time = Instant.now(),
+                    time = Instant.ofEpochSecond(ende),
                     zoneOffset = null,
                     beatsPerMinute = ruhe,
                     metadata = vonDerUhr("uhr-ruhepuls-" + tag),
@@ -687,9 +686,12 @@ object Aufgaben {
      * letzten Nacht, bis sie bestaetigt ist, und das kann mehrfach geschehen.
      */
     private suspend fun herz(context: Context, felder: Map<Int, Long>): String? {
-        val ms = felder[HZ_RMSSD] ?: return null
-        val wann = felder[HZ_WHEN] ?: return null
-        if (ms <= 0 || wann <= 0) return null
+        // Die Nacht faehrt mit dem Ergebnis mit - und kommt auch ohne eines,
+        // wenn die Messung scheiterte. Beides unabhaengig voneinander.
+        val nacht = nacht(context, felder)
+        val ms = felder[HZ_RMSSD] ?: return nacht
+        val wann = felder[HZ_WHEN] ?: return nacht
+        if (ms <= 0 || wann <= 0) return nacht
         if (!Riegel.neu(context, "herzintervall", wann.toString())) return null
 
         // DIE PEBBLE-APP KOENNTE DIESELBE MESSUNG EINTRAGEN. Sie synchronisiert
