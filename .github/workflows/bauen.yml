@@ -66,17 +66,6 @@ jobs:
           FASSUNG="$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)"
           TAG="v$FASSUNG"
           cp app/build/outputs/apk/debug/*.apk kiesel-helper.apk
-          # GIBT ES DAS RELEASE SCHON, FEHLT VIELLEICHT NUR DAS PAKET: ein
-          # Hochladen kann still danebengehen. Dann nur das nachreichen,
-          # den Text nicht anruehren.
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            if gh release view "$TAG" --json assets -q '.assets[].name' | grep -qx kiesel-helper.apk; then
-              echo "Release $TAG samt Paket gibt es schon."
-            else
-              gh release upload "$TAG" kiesel-helper.apk --clobber
-            fi
-            exit 0
-          fi
           NOTIZ=".github/release/$FASSUNG.md"
           if [ -f "$NOTIZ" ]; then
             TITEL="$FASSUNG - $(head -1 "$NOTIZ")"
@@ -85,9 +74,28 @@ jobs:
             TITEL="$FASSUNG - $(git log -1 --format=%s)"
             git log -1 --format=%b | sed '/^Co-Authored-By:/d;/^Claude-Session:/d' > notizen.md
           fi
-          gh release create "$TAG" \
-            --target "$GITHUB_SHA" --title "$TITEL" --notes-file notizen.md
-          # Das Paket getrennt und mit Pruefung: beim Anlegen in einem Zug
-          # kam es einmal nicht an, ohne dass gh sich beschwert haette.
-          gh release upload "$TAG" kiesel-helper.apk --clobber
-          gh release view "$TAG" --json assets -q '.assets[].name' | grep -qx kiesel-helper.apk
+          hat_paket() {
+            gh release view "$TAG" --json assets -q '.assets[].name' | grep -qx kiesel-helper.apk
+          }
+          anlegen() {
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "$TITEL" --notes-file notizen.md
+            gh release upload "$TAG" kiesel-helper.apk --clobber
+          }
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # GIBT ES DAS RELEASE SCHON, FEHLT VIELLEICHT NUR DAS PAKET. Ein
+            # Hochladen kann still danebengehen - und dann blockiert ein
+            # haengengebliebener Rest den Namen ("already exists"), ohne
+            # dass er irgendwo zu sehen waere. Dagegen hilft nur: das
+            # Release loeschen und neu anlegen. Der Text ist derselbe.
+            if hat_paket; then
+              echo "Release $TAG samt Paket gibt es schon."
+              exit 0
+            fi
+            if ! gh release upload "$TAG" kiesel-helper.apk --clobber; then
+              gh release delete "$TAG" --yes
+              anlegen
+            fi
+          else
+            anlegen
+          fi
+          hat_paket
