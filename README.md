@@ -752,6 +752,17 @@ ist im Test eine Attrappe, die null zurückgibt. Eine der Prüfungen hat prompt
 einen Fehler gefunden: ein `q=` gibt es auch in einer gewöhnlichen
 Google-Suche, und daraus ein Navigationsziel zu machen wäre eine Anmassung.
 
+**Der Empfang läuft auch nach einem Update weiter.** Android beendet beim
+Ersetzen des Pakets den Prozess und startet nichts von selbst neu; bis jemand
+die App öffnet, hörte niemand der Uhr zu. So ging ein Training verloren:
+abends aktualisiert, morgens gefahren. Seit 0.35.0 fährt `MY_PACKAGE_REPLACED`
+den Dienst wieder hoch, wie `BOOT_COMPLETED` nach einem Neustart.
+
+**Ein Fehlschlag beim Eintragen gibt den Riegel wieder frei.** Der Riegel gegen
+Doppelte fiel bisher vor dem Schreiben und blieb auch dann zu, wenn die Akte
+den Satz nicht annahm — der nächste Versuch der Uhr lief ins Leere, die Messung
+war weg.
+
 ## Was sie einträgt
 
 Drei feste Aufgaben, **im Code**, nicht in einer Datei aus dem Netz:
@@ -763,7 +774,7 @@ Drei feste Aufgaben, **im Code**, nicht in einer Datei aus dem Netz:
 | Kieselsport | Gesundheitsakte | ein beendetes Training als Trainingssitzung — **nur die Sitzung**, nicht die Zahlen darin; die Strecke kommt vom Telefon dazu |
 | Kieselsport | Trainings-Reiter | dieselben Sitzungen, aus der Akte zurückgelesen, mit Strecke auf der Karte |
 | Kieselsport | Gesundheitsakte | jeder **Satz** mit seinen Wiederholungen, jede **Pause** dazwischen, jede **Bahn** mit ihrer Länge |
-| SupCycle | Gesundheitsakte + eigener Speicher | jedes genommene Präparat als Ernährungssatz mit Namen; die Quote bleibt für den Trend lokal |
+| SupCycle | Gesundheitsakte + eigener Speicher | jedes neu abgehakte Präparat als Ernährungssatz mit Namen (seit 0.35.0 wirklich — davor stand es nur hier); die Quote bleibt für den Trend lokal |
 | OsmAnd | Kieselstrasse | Abbiegeart, Entfernung, Strasse, Ankunftszeit |
 
 **SupCycle geht als Ernährungssatz in die Akte** — mit Namen, ohne Mengen. Der

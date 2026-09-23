@@ -330,7 +330,11 @@ object Aufgaben {
         if (beginn <= 0 || dauer < 60) return null
         if (!Riegel.neu(context, "kieselsport", beginn.toString())) return null
 
-        val klient = Akte(context).bereit() ?: return "Gesundheitsakte nicht verfügbar"
+        val klient = Akte(context).bereit()
+        if (klient == null) {
+            Riegel.loese(context, "kieselsport")
+            return "Gesundheitsakte nicht verfügbar"
+        }
         val anfang = Instant.ofEpochSecond(beginn)
         val ende = anfang.plusSeconds(dauer)
 
@@ -412,7 +416,7 @@ object Aufgaben {
             if (bahnen > 0) append(", $bahnen Bahnen")
             if (segmente.isNotEmpty()) append(", ${felder[SP_SAETZE] ?: 0} Sätze")
             append(" eingetragen")
-        })
+        }, riegel = "kieselsport")
         return meldung
     }
 
@@ -451,13 +455,14 @@ object Aufgaben {
         }
 
     /**
-     * Supplemente festhalten - im EIGENEN Speicher, nicht in der Akte.
+     * Supplemente festhalten - die Quote im EIGENEN Speicher, jedes genommene
+     * als Ernaehrungssatz mit Namen in der Akte.
      *
      * DIE AKTE KENNT KEIN "GENOMMEN". Was ihr am naechsten kommt, ist ein
-     * Ernaehrungssatz mit Naehrstoffmassen - und die weiss SupCycle nicht: ein
-     * Plan dort besteht aus Namen und Zyklen, nicht aus Milligramm. Eine Zahl
-     * zu erfinden, damit sie in eine fremde Tabelle passt, waere der
-     * schlechteste aller Wege.
+     * Ernaehrungssatz - der bekommt den Namen, aber keine Naehrstoffmassen,
+     * denn die weiss SupCycle nicht: ein Plan dort besteht aus Namen und
+     * Zyklen, nicht aus Milligramm. Eine Zahl zu erfinden, damit sie in eine
+     * fremde Tabelle passt, waere der schlechteste aller Wege.
      *
      * Gezaehlt wird, was FAELLIG war und davon genommen wurde. Ein Praeparat,
      * das heute pausiert, gehoert in keine Quote.
@@ -487,15 +492,23 @@ object Aufgaben {
 
         if (!Riegel.neu(context, "supcycle", "$ymd:$faellig:$genommen")) return null
 
+        // WAS NEU ABGEHAKT WURDE, geht in die Akte - je Praeparat ein
+        // Ernaehrungssatz mit Namen. Nur die neuen: der Zeitpunkt soll der
+        // des Hakens sein, nicht der des naechsten Berichts.
+        val namen = texte[SC_NAMES]?.split("\n").orEmpty()
+        val vorher = Supplemente.lies(context)?.takeIf { it.tag == tag }?.genommen ?: 0L
+        val neuGenommen = genommen and faellig and vorher.inv()
+        for (platz in 0 until 64) {
+            if (((neuGenommen shr platz) and 1L) == 0L) continue
+            val name = namen.getOrNull(platz)?.ifBlank { null } ?: "Präparat ${platz + 1}"
+            praeparat(context, name, tag, platz, Instant.now())
+        }
+
         // Die Namen samt Bitmasken fuer die Liste von HEUTE. Sie stehen
         // nicht im Tagesspeicher: dort gehoert je Tag eine Zahl hin, und
         // eine Liste abgehakter Praeparate von vorletztem Dienstag hat
         // niemand je gebraucht.
-        Supplemente.merke(
-            context, tag,
-            texte[SC_NAMES]?.split("\n").orEmpty(),
-            faellig, genommen,
-        )
+        Supplemente.merke(context, tag, namen, faellig, genommen)
 
         withContext(Dispatchers.IO) {
             Speicher(context).merke(tag, mapOf(
@@ -522,7 +535,11 @@ object Aufgaben {
         if (!Riegel.neu(context, "drinktervall", wann.toString())) return null
 
         val beginn = Instant.ofEpochSecond(wann)
-        val klient = Akte(context).bereit() ?: return "Gesundheitsakte nicht verfügbar"
+        val klient = Akte(context).bereit()
+        if (klient == null) {
+            Riegel.loese(context, "drinktervall")
+            return "Gesundheitsakte nicht verfügbar"
+        }
         schonDa(context, klient, HydrationRecord::class, beginn, FENSTER_WASSER)?.let {
             Log.i(TAG, "Wasser steht schon da, von " + it)
             return "Übersprungen — $it hat dasselbe Glas schon eingetragen"
@@ -537,7 +554,7 @@ object Aufgaben {
             volume = Volume.milliliters(ml.toDouble()),
             metadata = vonDerUhr("drinktervall-" + wann),
         )
-        return schreibe(context, satz, "$ml ml eingetragen")
+        return schreibe(context, satz, "$ml ml eingetragen", riegel = "drinktervall")
     }
 
     /**
@@ -555,7 +572,11 @@ object Aufgaben {
         // DIE PEBBLE-APP KOENNTE DIESELBE MESSUNG EINTRAGEN. Sie synchronisiert
         // die Gesundheitsdaten der Uhr selbst, und die Akte fuehrt nur
         // zusammen, was aus derselben App kommt.
-        val klient = Akte(context).bereit() ?: return "Gesundheitsakte nicht verfügbar"
+        val klient = Akte(context).bereit()
+        if (klient == null) {
+            Riegel.loese(context, "herzintervall")
+            return "Gesundheitsakte nicht verfügbar"
+        }
         val zeitpunkt = Instant.ofEpochSecond(wann)
         schonDa(
             context, klient, HeartRateVariabilityRmssdRecord::class,
@@ -571,7 +592,7 @@ object Aufgaben {
             heartRateVariabilityMillis = ms.toDouble(),
             metadata = vonDerUhr("herzintervall-" + wann),
         )
-        return schreibe(context, satz, "$ms ms eingetragen")
+        return schreibe(context, satz, "$ms ms eingetragen", riegel = "herzintervall")
     }
 
     /**
@@ -714,9 +735,27 @@ object Aufgaben {
     // Ein Training beginnt man nicht zweimal in derselben Viertelstunde.
     private val FENSTER_TRAINING: Duration = Duration.ofMinutes(15)
 
-    private suspend fun schreibe(context: Context, satz: Record, meldung: String): String {
+    /**
+     * In die Akte schreiben - und bei einem Fehlschlag den Riegel wieder
+     * oeffnen.
+     *
+     * DER RIEGEL FAELLT VOR DEM SCHREIBEN, damit ein zweiter Bericht derselben
+     * Messung nicht dazwischenkommt. Scheitert das Schreiben aber - Akte
+     * nicht da, Erlaubnis fehlt -, bliebe er zu, und der naechste Versuch der
+     * Uhr liefe ins Leere: die Messung waere fuer immer weg. Deshalb wird er
+     * hier wieder geoeffnet.
+     */
+    private suspend fun schreibe(
+        context: Context,
+        satz: Record,
+        meldung: String,
+        riegel: String? = null,
+    ): String {
         val klient = Akte(context).bereit()
-            ?: return "Gesundheitsakte nicht verfügbar"
+        if (klient == null) {
+            riegel?.let { Riegel.loese(context, it) }
+            return "Gesundheitsakte nicht verfügbar"
+        }
         return try {
             klient.insertRecords(listOf(satz))
             // Das Widget zeigt Wasser; ein Glas, das erst in einer halben
@@ -727,6 +766,7 @@ object Aufgaben {
             // Die haeufigste Ursache ist eine fehlende Erlaubnis. Sie zu
             // nennen ist nuetzlicher als "Fehler".
             Log.w(TAG, "Eintragen fehlgeschlagen: " + e.message)
+            riegel?.let { Riegel.loese(context, it) }
             "Nicht eingetragen — Erlaubnis in der App prüfen"
         }
     }
@@ -753,5 +793,11 @@ object Riegel {
         if (p.getString(aufgabe, null) == merkmal) return false
         p.edit().putString(aufgabe, merkmal).apply()
         return true
+    }
+
+    /** Den Vormerk zuruecknehmen - wenn das Eintragen danach scheiterte. */
+    fun loese(context: Context, aufgabe: String) {
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
+            .edit().remove(aufgabe).apply()
     }
 }

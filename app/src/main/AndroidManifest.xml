@@ -240,13 +240,15 @@
              App je verlangt hat: Zugriff auf JEDE Benachrichtigung des
              Telefons, fuer eine Handvoll Zahlen. -->
 
-        <!-- Nach einem Neustart den Dienst wieder hochfahren, sonst verpasst
-             man die naechste Messung, ohne es zu merken. -->
+        <!-- Nach einem Neustart UND nach einem Update den Dienst wieder
+             hochfahren, sonst verpasst man die naechste Messung, ohne es zu
+             merken. -->
         <receiver
             android:name=".StartEmpfaenger"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
 

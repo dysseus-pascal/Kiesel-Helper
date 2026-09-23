@@ -6,7 +6,15 @@ import android.content.Intent
 import android.util.Log
 
 /**
- * Faehrt den Empfangsdienst nach einem Neustart wieder hoch.
+ * Faehrt den Empfangsdienst nach einem Neustart wieder hoch - und nach
+ * einem Update.
+ *
+ * NACH EINEM UPDATE IST DER DIENST TOT. Android beendet beim Ersetzen des
+ * Pakets den Prozess und startet nichts von selbst neu; bis jemand die App
+ * oeffnet, hoert niemand der Uhr zu. Genau so ging ein Training verloren:
+ * abends aktualisiert, morgens gefahren, die Zusammenfassung lief ins Leere.
+ * MY_PACKAGE_REPLACED steht wie BOOT_COMPLETED auf der Ausnahmeliste und
+ * darf einen Vordergrunddienst starten.
  *
  * BOOT_COMPLETED ist einer der wenigen impliziten Broadcasts, die ein im
  * Manifest angemeldeter Empfaenger auch ab Android 8 noch bekommt - er steht
@@ -24,11 +32,16 @@ import android.util.Log
  */
 class StartEmpfaenger : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
+        if (intent.action != Intent.ACTION_BOOT_COMPLETED &&
+            intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) return
         try {
             EmpfangsDienst.starte(context)
+            Verlauf(context).merkeMeldung(
+                if (intent.action == Intent.ACTION_BOOT_COMPLETED) "Empfang nach Neustart wieder an"
+                else "Empfang nach Update wieder an"
+            )
         } catch (e: Exception) {
-            Log.w(PebbleEmpfaenger.TAG, "Start nach Neustart abgelehnt: " + e.message)
+            Log.w(PebbleEmpfaenger.TAG, "Start abgelehnt: " + e.message)
         }
     }
 }
