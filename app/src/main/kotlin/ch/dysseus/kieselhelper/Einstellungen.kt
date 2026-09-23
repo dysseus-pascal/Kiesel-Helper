@@ -110,6 +110,22 @@ object Einstellungen {
         context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
             .edit().putBoolean(FUEHRT, fuehrt).apply()
     }
+    // --- Der Maximalpuls, fuer die Zonen ---
+    //
+    // DERSELBE WERT WIE AUF DER UHR, von Hand eingetragen: die Uhr schickt ihn
+    // nicht mit, und die Zonen der Auswertung sollen dieselben sein, die man
+    // beim Training gesehen hat. Vorgabe wie dort: 190.
+    private const val MAXPULS = "maxpuls"
+    const val MAXPULS_VORGABE = 190
+
+    fun maxpuls(context: Context): Int =
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE).getInt(MAXPULS, MAXPULS_VORGABE)
+
+    fun setzeMaxpuls(context: Context, wert: Int) {
+        if (wert < 120 || wert > 230) return
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE).edit().putInt(MAXPULS, wert).apply()
+    }
+
     // --- Die Sicherung ---
 
     private const val DAV_TAEGLICH = "sicherung_taeglich"

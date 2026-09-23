@@ -95,8 +95,151 @@ class VergangeneActivity : ComponentActivity() {
         }
         val voll = TrainingTab.vervollstaendige(this, eintrag)
         Ton.setze(Ton.TRAINING)
-        inhalt.addView(TrainingTab.sitzungskarte(this, voll, gross = true, karten = karten))
+        inhalt.addView(TrainingTab.sitzungskarte(this, voll, gross = true, karten = karten,
+            mitKarte = false, antippbar = false))
+        zeigeDetails(voll)
         karten.forEach { it.onResume() }
+    }
+
+    /**
+     * Alles, was mehr ist als der erste Blick.
+     *
+     * DIE STRECKE IST DIE ACHSE. Puls, Tempo und Hoehe stehen ueber den
+     * Kilometern, nicht ueber der Zeit: "am Anstieg bei Kilometer vier" ist,
+     * wie man sich an eine Fahrt erinnert. Und auf der Karte traegt die Linie
+     * das Tempo als Farbe - blau, wo es zaeh war, rot, wo es lief.
+     */
+    private fun zeigeDetails(e: TrainingTab.Eintrag) {
+        val art = Sportart.von(e.sitzung)
+        val ton = farbe(art.farbe)
+        val maxpuls = Einstellungen.maxpuls(this)
+        val rad = e.sitzung.exerciseType == androidx.health.connect.client.records.ExerciseSessionRecord.EXERCISE_TYPE_BIKING
+        val strecke = Trainingsanalyse.strecke(e.punkte)
+
+        // --- Zonen ---
+        if (e.puls.size >= 2) {
+            val zonen = Trainingsanalyse.zonenSekunden(e.puls, maxpuls)
+            val schwer = zonen[4] + zonen[5]
+            val summe = zonen.sum().coerceAtLeast(1)
+            inhalt.addView(abschnitt("PULSZONEN"))
+            inhalt.addView(karte().apply {
+                addView(zart("Zeit je Zone, Maximalpuls $maxpuls (Einstellungen)"))
+                addView(zonenbalken(zonen))
+                addView(zonenliste(zonen, maxpuls))
+                addView(zart(
+                    when {
+                        schwer * 100 / summe >= 50 -> "Mehr als die Hälfte an oder über der Schwelle — ein hartes Training."
+                        zonen[2] + zonen[3] >= summe * 6 / 10 -> "Vor allem Grundlage und Ausdauer — so baut man Form auf."
+                        zonen[0] + zonen[1] >= summe / 2 -> "Überwiegend locker — Erholung oder ein Spaziergang mit Puls."
+                        else -> "Gemischt über die Zonen."
+                    }
+                ).apply { setPadding(0, dp(8f), 0, 0) })
+            })
+        }
+
+        if (strecke.size >= 2) {
+            // --- Puls ueber die Strecke, mit den Zonen als Baender ---
+            val pulsStrecke = Trainingsanalyse.pulsUeberStrecke(e.puls, strecke)
+            if (pulsStrecke.size >= 2) {
+                val baender = (1..5).map { z ->
+                    val von = maxpuls * Trainingsanalyse.ZONEN_PROZENT[z - 1] / 100.0
+                    val bis = if (z == 5) 250.0 else maxpuls * Trainingsanalyse.ZONEN_PROZENT[z] / 100.0
+                    Triple(von, bis, Zonenfarben.FARBEN[z])
+                }
+                inhalt.addView(abschnitt("PULS ÜBER DIE STRECKE"))
+                inhalt.addView(karte().apply {
+                    addView(zart("Wo der Puls stieg — die Bänder sind die Zonen"))
+                    addView(streckenverlauf(pulsStrecke, ton, "bpm", baender = baender))
+                })
+            }
+
+            // --- Tempo ---
+            val tempo = Trainingsanalyse.tempoUeberStrecke(strecke)
+            val (langsam, schnell) = Trainingsanalyse.tempoSpanne(strecke)
+            val tempoText: (Double) -> String = { ms ->
+                if (rad) Zahlen.eine(ms * 3.6) + " km/h"
+                else if (ms > 0.2) { val s = 1000 / ms; String.format("%d:%02d /km", (s / 60).toInt(), (s % 60).toInt()) } else "–"
+            }
+            inhalt.addView(abschnitt("TEMPO"))
+            inhalt.addView(karte().apply {
+                val mittel = strecke.last().meter / strecke.last().sekunde.coerceAtLeast(1)
+                val spitze = strecke.maxOf { it.tempo }
+                addView(reihe().apply {
+                    addView(messwert("Schnitt", tempoText(mittel).substringBefore(" "), tempoText(mittel).substringAfter(" ", ""), 0f, false))
+                    addView(messwert("Spitze", tempoText(spitze).substringBefore(" "), tempoText(spitze).substringAfter(" ", ""), 0f, false))
+                    addView(messwert("Bewegt", Zahlen.dauer(strecke.last().sekunde / 60.0), "", 0f, false))
+                })
+                addView(zart("Über die Strecke, gefärbt wie auf der Karte").apply { setPadding(0, dp(10f), 0, 0) })
+                addView(streckenverlauf(
+                    tempo, ton, "km/h",
+                    farbeJeWert = { kmh -> Zonenfarben.tempofarbe((((kmh / 3.6) - langsam) / (schnell - langsam)).toFloat()) },
+                    flaeche = false, nachkomma = 0,
+                ))
+            })
+
+            // --- Die Karte, gefaerbt ---
+            inhalt.addView(abschnitt("TEMPO AUF DER KARTE"))
+            inhalt.addView(karte().apply {
+                addView(zart("Blau, wo es zäh war — rot, wo es lief"))
+                addView(tempokarte(strecke, karten))
+                addView(tempolegende(tempoText(langsam), tempoText(schnell)))
+            })
+
+            // --- Hoehe ---
+            val hoehe = Trainingsanalyse.hoeheUeberStrecke(strecke)
+            if (hoehe.size >= 2 && hoehe.maxOf { it.wert } - hoehe.minOf { it.wert } >= 10) {
+                inhalt.addView(abschnitt("HÖHENPROFIL"))
+                inhalt.addView(karte().apply {
+                    addView(reihe().apply {
+                        addView(messwert("Aufstieg", Zahlen.ganz(Spur.hoehenmeter(e.punkte)), "m", 0f, false))
+                        addView(messwert("Tiefster", Zahlen.ganz(hoehe.minOf { it.wert }), "m ü. M.", 0f, false))
+                        addView(messwert("Höchster", Zahlen.ganz(hoehe.maxOf { it.wert }), "m ü. M.", 0f, false))
+                    })
+                    addView(streckenverlauf(hoehe, farbe(R.color.sport_wandern), "m", nachkomma = 0, hoehe = 130f))
+                })
+            }
+
+            // --- Kilometer ---
+            val km = Trainingsanalyse.kilometer(strecke, e.puls)
+            if (km.size >= 2) {
+                inhalt.addView(abschnitt("KILOMETER FÜR KILOMETER"))
+                inhalt.addView(karte().apply {
+                    val schnellste = km.filter { it.meter >= 900 }.minByOrNull { it.sekunden / it.meter }
+                    addView(reihe().apply {
+                        addView(zart("km").apply { minWidth = dp(34f) })
+                        addView(zart("Zeit").apply { layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f) })
+                        addView(zart(if (rad) "km/h" else "/km").apply { minWidth = dp(64f) })
+                        addView(zart("Puls").apply { minWidth = dp(48f) })
+                        addView(zart("Auf").apply { minWidth = dp(48f); gravity = android.view.Gravity.END })
+                    })
+                    km.forEach { k ->
+                        addView(strich())
+                        val ms = k.meter / k.sekunden.coerceAtLeast(1)
+                        addView(reihe().apply {
+                            setPadding(0, dp(5f), 0, dp(5f))
+                            val fett = k == schnellste
+                            addView(fliesstext(k.nummer.toString() + (if (k.meter < 900) "*" else "")).apply { minWidth = dp(34f) })
+                            addView(fliesstext(Zahlen.dauer(k.sekunden / 60.0) ?: "").apply {
+                                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                            })
+                            addView(fliesstext(tempoText(ms).substringBefore(" ")).apply {
+                                minWidth = dp(64f)
+                                if (fett) { setTypeface(typeface, android.graphics.Typeface.BOLD); setTextColor(ton) }
+                            })
+                            addView(fliesstext(k.pulsMittel?.let { Zahlen.ganz(it) } ?: "–").apply { minWidth = dp(48f) })
+                            addView(fliesstext(if (k.aufstieg >= 1) "+" + Zahlen.ganz(k.aufstieg) else "–").apply {
+                                minWidth = dp(48f); gravity = android.view.Gravity.END
+                            })
+                        })
+                    }
+                    if (km.any { it.meter < 900 }) addView(zart("* angefangener Kilometer").apply { setPadding(0, dp(6f), 0, 0) })
+                })
+            }
+        } else if (e.puls.size < 2) {
+            inhalt.addView(karte().apply {
+                addView(zart("Ohne Strecke und ohne Pulskurve gibt es hier nichts weiter zu zeigen."))
+            })
+        }
     }
 
     /**

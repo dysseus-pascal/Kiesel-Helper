@@ -347,6 +347,8 @@ object TrainingTab {
         eintrag: Eintrag,
         gross: Boolean,
         karten: MutableList<MapView> = this.karten,
+        mitKarte: Boolean = true,
+        antippbar: Boolean = true,
     ): LinearLayout {
         val sitzung = eintrag.sitzung
         val art = Sportart.von(sitzung)
@@ -380,16 +382,33 @@ object TrainingTab {
         val punkte = eintrag.punkte
         if (gross && punkte.size >= 2) {
             k.addView(streckendaten(ctx, punkte, eintrag.sitzung.exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_BIKING))
-            k.addView(kartenbild(ctx, punkte, karten))
+            if (mitKarte) k.addView(kartenbild(ctx, punkte, karten))
         } else if (!gross && eintrag.meter > 100) {
             k.addView(ctx.zart(
                 (Zahlen.eine(eintrag.meter / 1000) ?: "") + " km aufgezeichnet"
             ))
-        } else if (gross) {
+        } else if (gross && mitKarte) {
             k.addView(ctx.zart(
                 "Keine Strecke — entweder war das Telefon nicht dabei, oder die " +
                     "Standortberechtigung fehlte."
             ))
+        }
+        // DIE KARTE FUEHRT WEITER: Zonen, Puls ueber die Strecke, Tempo als
+        // Farbe, Kilometer - alles, was mehr ist als der erste Blick, steht
+        // auf der eigenen Seite. Der Reiter zeigt die Grundzahlen.
+        if (antippbar) {
+            val beginn = sitzung.startTime.epochSecond
+            k.addView(android.widget.TextView(ctx).apply {
+                text = "Alles zum Training  ›"
+                setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14f)
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setTextColor(ctx.akzentfarbe())
+                gravity = android.view.Gravity.END
+                setPadding(0, ctx.dp(12f), 0, ctx.dp(2f))
+                setOnClickListener { VergangeneActivity.zeige(ctx, beginn) }
+            })
+            k.isClickable = true
+            k.setOnClickListener { VergangeneActivity.zeige(ctx, beginn) }
         }
         return k
     }

@@ -362,6 +362,35 @@ nicht sterben.
 dem Nachttief hergeleiteten Wert sieht man in einem Jahresmittel nicht mehr an,
 woher er kam.
 
+## Die Seite zum Training
+
+Die Karte im Trainings-Reiter zeigt die Grundzahlen — Dauer, Puls, Strecke —
+und führt beim Antippen auf eine eigene Seite mit allem, was mehr ist als der
+erste Blick:
+
+- **Pulszonen** — Zeit je Zone als Balken und Liste, in den Farben der Uhr.
+  Die Zonen rechnen sich aus dem **Maximalpuls** in den Einstellungen; er ist
+  von Hand einzutragen, derselbe wie in Kieselsport, die Uhr schickt ihn nicht
+  mit. Ein Satz darunter sagt, was für ein Training es war.
+- **Puls über die Strecke** — die Kurve über den Kilometern, die Zonen als
+  Bänder dahinter. Die Strecke ist die Achse, nicht die Zeit: »am Anstieg bei
+  Kilometer vier« ist, wie man sich an eine Fahrt erinnert.
+- **Tempo** — Schnitt, Spitze, bewegte Zeit; darunter das Tempo über die
+  Strecke, gefärbt wie auf der Karte. Auf dem Rad in km/h, sonst in min/km.
+- **Tempo auf der Karte** — die Linie trägt das Tempo als Farbe: blau, wo es
+  zäh war, über Grün und Gelb bis Rot, wo es lief. Die Spanne sind das 5.- und
+  das 95.-Perzentil, damit ein Ausreisser nicht alles andere blau färbt.
+  Aufeinander folgende Punkte derselben Farbstufe werden zu einer Linie — ein
+  paar Dutzend statt Tausend, sonst wird die Karte zäh.
+- **Höhenprofil** — wenn das GPS Höhen lieferte und mehr als zehn Meter
+  dazwischen liegen; geglättet über fünf Punkte, weil GPS-Höhe zittert.
+- **Kilometer für Kilometer** — Zeit, Tempo, Puls und Aufstieg je Kilometer,
+  der schnellste hervorgehoben.
+
+Das Tempo ist über rund zehn Sekunden geglättet: aus zwei GPS-Punkten im
+Sekundenabstand wird sonst ein Tempo, das zwischen 10 und 40 km/h flattert.
+Gerechnet wird in `Trainingsanalyse`, ohne Schirm — und deshalb mit Tests.
+
 ## Was die Uhr direkt liefert
 
 Seit 0.38.0 kommen drei Dinge nicht mehr nur über Health Connect, sondern

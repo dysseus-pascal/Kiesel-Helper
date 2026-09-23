@@ -122,6 +122,7 @@ class EinstellungenActivity : ComponentActivity() {
         wurzel.luft(8f)
         wurzel.addView(abschnitt("TRAINING"))
         wurzel.addView(spurkarte())
+        wurzel.addView(pulskarte())
 
         wurzel.luft(8f)
         wurzel.addView(abschnitt("SICHERUNG"))
@@ -425,6 +426,34 @@ class EinstellungenActivity : ComponentActivity() {
      * gefragt wird, wer eine Strecke will. Ohne sie laeuft alles andere
      * weiter - das Training wird eingetragen, nur ohne Karte.
      */
+    /**
+     * Der Maximalpuls - derselbe wie auf der Uhr, damit die Zonen der
+     * Auswertung die sind, die man beim Training gesehen hat.
+     */
+    private fun pulskarte(): LinearLayout {
+        val k = karte()
+        k.addView(kartentitel("Pulszonen"))
+        k.addView(zart(
+            "Die Zonen rechnen sich aus dem Maximalpuls: Zone 1 ab 50 %, Zone 5 ab " +
+                "90 %. Trag denselben Wert ein wie in den Einstellungen von " +
+                "Kieselsport — die Uhr schickt ihn nicht mit."
+        ))
+        val feld = feld("Maximalpuls", Einstellungen.maxpuls(this).toString()).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+        }
+        k.addView(feld)
+        k.addView(knopfLeise("Speichern") {
+            val wert = feld.text().toIntOrNull()
+            if (wert == null || wert < 120 || wert > 230) {
+                melde("Zwischen 120 und 230")
+            } else {
+                Einstellungen.setzeMaxpuls(this, wert)
+                melde("Maximalpuls $wert gespeichert")
+            }
+        })
+        return k
+    }
+
     private fun spurkarte(): LinearLayout {
         val k = karte()
         k.addView(kartentitel("Strecke aufzeichnen"))
