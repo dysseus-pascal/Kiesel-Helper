@@ -65,11 +65,18 @@ jobs:
         run: |
           FASSUNG="$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)"
           TAG="v$FASSUNG"
+          cp app/build/outputs/apk/debug/*.apk kiesel-helper.apk
+          # GIBT ES DAS RELEASE SCHON, FEHLT VIELLEICHT NUR DAS PAKET: ein
+          # Hochladen kann still danebengehen. Dann nur das nachreichen,
+          # den Text nicht anruehren.
           if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG gibt es schon."
+            if gh release view "$TAG" --json assets -q '.assets[].name' | grep -qx kiesel-helper.apk; then
+              echo "Release $TAG samt Paket gibt es schon."
+            else
+              gh release upload "$TAG" kiesel-helper.apk --clobber
+            fi
             exit 0
           fi
-          cp app/build/outputs/apk/debug/*.apk kiesel-helper.apk
           NOTIZ=".github/release/$FASSUNG.md"
           if [ -f "$NOTIZ" ]; then
             TITEL="$FASSUNG - $(head -1 "$NOTIZ")"
@@ -78,5 +85,9 @@ jobs:
             TITEL="$FASSUNG - $(git log -1 --format=%s)"
             git log -1 --format=%b | sed '/^Co-Authored-By:/d;/^Claude-Session:/d' > notizen.md
           fi
-          gh release create "$TAG" kiesel-helper.apk \
+          gh release create "$TAG" \
             --target "$GITHUB_SHA" --title "$TITEL" --notes-file notizen.md
+          # Das Paket getrennt und mit Pruefung: beim Anlegen in einem Zug
+          # kam es einmal nicht an, ohne dass gh sich beschwert haette.
+          gh release upload "$TAG" kiesel-helper.apk --clobber
+          gh release view "$TAG" --json assets -q '.assets[].name' | grep -qx kiesel-helper.apk
