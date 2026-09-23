@@ -72,6 +72,11 @@ object UhrSender {
             val o = JSONObject()
             o.put(SCHLUESSEL, nummer)
             when (wert) {
+                is Wert.Bytes -> {
+                    o.put(TYP, "bytes")
+                    o.put(BREITE, 0)
+                    o.put(WERT, android.util.Base64.encodeToString(wert.bytes, android.util.Base64.NO_WRAP))
+                }
                 is Wert.Text -> {
                     o.put(TYP, "string")
                     o.put(BREITE, 0)          // Width.NONE

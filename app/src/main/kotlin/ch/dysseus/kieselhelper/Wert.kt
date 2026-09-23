@@ -22,6 +22,7 @@ sealed class Wert {
     fun alsText(): String = when (this) {
         is Zahl -> zahl.toString()
         is Text -> text
+        is Bytes -> bytes.size.toString() + " Byte"
     }
 
     /**
@@ -67,6 +68,7 @@ sealed class Wert {
         val roh: String = when (this) {
             is Zahl -> if (muster == null) return skaliere(zahl.toDouble(), faktor) else zahl.toString()
             is Text -> text
+            is Bytes -> return null
         }
         val gefangen = if (muster == null) roh else {
             val treffer = muster.find(roh) ?: return null
