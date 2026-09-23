@@ -362,6 +362,28 @@ nicht sterben.
 dem Nachttief hergeleiteten Wert sieht man in einem Jahresmittel nicht mehr an,
 woher er kam.
 
+## Was die Uhr direkt liefert
+
+Seit 0.38.0 kommen drei Dinge nicht mehr nur über Health Connect, sondern
+direkt von der Uhr — und landen von hier aus in der Akte:
+
+- **Die Pulskurve zum Training**, von Kieselsport (ab 0.9.0) per **Data
+  Logging**: der Hintergrund-Worker der Uhr schreibt jede Sekunde einen Satz,
+  die Pebble-App holt sie ab, sobald sie die Uhr erreicht, und reicht jeden als
+  Broadcast weiter (`com.getpebble.action.dl.RECEIVE_DATA`, bestätigt mit
+  `ACK_DATA`). Die Sätze sammeln sich in einer Datei je Training und gehen als
+  Herzfrequenz-Eintrag in die Akte, sobald das Log abgeschlossen ist oder die
+  Zusammenfassung ankommt. Der Trainings-Reiter liest die Kurve ohnehin aus der
+  Akte — sie steht damit von selbst unter dem Training. *Ungeprüft mit der
+  neuen Pebble-App:* ob sie Data Logging an klassische Companion-Apps
+  weiterreicht, steht nirgends.
+- **Die Nacht und der Ruhepuls**, von Drinktervall (ab 1.10.0): Schlafbeginn,
+  Schlafende und Ruhepuls der Uhr fahren bei jeder Standmeldung mit. Schlaf
+  wird nur eingetragen, wenn nicht schon eine andere App dieselbe Nacht
+  geschrieben hat; der Ruhepuls einmal am Tag.
+- **HRV aus dem Yoga**, von Kieselsport: der RMSSD des Trainings, als eigener
+  Satz zum Trainingsende — wie die nächtliche Messung von Herzintervall.
+
 ## Sicherung in einen Ordner auf dem Telefon
 
 **Die Gesundheitsakte hält rund dreissig Tage.** Alles, was diese App an

@@ -16,6 +16,9 @@
          nichts zuerst. Diese App zeigt acht Zahlen und sonst nichts - dafuer
          muss sie sie lesen duerfen. -->
     <uses-permission android:name="android.permission.health.WRITE_HEART_RATE_VARIABILITY" />
+    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.WRITE_SLEEP" />
+    <uses-permission android:name="android.permission.health.WRITE_RESTING_HEART_RATE" />
     <uses-permission android:name="android.permission.health.WRITE_HYDRATION" />
     <!-- Koffein und genommene Praeparate. Die Akte fuehrt beides als
          Ernaehrung; einen eigenen Satz fuer "genommen" hat sie nicht. -->

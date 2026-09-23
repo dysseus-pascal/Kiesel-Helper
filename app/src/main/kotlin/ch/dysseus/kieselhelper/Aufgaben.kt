@@ -8,6 +8,9 @@ import androidx.health.connect.client.records.ExerciseRoute
 import androidx.health.connect.client.records.ExerciseSegment
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
+import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.RestingHeartRateRecord
+import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.NutritionRecord
@@ -59,6 +62,12 @@ object Aufgaben {
      */
     private const val DT_GLASS_ML = 10008
     private const val DT_DRANK_AT = 10009
+    // Die Nacht, von der Uhr gemessen - Drinktervall schickt sie mit, weil
+    // es ohnehin mehrmals am Tag mit dem Telefon redet.
+    private const val DT_SLEEP_START = 10011
+    private const val DT_SLEEP_END = 10012
+    private const val DT_SLEEP_RESTFUL = 10013
+    private const val DT_RESTING_HR = 10014
 
     // --- Herzintervall: naechtliche RMSSD-Messung ---
 
@@ -129,6 +138,7 @@ object Aufgaben {
         else -> ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT to "Training"
     }
 
+    private const val SP_HRV = 10017
     private const val SP_SAETZE = 10013
     private const val SP_REPS = 10014
     private const val SP_BAHNEN = 10015
@@ -448,6 +458,24 @@ object Aufgaben {
             meldung = schreibe(context, ohne, "$kurz (ohne die einzelnen Abschnitte)",
                 riegel = "kieselsport")
         }
+
+        // YOGA BRINGT EINE HRV MIT. Sie gehoert als eigener Satz in die Akte,
+        // zum Ende des Trainings - so wie die naechtliche von Herzintervall.
+        felder[SP_HRV]?.takeIf { it in 5..300 }?.let { hrv ->
+            if (Riegel.neu(context, "kieselsport-hrv", beginn.toString())) {
+                schreibe(context, HeartRateVariabilityRmssdRecord(
+                    time = ende,
+                    zoneOffset = null,
+                    heartRateVariabilityMillis = hrv.toDouble(),
+                    metadata = vonDerUhr("kieselsport-hrv-" + beginn),
+                ), "HRV $hrv ms eingetragen", riegel = "kieselsport-hrv")
+                meldung += ", HRV $hrv ms"
+            }
+        }
+
+        // Die Pulskurve, falls die Uhr sie schon geliefert hat. Kommt sie
+        // spaeter, traegt der Datenlog-Empfaenger sie selbst ein.
+        if (Pulskurve.eintragen(context, beginn)) meldung += ", Pulskurve"
         return meldung
     }
 
@@ -462,7 +490,14 @@ object Aufgaben {
         HealthPermission.getWritePermission(NutritionRecord::class),
         // Fuer die Trainingssitzungen von Kieselsport.
         HealthPermission.getWritePermission(ExerciseSessionRecord::class),
+        // Die Pulskurve zum Training, die Nacht und der Ruhepuls von der Uhr.
+        HealthPermission.getWritePermission(HeartRateRecord::class),
+        HealthPermission.getWritePermission(SleepSessionRecord::class),
+        HealthPermission.getWritePermission(RestingHeartRateRecord::class),
     )
+
+    /** Fuer den Datenlog-Empfaenger: nur Kieselsport schreibt Logs. */
+    val KIESELSPORT_UUID: UUID get() = KIESELSPORT
 
     /**
      * Eine Nachricht von der Uhr verarbeiten.
@@ -560,9 +595,12 @@ object Aufgaben {
      * natuerliche Schluessel dafuer.
      */
     private suspend fun wasser(context: Context, felder: Map<Int, Long>): String? {
-        val ml = felder[DT_GLASS_ML] ?: return null
-        val wann = felder[DT_DRANK_AT] ?: return null
-        if (ml <= 0 || wann <= 0) return null
+        // Die Nacht faehrt bei jeder Standmeldung mit; das Glas nur, wenn
+        // eines getrunken wurde. Beides unabhaengig voneinander.
+        val nacht = nacht(context, felder)
+        val ml = felder[DT_GLASS_ML] ?: return nacht
+        val wann = felder[DT_DRANK_AT] ?: return nacht
+        if (ml <= 0 || wann <= 0) return nacht
         if (!Riegel.neu(context, "drinktervall", wann.toString())) return null
 
         val beginn = Instant.ofEpochSecond(wann)
@@ -586,6 +624,60 @@ object Aufgaben {
             metadata = vonDerUhr("drinktervall-" + wann),
         )
         return schreibe(context, satz, "$ml ml eingetragen", riegel = "drinktervall")
+    }
+
+    /**
+     * Die Nacht von der Uhr: Schlafbeginn, Schlafende, Ruhepuls.
+     *
+     * DIE PEBBLE-APP SCHREIBT SCHLAF WOMOEGLICH SELBST in die Akte. Dann
+     * steht er schon da, und ein zweiter Eintrag ueber dieselbe Nacht waere
+     * eine doppelte Nacht - deshalb erst nachsehen, wie beim Wasser.
+     */
+    private suspend fun nacht(context: Context, felder: Map<Int, Long>): String? {
+        val meldungen = mutableListOf<String>()
+        val start = felder[DT_SLEEP_START] ?: 0
+        val ende = felder[DT_SLEEP_END] ?: 0
+        val klient = Akte(context).bereit()
+
+        if (start > 0 && ende > start + 1800 && Riegel.neu(context, "schlaf", ende.toString())) {
+            if (klient == null) {
+                Riegel.loese(context, "schlaf")
+                return "Gesundheitsakte nicht verfügbar"
+            }
+            val von = Instant.ofEpochSecond(start)
+            val bis = Instant.ofEpochSecond(ende)
+            val fremd = schonDa(context, klient, SleepSessionRecord::class, bis, FENSTER_SCHLAF)
+            if (fremd != null) {
+                Log.i(TAG, "Schlaf steht schon da, von " + fremd)
+            } else {
+                val satz = SleepSessionRecord(
+                    startTime = von,
+                    startZoneOffset = null,
+                    endTime = bis,
+                    endZoneOffset = null,
+                    title = "Schlaf (Uhr)",
+                    metadata = vonDerUhr("uhr-schlaf-" + ende),
+                )
+                val stunden = Duration.between(von, bis).toMinutes()
+                meldungen += schreibe(context, satz,
+                    "Schlaf ${stunden / 60} h ${stunden % 60} min eingetragen", riegel = "schlaf")
+            }
+        }
+
+        val ruhe = felder[DT_RESTING_HR] ?: 0
+        if (ruhe in 30..120 && klient != null) {
+            val tag = LocalDate.now().toString()
+            if (Riegel.neu(context, "ruhepuls", tag)) {
+                val satz = RestingHeartRateRecord(
+                    time = Instant.now(),
+                    zoneOffset = null,
+                    beatsPerMinute = ruhe,
+                    metadata = vonDerUhr("uhr-ruhepuls-" + tag),
+                )
+                meldungen += schreibe(context, satz, "Ruhepuls $ruhe eingetragen", riegel = "ruhepuls")
+            }
+        }
+        return meldungen.takeIf { it.isNotEmpty() }?.joinToString(", ")
     }
 
     /**
@@ -762,6 +854,7 @@ object Aufgaben {
      * zwei Eintraege in derselben Minute nicht.
      */
     private val FENSTER_HRV: Duration = Duration.ofMinutes(5)
+    private val FENSTER_SCHLAF: Duration = Duration.ofHours(2)
     private val FENSTER_WASSER: Duration = Duration.ofMinutes(1)
     // Ein Training beginnt man nicht zweimal in derselben Viertelstunde.
     private val FENSTER_TRAINING: Duration = Duration.ofMinutes(15)

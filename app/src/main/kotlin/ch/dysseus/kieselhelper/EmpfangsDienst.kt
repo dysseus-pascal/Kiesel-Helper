@@ -35,6 +35,7 @@ import android.util.Log
 class EmpfangsDienst : Service() {
 
     private var empfaenger: PebbleEmpfaenger? = null
+    private var datenlog: DatenlogEmpfaenger? = null
 
     /**
      * Der Minutentakt fuer das Widget.
@@ -67,6 +68,21 @@ class EmpfangsDienst : Service() {
         }
         empfaenger = e
         Log.i(PebbleEmpfaenger.TAG, "Empfaenger zur Laufzeit angemeldet")
+
+        // Der zweite Draht: die Logs der Uhr (Pulskurve), auf denselben
+        // Bedingungen wie die Nachrichten.
+        val d = DatenlogEmpfaenger()
+        val logFilter = IntentFilter().apply {
+            addAction(DatenlogEmpfaenger.ACTION_RECEIVE_DATA)
+            addAction(DatenlogEmpfaenger.ACTION_FINISH_SESSION)
+        }
+        if (Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(d, logFilter, Context.RECEIVER_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(d, logFilter)
+        }
+        datenlog = d
 
         registerReceiver(takt, IntentFilter(Intent.ACTION_TIME_TICK))
 
@@ -122,6 +138,13 @@ class EmpfangsDienst : Service() {
             }
         }
         empfaenger = null
+        datenlog?.let {
+            try {
+                unregisterReceiver(it)
+            } catch (e: IllegalArgumentException) {
+            }
+        }
+        datenlog = null
         try {
             unregisterReceiver(takt)
         } catch (e: IllegalArgumentException) {
