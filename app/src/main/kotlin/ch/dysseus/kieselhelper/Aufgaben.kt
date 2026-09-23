@@ -341,11 +341,16 @@ object Aufgaben {
         if (dauer == null) {
             // Eine blosse Zustandsmeldung: sie steuert nur die Aufzeichnung.
             val beginn = felder[SP_BEGINN] ?: return null
-            val (_, name) = artAlsSatzart(felder[SP_ART] ?: -1)
+            val artNummer = felder[SP_ART] ?: -1
+            val (_, name) = artAlsSatzart(artNummer)
+            // NUR WO ES EINE STRECKE GIBT, laeuft das GPS: Laufen, Bike,
+            // Wandern, MTB. Beim Kraft in der Halle, beim Yoga und im Becken
+            // zeichnete es nur Rauschen auf - und kostete den Akku.
+            val mitStrecke = artNummer in setOf(0L, 1L, 2L, 4L)
             return when (zustand) {
-                1L -> { SpurDienst.starte(context, beginn, name); "$name begonnen" }
+                1L -> { if (mitStrecke) SpurDienst.starte(context, beginn, name); "$name begonnen" }
                 2L -> { SpurDienst.stoppe(context); "$name pausiert" }
-                3L -> { SpurDienst.starte(context, beginn, name); "$name fortgesetzt" }
+                3L -> { if (mitStrecke) SpurDienst.starte(context, beginn, name); "$name fortgesetzt" }
                 0L -> { SpurDienst.stoppe(context); null }
                 else -> null
             }

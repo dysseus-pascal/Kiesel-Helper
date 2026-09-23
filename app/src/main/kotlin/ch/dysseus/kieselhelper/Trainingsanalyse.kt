@@ -179,6 +179,61 @@ object Trainingsanalyse {
         return aus
     }
 
+    /**
+     * Die Steigung je Punkt in Prozent, ueber rund fuenfzig Meter Strecke.
+     *
+     * Aus zwei Nachbarpunkten waere es Rauschen: GPS-Hoehe zittert um Meter,
+     * und zwei Meter auf drei Meter Weg waeren siebzig Prozent.
+     */
+    fun steigung(strecke: List<Streckenpunkt>): List<Double> {
+        if (strecke.size < 2 || strecke.count { it.hoehe != null } < strecke.size / 2) {
+            return strecke.map { 0.0 }
+        }
+        return strecke.indices.map { i ->
+            var a = i
+            while (a > 0 && strecke[i].meter - strecke[a - 1].meter < 25) a--
+            var b = i
+            while (b < strecke.size - 1 && strecke[b + 1].meter - strecke[i].meter < 25) b++
+            val ha = strecke[a].hoehe
+            val hb = strecke[b].hoehe
+            val dm = strecke[b].meter - strecke[a].meter
+            if (ha == null || hb == null || dm < 5) 0.0 else ((hb - ha) / dm * 100).coerceIn(-40.0, 40.0)
+        }
+    }
+
+    /** Der Puls zu einer Sekunde - der naechste Messpunkt, hoechstens eine Minute weg. */
+    fun pulsBei(puls: List<Pulspunkt>, sekunde: Long): Long? =
+        puls.minByOrNull { abs(it.sekunde - sekunde) }
+            ?.takeIf { abs(it.sekunde - sekunde) <= 60 }?.bpm
+
+    /** Der mittlere Puls in einer Spanne, null wenn keiner drin liegt. */
+    fun pulsMittel(puls: List<Pulspunkt>, von: Long, bis: Long): Double? =
+        puls.filter { it.sekunde in von..bis }.takeIf { it.isNotEmpty() }?.map { it.bpm }?.average()
+
+    /**
+     * Wie schnell der Puls in den Pausen faellt, in Schlaegen je Minute.
+     *
+     * DAS IST DIE ZAHL, DIE BEIM KRAFTTRAINING ETWAS SAGT: nicht der Puls im
+     * Satz, sondern wie schnell er danach wieder unten ist. Je Pause der
+     * Abfall zwischen Anfang und Ende, auf die Minute gerechnet, im Mittel.
+     */
+    fun erholung(puls: List<Pulspunkt>, pausen: List<Pair<Long, Long>>): Double? {
+        val werte = pausen.mapNotNull { (von, bis) ->
+            if (bis - von < 30) return@mapNotNull null
+            val a = pulsBei(puls, von) ?: return@mapNotNull null
+            val b = pulsBei(puls, bis) ?: return@mapNotNull null
+            (a - b).toDouble() / ((bis - von) / 60.0)
+        }
+        return werte.takeIf { it.isNotEmpty() }?.average()
+    }
+
+    /** Wie gleichmaessig Werte sind: die Standardabweichung. */
+    fun schwankung(werte: List<Double>): Double {
+        if (werte.size < 2) return 0.0
+        val m = werte.average()
+        return Math.sqrt(werte.sumOf { (it - m) * (it - m) } / werte.size)
+    }
+
     /** Zwischen welchen Werten das Tempo liegt, ohne die Ausreisser oben. */
     fun tempoSpanne(strecke: List<Streckenpunkt>): Pair<Double, Double> {
         val werte = strecke.map { it.tempo }.filter { it > 0.3 }.sorted()

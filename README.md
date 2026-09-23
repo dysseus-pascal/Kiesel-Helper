@@ -387,6 +387,20 @@ erste Blick:
 - **Kilometer für Kilometer** — Zeit, Tempo, Puls und Aufstieg je Kilometer,
   der schnellste hervorgehoben.
 
+**Jede Sportart hat ihre eigene Frage**, und die Seite zeigt die Antwort
+darauf statt derselben Bilder für alle:
+
+| Art | Was die Seite zeigt |
+|---|---|
+| Laufen, Bike, MTB | Zonen, Puls und Tempo über die Strecke, Tempo als Farbe auf der Karte, Höhenprofil, Kilometer |
+| Wandern | Zonen, **Höhenprofil zuerst**, Aufstieg in m/h, Puls über die Strecke, **Steigung als Farbe auf der Karte** (blau bergab, rot bergauf), Kilometer |
+| Kraft | Zonen, Puls über die Zeit mit den Sätzen als Bändern, Satztabelle (Wdh., Dauer, Puls, Pause), und **wie schnell der Puls in den Pausen fällt** — Schläge je Minute |
+| Yoga | Zonen, Puls über die Zeit, **Anfang gegen Ende** (wurde man ruhiger?), tiefster Puls, die **HRV** aus dieser Stunde |
+| Schwimmen | Zonen, Puls über die Zeit mit jeder zweiten Bahn als Band, Bahnen und Strecke, Zeit je 100 m, **Schwankung der Bahnzeiten**, Bahn für Bahn gefärbt |
+
+Keine Karte beim Yoga, im Becken oder in der Halle — und dort läuft auch kein
+GPS mehr mit: das Telefon zeichnet nur bei Laufen, Bike, MTB und Wandern auf.
+
 Das Tempo ist über rund zehn Sekunden geglättet: aus zwei GPS-Punkten im
 Sekundenabstand wird sonst ein Tempo, das zwischen 10 und 40 km/h flattert.
 Gerechnet wird in `Trainingsanalyse`, ohne Schirm — und deshalb mit Tests.

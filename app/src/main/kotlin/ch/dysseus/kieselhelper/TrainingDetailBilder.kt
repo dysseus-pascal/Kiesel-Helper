@@ -124,6 +124,10 @@ class StreckenverlaufView(
     private val farbeJeWert: ((Double) -> Int)? = null,
     private val flaeche: Boolean = true,
     private val nachkomma: Int = 0,
+    /** true: `meter` sind Sekunden, die Achse zeigt Minuten. */
+    private val zeitachse: Boolean = false,
+    /** Senkrechte Baender (von, bis, Farbe) auf der x-Achse - Saetze, Bahnen. */
+    private val xBaender: List<Triple<Double, Double, Int>> = emptyList(),
 ) : View(ctx) {
 
     private val linie = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -162,7 +166,11 @@ class StreckenverlaufView(
         fun x(m: Double) = links + (width - links) * (m / ende).toFloat()
         fun y(w: Double) = kopf + (boden - kopf) * (1f - ((w - tief) / spanne).toFloat())
 
-        // Baender hinter allem
+        // Baender hinter allem - erst die senkrechten, dann die waagrechten
+        xBaender.forEach { (von, bis, farbe) ->
+            band.color = farbe and 0x00FFFFFF or 0x2A000000
+            leinwand.drawRect(x(von), kopf, x(bis), boden, band)
+        }
         baender.forEach { (von, bis, farbe) ->
             val yo = y(bis.coerceAtMost(hoch)).coerceAtLeast(kopf)
             val yu = y(von.coerceAtLeast(tief)).coerceAtMost(boden)
@@ -210,22 +218,39 @@ class StreckenverlaufView(
             linie.color = ton
         }
 
-        // Die Achse: Kilometer
+        // Die Achse: Kilometer - oder Minuten
         val unten = height - context.dp(3f).toFloat()
-        val km = ende / 1000
-        val schritt = when {
-            km > 40 -> 10; km > 20 -> 5; km > 8 -> 2; km > 3 -> 1; else -> 0
-        }
-        schrift.textAlign = Paint.Align.CENTER
-        if (schritt > 0) {
-            var k = schritt
-            while (k < km) {
-                leinwand.drawText("$k", x(k * 1000.0), unten, schrift)
-                k += schritt
+        if (zeitachse) {
+            val min = ende / 60
+            val schritt = when {
+                min > 120 -> 30; min > 60 -> 15; min > 30 -> 10; min > 10 -> 5; else -> 0
             }
+            schrift.textAlign = Paint.Align.CENTER
+            if (schritt > 0) {
+                var k = schritt
+                while (k < min) {
+                    leinwand.drawText("$k", x(k * 60.0), unten, schrift)
+                    k += schritt
+                }
+            }
+            schrift.textAlign = Paint.Align.RIGHT
+            leinwand.drawText(Zahlen.ganz(min) + " min", width.toFloat(), unten, schrift)
+        } else {
+            val km = ende / 1000
+            val schritt = when {
+                km > 40 -> 10; km > 20 -> 5; km > 8 -> 2; km > 3 -> 1; else -> 0
+            }
+            schrift.textAlign = Paint.Align.CENTER
+            if (schritt > 0) {
+                var k = schritt
+                while (k < km) {
+                    leinwand.drawText("$k", x(k * 1000.0), unten, schrift)
+                    k += schritt
+                }
+            }
+            schrift.textAlign = Paint.Align.RIGHT
+            leinwand.drawText(Zahlen.eine(km) + " km", width.toFloat(), unten, schrift)
         }
-        schrift.textAlign = Paint.Align.RIGHT
-        leinwand.drawText(Zahlen.eine(km) + " km", width.toFloat(), unten, schrift)
         schrift.textAlign = Paint.Align.LEFT
         leinwand.drawText(einheit, links + context.dp(4f), kopf + context.dp(10f), schrift)
     }
@@ -240,7 +265,9 @@ fun Context.streckenverlauf(
     flaeche: Boolean = true,
     nachkomma: Int = 0,
     hoehe: Float = 160f,
-): View = StreckenverlaufView(this, punkte, ton, einheit, baender, farbeJeWert, flaeche, nachkomma).apply {
+    zeitachse: Boolean = false,
+    xBaender: List<Triple<Double, Double, Int>> = emptyList(),
+): View = StreckenverlaufView(this, punkte, ton, einheit, baender, farbeJeWert, flaeche, nachkomma, zeitachse, xBaender).apply {
     layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(hoehe))
         .apply { topMargin = dp(8f) }
 }
@@ -255,6 +282,21 @@ fun Context.streckenverlauf(
  * werden zu einer Linie zusammengefasst - ein paar Dutzend statt Tausend.
  */
 fun Context.tempokarte(strecke: List<Trainingsanalyse.Streckenpunkt>, karten: MutableList<MapView>): MapView {
+    val (langsam, schnell) = Trainingsanalyse.tempoSpanne(strecke)
+    return farbkarte(strecke, karten, { it.tempo }, langsam, schnell)
+}
+
+/**
+ * Die Strecke, gefaerbt nach einem beliebigen Wert je Punkt - beim Wandern
+ * nach der Steigung: blau bergab, gruen flach, rot bergauf.
+ */
+fun Context.farbkarte(
+    strecke: List<Trainingsanalyse.Streckenpunkt>,
+    karten: MutableList<MapView>,
+    wert: (Trainingsanalyse.Streckenpunkt) -> Double,
+    von: Double,
+    bis: Double,
+): MapView {
     Configuration.getInstance().userAgentValue = packageName
     Configuration.getInstance().osmdroidBasePath = cacheDir
     Configuration.getInstance().osmdroidTileCache = java.io.File(cacheDir, "kacheln")
@@ -265,8 +307,7 @@ fun Context.tempokarte(strecke: List<Trainingsanalyse.Streckenpunkt>, karten: Mu
     ansicht.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(300f))
         .apply { topMargin = dp(10f) }
 
-    val (langsam, schnell) = Trainingsanalyse.tempoSpanne(strecke)
-    fun stufe(t: Double) = (((t - langsam) / (schnell - langsam)).coerceIn(0.0, 1.0) * 11).toInt()
+    fun stufe(t: Double) = (((t - von) / (bis - von).coerceAtLeast(0.001)).coerceIn(0.0, 1.0) * 11).toInt()
 
     // Ein weisser Saum darunter, damit die bunte Linie auf jeder Karte steht.
     val saum = Polyline(ansicht).apply {
@@ -278,9 +319,9 @@ fun Context.tempokarte(strecke: List<Trainingsanalyse.Streckenpunkt>, karten: Mu
 
     var i = 0
     while (i < strecke.size - 1) {
-        val s = stufe(strecke[i].tempo)
+        val s = stufe(wert(strecke[i]))
         var j = i + 1
-        while (j < strecke.size - 1 && stufe(strecke[j].tempo) == s) j++
+        while (j < strecke.size - 1 && stufe(wert(strecke[j])) == s) j++
         val stueck = strecke.subList(i, j + 1).map { GeoPoint(it.lat, it.lon) }
         ansicht.overlays.add(Polyline(ansicht).apply {
             outlinePaint.color = Zonenfarben.tempofarbe(s / 11f)

@@ -72,6 +72,15 @@ object Sportart {
         else -> Art(s.title ?: "Training", "⏱", R.color.sport_anderes)
     }
 
+    /** Arten, bei denen eine Strecke etwas aussagt - und das GPS mitlaeuft. */
+    fun mitStrecke(s: ExerciseSessionRecord): Boolean = when (s.exerciseType) {
+        ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
+        ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
+        ExerciseSessionRecord.EXERCISE_TYPE_HIKING,
+        ExerciseSessionRecord.EXERCISE_TYPE_WALKING -> true
+        else -> false
+    }
+
     fun minuten(s: ExerciseSessionRecord): Long =
         Duration.between(s.startTime, s.endTime).toMinutes()
 }

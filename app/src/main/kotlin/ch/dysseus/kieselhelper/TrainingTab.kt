@@ -387,7 +387,7 @@ object TrainingTab {
             k.addView(ctx.zart(
                 (Zahlen.eine(eintrag.meter / 1000) ?: "") + " km aufgezeichnet"
             ))
-        } else if (gross && mitKarte) {
+        } else if (gross && mitKarte && Sportart.mitStrecke(sitzung)) {
             k.addView(ctx.zart(
                 "Keine Strecke — entweder war das Telefon nicht dabei, oder die " +
                     "Standortberechtigung fehlte."
