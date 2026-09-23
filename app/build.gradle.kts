@@ -17,8 +17,8 @@ android {
         // und deckt jedes Telefon ab, das die Pebble-App ueberhaupt betreibt.
         minSdk = 28
         targetSdk = 36
-        versionCode = 42
-        versionName = "0.35.0"
+        versionCode = 43
+        versionName = "0.35.1"
     }
 
     // EIN DEBUG-SCHLUESSEL IM REPO, nicht einer je Lauf. Jeder GitHub-Lauf

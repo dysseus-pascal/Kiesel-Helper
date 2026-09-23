@@ -51,11 +51,13 @@ object Sichern {
         )
     }
 
-    /** Zugang und Ordner prüfen, ohne etwas zu schreiben. */
+    /** Zugang und Ordner prüfen; einen fehlenden Ordner anlegen. */
     suspend fun pruefe(context: Context): String = withContext(Dispatchers.IO) {
         val dav = draht(context) ?: return@withContext "Adresse, Benutzer und Passwort fehlen"
         when (val e = dav.pruefe()) {
-            is WebDav.Ergebnis.Gut -> "Ordner erreichbar, Zugang stimmt"
+            is WebDav.Ergebnis.Gut ->
+                if (e.text == "angelegt") "Ordner angelegt, Zugang stimmt"
+                else "Ordner erreichbar, Zugang stimmt"
             is WebDav.Ergebnis.Schlecht -> e.grund
         }
     }

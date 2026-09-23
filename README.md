@@ -383,6 +383,19 @@ Kiesel/
     └── spur-1758486400.jsonl
 ```
 
+**Die Adresse ist der Ordner.** Was in den Einstellungen als Adresse steht,
+ist der Ordner, in den gesichert wird — den Namen wählt man selbst. Fehlt er,
+legt die App ihn beim Prüfen an; nur der übergeordnete Ordner muss schon da
+sein. Beispiele:
+
+| Dienst | Adresse | Benutzername |
+|---|---|---|
+| Nextcloud | `https://wolke.example/remote.php/dav/files/BENUTZER/Kiesel/` | Benutzername |
+| mailbox.org | `https://dav.mailbox.org/servlet/webdav.infostore/Userstore/ADRESSE@mailbox.org/Kiesel/` | die E-Mail-Adresse |
+
+Geprüft wird mit `PROPFIND`, nicht mit `HEAD`: Open-Xchange (mailbox.org)
+antwortet auf `HEAD` zu einem Ordner mit 404, als gäbe es ihn nicht.
+
 **Als Klartext, nicht als Datenbankabzug.** Ein JSON, das man öffnen und lesen
 kann, ist auch dann noch etwas wert, wenn es diese App nicht mehr gibt. Ein
 SQLite-Abzug wäre kleiner und in fünf Jahren ein Rätsel. In jeder Datei steht

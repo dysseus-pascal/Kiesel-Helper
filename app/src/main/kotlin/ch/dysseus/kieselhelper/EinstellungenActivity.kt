@@ -580,6 +580,13 @@ class EinstellungenActivity : ComponentActivity() {
         k.addView(nutzer)
         k.addView(geheim)
         k.addView(zartMitHinweis(
+            "Die Adresse ist der Ordner — fehlt er, wird er angelegt",
+            "Nextcloud: https://wolke.example/remote.php/dav/files/BENUTZER/Kiesel/ — " +
+                "mailbox.org: https://dav.mailbox.org/servlet/webdav.infostore/" +
+                "Userstore/ADRESSE@mailbox.org/Kiesel/ mit der E-Mail-Adresse als " +
+                "Benutzername. Nur der übergeordnete Ordner muss schon da sein."
+        ))
+        k.addView(zartMitHinweis(
             "Nur https, und das Passwort liegt verschlüsselt",
             "Über eine unverschlüsselte Verbindung gingen Passwort und ein Jahr " +
                 "Gesundheitsdaten im Klartext durchs Netz. Das Passwort selbst " +

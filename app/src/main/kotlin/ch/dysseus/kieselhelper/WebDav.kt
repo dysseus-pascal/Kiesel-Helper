@@ -53,15 +53,35 @@ class WebDav(basis: String, private val nutzer: String, private val geheim: Stri
     private fun pfad(name: String) = basis + name.trimStart('/')
 
     /**
-     * Steht der Ordner, und stimmen die Zugangsdaten?
+     * Steht der Ordner, und stimmen die Zugangsdaten? Fehlt er, wird er
+     * angelegt.
      *
-     * MIT EINEM HEAD AUF DEN ORDNER. Ein PROPFIND wäre die richtige Frage,
-     * aber die Antwort wäre XML und die Frage hier ist einfacher: kommt 401,
-     * stimmt das Passwort nicht; kommt 404, gibt es den Ordner nicht; kommt
-     * irgendetwas Zweihundertartiges, ist alles gut.
+     * MIT PROPFIND, NICHT MIT HEAD. Der erste Entwurf fragte mit HEAD, und
+     * das verstehen nicht alle Server als Frage nach einem Ordner: Open-
+     * Xchange (mailbox.org) antwortet auf HEAD zu einem Ordner mit 404, als
+     * gaebe es ihn nicht - und der Nutzer sucht einen Fehler in einer
+     * Adresse, die stimmt. PROPFIND mit Tiefe 0 ist die Frage, die WebDAV
+     * dafuer vorsieht; die XML-Antwort wird nicht gelesen, der Code reicht.
+     *
+     * UND FEHLT ER WIRKLICH, WIRD ER ANGELEGT. Die Sicherung legte ihn beim
+     * ersten Mal ohnehin an; die Pruefung soll nicht an etwas scheitern, das
+     * die Sicherung selbst behebt.
      */
-    fun pruefe(): Ergebnis = versuche("HEAD") {
-        kopf(Request.Builder().url(basis).head()).build()
+    fun pruefe(): Ergebnis {
+        val e = versuche("PROPFIND", erlaubtAuch = setOf(207)) {
+            kopf(
+                Request.Builder().url(basis)
+                    .method("PROPFIND", null)
+                    .header("Depth", "0")
+            ).build()
+        }
+        if (e is Ergebnis.Schlecht && e.grund.startsWith("Diesen Ordner gibt es nicht")) {
+            return when (val an = ordner()) {
+                is Ergebnis.Gut -> Ergebnis.Gut("angelegt")
+                is Ergebnis.Schlecht -> an
+            }
+        }
+        return e
     }
 
     /** Den Ordner anlegen. Gibt es ihn schon, ist das kein Fehler. */
