@@ -128,8 +128,14 @@ Dazu Strecke, Tempo, Aufstieg und die Karte.
 
 Dann **acht Wochen**, gestapelt nach Art, und **woraus es besteht**: die Arten
 eines Vierteljahres als ein Band nach Zeit. Ein Band und kein Kuchen, weil man
-Anteile an Längen besser liest als an Winkeln. Zuletzt die älteren Trainings
-als Zeilen.
+Anteile an Längen besser liest als an Winkeln.
+
+**Die älteren Trainings haben eine eigene Seite.** Im Reiter steht von ihnen
+nur eine Karte — wie viele, wie lange, die Zeichen der jüngsten —, und ein
+Tippen öffnet sie: eine Zeile je Training, nach Monaten. Zwanzig Karten unter
+den Bildern nahmen mehr Platz als alles andere, und gesucht wird in ihnen
+selten. Ein Tippen auf eine Zeile zeigt das Training so gross wie das jüngste,
+mit Puls, Sätzen oder Bahnen und Karte.
 
 **Jede Art hat ihre Farbe** und ihr Zeichen — warme Erdtöne für das, was auf
 dem Boden stattfindet, kühle für Yoga und Wasser. Man erkennt sie im Kalender

@@ -211,6 +211,12 @@
             android:exported="false"
             android:parentActivityName=".HauptActivity" />
 
+        <!-- Die aelteren Trainings, und eines davon im Einzelnen. -->
+        <activity
+            android:name=".VergangeneActivity"
+            android:exported="false"
+            android:parentActivityName=".HauptActivity" />
+
         <!-- Was die App getan hat, als niemand hinsah. -->
         <activity
             android:name=".VerlaufActivity"

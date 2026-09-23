@@ -69,8 +69,18 @@ object TrainingTab {
         val puls: List<Pulspunkt> = emptyList(),
     )
 
-    /** So viele stehen als Karten da; die uebrigen zaehlen nur in den Bildern. */
+    /** Fuer so viele wird die Spur gelesen; die uebrigen zaehlen nur in den Bildern. */
     private const val LISTE = 20
+
+    /**
+     * Was zuletzt gebaut wurde - fuer die Seite der vergangenen Trainings.
+     *
+     * Sie liest die Akte nicht ein zweites Mal: was hier steht, ist
+     * Sekunden alt. Nur wenn der Prozess dazwischen neu begann, holt sie
+     * selbst.
+     */
+    var zuletzt: List<Eintrag> = emptyList()
+        private set
 
     /**
      * Alles holen, was der Schirm braucht - und zwar hier, nicht beim Bauen.
@@ -130,8 +140,25 @@ object TrainingTab {
         emptyList()
     }
 
+    /**
+     * Ein Eintrag mit allem, was die grosse Karte braucht.
+     *
+     * Die Liste holt Spur und Puls nur fuer das juengste Training. Wer auf
+     * der Seite der vergangenen eines antippt, bekommt beides hier nach.
+     */
+    suspend fun vervollstaendige(ctx: Context, e: Eintrag): Eintrag = withContext(Dispatchers.IO) {
+        val punkte = Spur.lies(ctx, e.sitzung.startTime.epochSecond)
+        val klient = Akte(ctx).bereit()
+        e.copy(
+            punkte = punkte,
+            meter = Spur.laenge(punkte),
+            puls = klient?.let { puls(it, e.sitzung) }.orEmpty(),
+        )
+    }
+
     fun baue(ctx: Context, eintraege: List<Eintrag>): LinearLayout {
         karten.clear()
+        zuletzt = eintraege
         val s = ctx.spalte()
 
         if (eintraege.isEmpty()) {
@@ -172,9 +199,7 @@ object TrainingTab {
 
         if (eintraege.size > 1) {
             s.addView(ctx.abschnitt("DAVOR"))
-            eintraege.drop(1).take(LISTE - 1).forEach {
-                s.addView(sitzungskarte(ctx, it, gross = false))
-            }
+            s.addView(vergangeneKarte(ctx, eintraege.drop(1)))
         }
         return s
     }
@@ -240,10 +265,88 @@ object TrainingTab {
         return k
     }
 
-    private fun sitzungskarte(
+    /**
+     * Die aelteren Trainings als EINE Karte, nicht als Liste.
+     *
+     * Zwanzig Karten unter den Bildern schoben alles andere aus dem Blick,
+     * und gesucht wird dort selten. Jetzt steht hier, wie viele es sind und
+     * welche Arten - die Zeichen der juengsten in einer Reihe -, und ein
+     * Tippen oeffnet die eigene Seite.
+     */
+    private fun vergangeneKarte(ctx: Context, aeltere: List<Eintrag>): LinearLayout {
+        val k = ctx.karte()
+        k.isClickable = true
+        k.setOnClickListener { VergangeneActivity.zeige(ctx) }
+
+        k.addView(ctx.reihe().apply {
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            addView(ctx.kartentitel("Vergangene Trainings").apply {
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            addView(ctx.fliesstext("Alle ›").apply {
+                setTextColor(ctx.akzentfarbe())
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+            })
+        })
+        val minuten = aeltere.sumOf { Sportart.minuten(it.sitzung) }
+        k.addView(ctx.zart(
+            aeltere.size.toString() + (if (aeltere.size == 1) " Training" else " Trainings") +
+                " in drei Monaten  ·  " + (Zahlen.dauer(minuten.toDouble()) ?: "")
+        ))
+        k.addView(ctx.reihe().apply {
+            setPadding(0, ctx.dp(10f), 0, 0)
+            aeltere.take(8).forEach { e ->
+                addView(ctx.sportzeichen(Sportart.von(e.sitzung), 30f).apply {
+                    (layoutParams as LinearLayout.LayoutParams).marginEnd = ctx.dp(6f)
+                })
+            }
+        })
+        return k
+    }
+
+    /**
+     * Ein Training als eine Zeile - fuer die Seite der vergangenen.
+     *
+     * Zeichen, Name, Tag und Dauer; rechts die Strecke, wenn es eine gibt.
+     * Mehr braucht man nicht, um das gesuchte zu finden.
+     */
+    fun zeile(ctx: Context, eintrag: Eintrag, tue: () -> Unit): LinearLayout {
+        val sitzung = eintrag.sitzung
+        val art = Sportart.von(sitzung)
+        val wann = java.time.format.DateTimeFormatter.ofPattern("EEE d. MMM, HH:mm", java.util.Locale.GERMAN)
+            .format(sitzung.startTime.atZone(java.time.ZoneId.systemDefault()))
+        return ctx.reihe().apply {
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding(0, ctx.dp(8f), 0, ctx.dp(8f))
+            isClickable = true
+            setOnClickListener { tue() }
+            addView(ctx.sportzeichen(art, 36f))
+            addView(ctx.spalte().apply {
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                addView(ctx.fliesstext(sitzung.title ?: art.name).apply {
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                })
+                addView(ctx.zart(wann + "  ·  " + (Zahlen.dauer(Sportart.minuten(sitzung).toDouble()) ?: "")))
+            })
+            if (eintrag.meter > 100) {
+                addView(ctx.fliesstext((Zahlen.eine(eintrag.meter / 1000) ?: "") + " km"))
+            }
+            addView(ctx.zart("  ›"))
+        }
+    }
+
+    /**
+     * Die grosse Karte eines Trainings.
+     *
+     * [karten] nimmt die Kartenansicht auf, damit der Schirm, der sie zeigt,
+     * ihr seinen Lebenslauf weitergeben kann - der Reiter seine, die Seite
+     * eines vergangenen Trainings ihre eigene.
+     */
+    fun sitzungskarte(
         ctx: Context,
         eintrag: Eintrag,
         gross: Boolean,
+        karten: MutableList<MapView> = this.karten,
     ): LinearLayout {
         val sitzung = eintrag.sitzung
         val art = Sportart.von(sitzung)
@@ -277,7 +380,7 @@ object TrainingTab {
         val punkte = eintrag.punkte
         if (gross && punkte.size >= 2) {
             k.addView(streckendaten(ctx, punkte))
-            k.addView(kartenbild(ctx, punkte))
+            k.addView(kartenbild(ctx, punkte, karten))
         } else if (!gross && eintrag.meter > 100) {
             k.addView(ctx.zart(
                 (Zahlen.eine(eintrag.meter / 1000) ?: "") + " km aufgezeichnet"
@@ -384,7 +487,7 @@ object TrainingTab {
      * Roller, die sich ihre Hoehe selbst nimmt, wird entweder null Punkte
      * hoch oder unendlich.
      */
-    private fun kartenbild(ctx: Context, punkte: List<Spur.Punkt>): MapView {
+    private fun kartenbild(ctx: Context, punkte: List<Spur.Punkt>, karten: MutableList<MapView>): MapView {
         // Die Kennung ist Bedingung der Kachelserver, keine Formalie: anonyme
         // Abfragen weist OpenStreetMap ab.
         Configuration.getInstance().userAgentValue = ctx.packageName
