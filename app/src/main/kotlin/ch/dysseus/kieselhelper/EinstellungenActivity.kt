@@ -549,16 +549,16 @@ class EinstellungenActivity : ComponentActivity() {
     }
 
     /**
-     * Die Sicherung in einen WebDAV-Ordner.
+     * Die Sicherung in einen Ordner auf dem Telefon.
      *
      * WARUM ES SIE GIBT: die Gesundheitsakte hält rund dreissig Tage. Alles,
      * was diese App an Wochenprofilen und Zusammenhängen rechnet, steht danach
      * nur noch in ihrer eigenen Tabelle - und die liegt in den App-Daten eines
      * einzigen Telefons.
      *
-     * WEBDAV, WEIL ES ÜBERALL SCHON DA IST: Nextcloud, Synology, ein Webspace
-     * mit mod_dav. Kein Konto bei jemandem Neuen, kein Schlüssel, kein Dienst,
-     * der in zwei Jahren eingestellt wird.
+     * EIN ORDNER, DEN EINE SYNC-APP ABGLEICHT. Kein eigener Cloud-Code, kein
+     * WebDAV mehr: DAVx5, Nextcloud oder mailbox.org Drive tragen den Ordner
+     * hinauf, mit ihrer Anmeldung und ihrer Fehlerbehandlung.
      */
     private fun sicherungskarte(): LinearLayout {
         val k = karte()
@@ -573,7 +573,7 @@ class EinstellungenActivity : ComponentActivity() {
             else "Noch nie gesichert"
         ))
         k.addView(zartMitHinweis(
-            "Tagestabelle und Strecken in einen Ordner — auf dem Telefon oder per WebDAV",
+            "Tagestabelle und Strecken in einen Ordner auf dem Telefon",
             "Die Gesundheitsakte hält rund dreissig Tage. Alles, was diese App " +
                 "an Wochenprofilen und Zusammenhängen rechnet, steht danach nur " +
                 "noch in ihrer eigenen Tabelle — und die liegt in den App-Daten " +
@@ -583,10 +583,9 @@ class EinstellungenActivity : ComponentActivity() {
                 "gehen nur einmal hinauf."
         ))
 
-        // DER ORDNER AUF DEM TELEFON ZUERST: er geht mit jedem Anbieter. Die
-        // Cloud-App - mailbox.org Drive, Nextcloud, Icedrive, Syncthing -
-        // traegt ihn hinauf, mit ihrer eigenen Anmeldung. WebDAV bleibt fuer
-        // die, die keine App wollen.
+        // EIN ORDNER, DEN EINE SYNC-APP ABGLEICHT: er geht mit jedem Anbieter.
+        // DAVx5, Nextcloud, mailbox.org Drive oder Syncthing tragen ihn hinauf,
+        // mit ihrer eigenen Anmeldung.
         val ordnerUri = Einstellungen.sicherungOrdner(this)
         val ordnerName = if (ordnerUri.isNotBlank()) {
             val uri = android.net.Uri.parse(ordnerUri)
@@ -601,14 +600,13 @@ class EinstellungenActivity : ComponentActivity() {
             }
         ))
         k.addView(zartMitHinweis(
-            "Der einfache Weg: einen Ordner wählen, den eine Cloud-App abgleicht",
-            "Wähle im Dialog einen Ordner, den die App deines Anbieters " +
-                "synchronisiert — der Ordner von mailbox.org Drive, Nextcloud, " +
-                "Icedrive oder Syncthing, oder ein Ordner in »Dokumente«. " +
-                "Kiesel-Helper schreibt dorthin, die Cloud-App trägt es hinauf; " +
-                "Anmeldung und Eigenheiten des Servers sind dann deren Sache. " +
-                "Ohne Cloud-App bleibt es eine Kopie auf dem Telefon, die man " +
-                "abholen kann."
+            "Einen Ordner wählen, den eine Sync-App abgleicht",
+            "Wähle im Dialog einen Ordner, den DAVx5, Nextcloud, mailbox.org " +
+                "Drive oder Syncthing synchronisiert — oder einen Ordner in " +
+                "»Dokumente«. Kiesel-Helper schreibt dorthin, die Sync-App trägt " +
+                "es hinauf; Anmeldung und Eigenheiten des Servers sind deren " +
+                "Sache. Ohne Sync-App bleibt es eine Kopie auf dem Telefon, die " +
+                "man abholen kann. Gesichert wird als lesbares JSON."
         ))
         val ordnerReihe = reihe()
         ordnerReihe.addView(knopfHaupt(
@@ -623,57 +621,6 @@ class EinstellungenActivity : ComponentActivity() {
             }.breitInReihe())
         }
         k.addView(ordnerReihe)
-
-        k.addView(zartMitHinweis(
-            "Oder per WebDAV — ohne App des Anbieters",
-            "Nextcloud, ownCloud, Synology, ein Webspace mit mod_dav. Nicht " +
-                "jeder Server nimmt jede Anfrage: wer hier scheitert, nimmt den " +
-                "Ordner oben."
-        ))
-        val adresse = feld(
-            "https://wolke.example/remote.php/dav/files/ich/Kiesel/",
-            Einstellungen.sicherungUrl(this),
-        )
-        val nutzer = feld("Benutzername", Einstellungen.sicherungNutzer(this))
-        val geheim = feld(
-            if (Tresor.hatGeheimnis(this)) "Passwort (gespeichert)" else "Passwort",
-            "",
-            geheim = true,
-        )
-        k.addView(adresse)
-        k.addView(nutzer)
-        k.addView(geheim)
-        k.addView(zartMitHinweis(
-            "Die Adresse ist der Ordner — fehlt er, wird er angelegt",
-            "Nextcloud: https://wolke.example/remote.php/dav/files/BENUTZER/Kiesel/ — " +
-                "mailbox.org: https://dav.mailbox.org/servlet/webdav.infostore/" +
-                "Userstore/Vorname, Nachname/Kiesel/ — der eigene Ordner heisst dort " +
-                "nach Vor- und Nachname aus den Kontodaten, mit Komma; Benutzername " +
-                "ist die E-Mail-Adresse, bei Zwei-Faktor ein Anwendungspasswort. " +
-                "Stimmt der Name nicht, nennt die Prüfung die Ordner, die es gibt."
-        ))
-        k.addView(zartMitHinweis(
-            "Nur https, und das Passwort liegt verschlüsselt",
-            "Über eine unverschlüsselte Verbindung gingen Passwort und ein Jahr " +
-                "Gesundheitsdaten im Klartext durchs Netz. Das Passwort selbst " +
-                "liegt nicht in einer Einstellungsdatei, sondern mit einem " +
-                "Schlüssel aus dem Android-Schlüsselbund verschlossen — der " +
-                "verlässt dieses Telefon nie. Nach einem Zurücksetzen ist er " +
-                "weg, und das Passwort wird einmal neu eingetippt."
-        ))
-
-        k.addView(knopfHaupt("Speichern und prüfen", breit = true) {
-            Einstellungen.setzeSicherungZugang(
-                this, adresse.text(), nutzer.text()
-            )
-            val neu = geheim.text()
-            if (neu.isNotBlank()) Tresor.merke(this, neu)
-            geheim.leeren()
-            lifecycleScope.launch {
-                melde(Sichern.pruefe(this@EinstellungenActivity))
-                auffrischen()
-            }
-        })
 
         val reihe = reihe()
         reihe.addView(knopfLeise("Jetzt sichern") {

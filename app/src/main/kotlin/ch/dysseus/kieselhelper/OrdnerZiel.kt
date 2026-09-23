@@ -6,42 +6,53 @@ import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 
 /**
- * Ein Ordner auf dem Telefon als Sicherungsziel - gewaehlt ueber den
+ * Der Ordner auf dem Telefon, in den gesichert wird - gewaehlt ueber den
  * Ordnerdialog des Systems (Storage Access Framework).
  *
- * KEIN EIGENER CLOUD-CODE. Wer den Ordner in Nextcloud, mailbox.org Drive,
- * Icedrive oder Syncthing waehlt, bekommt die Sicherung dorthin - die App des
- * Anbieters traegt sie hinauf, mit dessen Anmeldung, dessen Eigenheiten und
- * dessen Fehlerbehandlung. Das ist der Weg, der mit jedem Anbieter geht.
+ * KEIN EIGENER CLOUD-CODE, UND KEIN WEBDAV MEHR. Es gab eine WebDAV-Anbindung;
+ * sie scheiterte an mailbox.org und an Icedrive, jeder Server hat seine
+ * Eigenheiten, und eine Sicherung, die an ihnen scheitert, ist keine. Wer den
+ * Ordner in einer Sync-App waehlt - DAVx5, Nextcloud, mailbox.org Drive,
+ * Syncthing -, bekommt die Sicherung in die Cloud: die App des Anbieters
+ * traegt sie hinauf, mit ihrer Anmeldung und ihrer Fehlerbehandlung. Das ist
+ * der Weg, der mit jedem Anbieter geht - und diese App muss dafuer nicht
+ * einmal ins Netz.
  *
  * DIE ERLAUBNIS IST DAUERHAFT (takePersistableUriPermission) und ueberlebt
  * den Neustart; sie faellt weg, wenn die Cloud-App deinstalliert oder der
  * Ordner geloescht wird. Dann sagt pruefe() das, und der Ordner wird neu
  * gewaehlt.
  */
-class OrdnerZiel(private val context: Context, private val baum: Uri) : Ziel {
+class OrdnerZiel(private val context: Context, private val baum: Uri) {
 
-    override val name: String
+    sealed class Ergebnis {
+        object Gut : Ergebnis()
+        data class Schlecht(val grund: String) : Ergebnis()
+    }
+
+    val name: String
         get() = DocumentFile.fromTreeUri(context, baum)?.name ?: baum.lastPathSegment ?: "Ordner"
 
     private fun wurzel(): DocumentFile? =
         DocumentFile.fromTreeUri(context, baum)?.takeIf { it.exists() && it.isDirectory }
 
-    override fun pruefe(): WebDav.Ergebnis {
-        val w = wurzel() ?: return WebDav.Ergebnis.Schlecht(
+    /** Erreichbar und beschreibbar? */
+    fun pruefe(): Ergebnis {
+        val w = wurzel() ?: return Ergebnis.Schlecht(
             "Der Ordner auf dem Telefon ist nicht mehr erreichbar — bitte neu wählen"
         )
-        if (!w.canWrite()) return WebDav.Ergebnis.Schlecht("In diesen Ordner darf die App nicht schreiben")
-        return WebDav.Ergebnis.Gut()
+        if (!w.canWrite()) return Ergebnis.Schlecht("In diesen Ordner darf die App nicht schreiben")
+        return Ergebnis.Gut
     }
 
-    override fun ordner(name: String): WebDav.Ergebnis {
+    /** Einen Unterordner anlegen; leer heisst: den Zielordner selbst. */
+    fun ordner(name: String = ""): Ergebnis {
         val w = wurzel() ?: return pruefe()
-        if (name.isBlank()) return WebDav.Ergebnis.Gut()
+        if (name.isBlank()) return Ergebnis.Gut
         val da = w.findFile(name)
-        if (da != null && da.isDirectory) return WebDav.Ergebnis.Gut()
-        return if (w.createDirectory(name) != null) WebDav.Ergebnis.Gut()
-        else WebDav.Ergebnis.Schlecht("Unterordner »$name« liess sich nicht anlegen")
+        if (da != null && da.isDirectory) return Ergebnis.Gut
+        return if (w.createDirectory(name) != null) Ergebnis.Gut
+        else Ergebnis.Schlecht("Unterordner »$name« liess sich nicht anlegen")
     }
 
     /** "spuren/spur-1.jsonl" -> der Unterordner und der Dateiname darin. */
@@ -54,24 +65,25 @@ class OrdnerZiel(private val context: Context, private val baum: Uri) : Ziel {
         return d to teile.last()
     }
 
-    override fun lege(name: String, inhalt: ByteArray, typ: String): WebDav.Ergebnis {
+    fun lege(name: String, inhalt: ByteArray, typ: String = "application/json"): Ergebnis {
         val (d, datei) = zerlege(name) ?: return pruefe()
         return try {
             // ERSETZEN, NICHT DANEBENLEGEN. Ein zweites createFile mit demselben
             // Namen gaebe "kiesel-helper (1).json" - und die Sicherung von
             // gestern bliebe die, die man beim Zurueckholen findet.
             val ziel = d.findFile(datei)?.takeIf { it.isFile } ?: d.createFile(typ, datei)
-                ?: return WebDav.Ergebnis.Schlecht("»$datei« liess sich nicht anlegen")
+                ?: return Ergebnis.Schlecht("»$datei« liess sich nicht anlegen")
             context.contentResolver.openOutputStream(ziel.uri, "wt")?.use { it.write(inhalt) }
-                ?: return WebDav.Ergebnis.Schlecht("»$datei« liess sich nicht schreiben")
-            WebDav.Ergebnis.Gut()
+                ?: return Ergebnis.Schlecht("»$datei« liess sich nicht schreiben")
+            Ergebnis.Gut
         } catch (e: Exception) {
             Log.w(PebbleEmpfaenger.TAG, "Ordner schreiben: " + e.message)
-            WebDav.Ergebnis.Schlecht("Schreiben fehlgeschlagen: " + (e.message ?: e.javaClass.simpleName))
+            Ergebnis.Schlecht("Schreiben fehlgeschlagen: " + (e.message ?: e.javaClass.simpleName))
         }
     }
 
-    override fun hole(name: String): String? {
+    /** Eine Datei als Text; null heisst: gibt es nicht oder ging nicht. */
+    fun hole(name: String): String? {
         val (d, datei) = zerlege(name) ?: return null
         val quelle = d.findFile(datei)?.takeIf { it.isFile } ?: return null
         return try {

@@ -112,8 +112,6 @@ object Einstellungen {
     }
     // --- Die Sicherung ---
 
-    private const val DAV_URL = "sicherung_url"
-    private const val DAV_NUTZER = "sicherung_nutzer"
     private const val DAV_TAEGLICH = "sicherung_taeglich"
     private const val DAV_ZULETZT = "sicherung_zuletzt"
     private const val DAV_SPUREN = "sicherung_spuren"
@@ -125,23 +123,9 @@ object Einstellungen {
             .getString(ORDNER_URI, "").orEmpty()
 
     fun setzeSicherungOrdner(context: Context, uri: String) {
-        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE).edit()
-            .putString(ORDNER_URI, uri).apply()
-    }
-
-    fun sicherungUrl(context: Context): String =
-        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
-            .getString(DAV_URL, "").orEmpty()
-
-    fun sicherungNutzer(context: Context): String =
-        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
-            .getString(DAV_NUTZER, "").orEmpty()
-
-    fun setzeSicherungZugang(context: Context, url: String, nutzer: String) {
-        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE).edit()
-            .putString(DAV_URL, url.trim())
-            .putString(DAV_NUTZER, nutzer.trim())
-            .apply()
+        val laden = context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
+        if (laden.getString(ORDNER_URI, "") != uri) vergissGesicherteSpuren(context)
+        laden.edit().putString(ORDNER_URI, uri).apply()
     }
 
     fun sicherungTaeglich(context: Context): Boolean =
@@ -169,30 +153,30 @@ object Einstellungen {
      * DAMIT NICHT JEDEN TAG DASSELBE MEGABYTE HINAUFGEHT. Eine Spur aendert
      * sich nach dem Training nicht mehr; einmal hochgeladen ist sie fertig.
      */
-    // Je Ziel eine Liste: "WebDAV" hat den alten Schluessel, damit nichts
-    // doppelt hinaufgeht, was schon oben liegt.
-    private fun spurenSchluessel(ziel: String) =
-        if (ziel == "WebDAV") DAV_SPUREN else DAV_SPUREN + "_" + ziel.hashCode()
-
-    fun gesicherteSpuren(context: Context, ziel: String = "WebDAV"): Set<String> =
+    fun gesicherteSpuren(context: Context): Set<String> =
         context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
-            .getStringSet(spurenSchluessel(ziel), emptySet()).orEmpty()
+            .getStringSet(DAV_SPUREN, emptySet()).orEmpty()
 
-    fun merkeGesicherteSpur(context: Context, beginn: Long, ziel: String = "WebDAV") {
+    fun merkeGesicherteSpur(context: Context, beginn: Long) {
         val laden = context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
         // Die Menge muss KOPIERT werden: getStringSet gibt die gespeicherte
         // Menge selbst zurueck, und wer sie aendert, aendert sie hinter dem
         // Ruecken der Ablage - beim naechsten Start stuende der alte Stand da.
-        val neu = laden.getStringSet(spurenSchluessel(ziel), emptySet()).orEmpty().toMutableSet()
+        val neu = laden.getStringSet(DAV_SPUREN, emptySet()).orEmpty().toMutableSet()
         neu += beginn.toString()
-        laden.edit().putStringSet(spurenSchluessel(ziel), neu).apply()
+        laden.edit().putStringSet(DAV_SPUREN, neu).apply()
+    }
+
+    /** Die Liste vergessen - wenn ein anderer Ordner gewaehlt wird, liegt dort noch nichts. */
+    fun vergissGesicherteSpuren(context: Context) {
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
+            .edit().remove(DAV_SPUREN).apply()
     }
 
     /**
      * Die Einstellungen als Text - fuer die Sicherung.
      *
-     * OHNE ZUGANGSDATEN. Eine Sicherung, die das Passwort ihres eigenen
-     * Ablageorts enthaelt, waere ein Schluessel, der im Schloss steckt.
+     * OHNE DEN ORDNER SELBST: der gilt nur auf diesem Telefon.
      */
     fun alsText(context: Context): Map<String, String> = mapOf(
         SCHLAF to schlafziel(context).toString(),

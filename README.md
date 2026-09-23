@@ -362,19 +362,7 @@ nicht sterben.
 dem Nachttief hergeleiteten Wert sieht man in einem Jahresmittel nicht mehr an,
 woher er kam.
 
-## Sicherung in einen Ordner — auf dem Telefon oder per WebDAV
-
-**Der einfache Weg ist ein Ordner auf dem Telefon.** Man wählt ihn im
-Ordnerdialog des Systems — am besten den Ordner, den die App des Anbieters
-abgleicht: mailbox.org Drive, Nextcloud, Icedrive, Syncthing. Kiesel-Helper
-schreibt dorthin, die Cloud-App trägt es hinauf; Anmeldung und Eigenheiten des
-Servers sind dann deren Sache. Das geht mit jedem Anbieter, und es geht auch
-ohne Netz. WebDAV bleibt für die, die keine App des Anbieters wollen — aber
-nicht jeder Server nimmt jede Anfrage (mailbox.org und Icedrive haben beide
-ihre Eigenheiten), und wer dort scheitert, nimmt den Ordner.
-
-Sind beide eingerichtet, bekommen beide dieselbe Sicherung. Zurückgeholt wird
-aus dem ersten, der eine hat — der Telefonordner vor dem Server.
+## Sicherung in einen Ordner auf dem Telefon
 
 **Die Gesundheitsakte hält rund dreissig Tage.** Alles, was diese App an
 Wochenprofilen, typischen Tagen und Zusammenhängen rechnet, steht danach nur
@@ -382,10 +370,20 @@ noch in ihrer eigenen Tabelle — und die liegt in den App-Daten eines einzigen
 Telefons. Ein Wechsel, ein Zurücksetzen, ein kaputtes Gerät, und ein Jahr
 Aufzeichnung ist weg.
 
-**WebDAV, weil es überall schon da ist:** Nextcloud, ownCloud, Synology, ein
-Webspace mit `mod_dav`. Kein Konto bei jemandem Neuen, kein Schlüssel, kein
-Dienst, der in zwei Jahren eingestellt wird. Ein Ordner, in dem Dateien liegen
-— und genau das braucht eine Sicherung.
+**Ein Ordner, den eine Sync-App abgleicht.** Man wählt ihn im Ordnerdialog des
+Systems — am besten den Ordner, den DAVx5, Nextcloud, mailbox.org Drive oder
+Syncthing synchronisiert. Kiesel-Helper schreibt dorthin, die Sync-App trägt es
+hinauf; Anmeldung und Eigenheiten des Servers sind deren Sache. Das geht mit
+jedem Anbieter, und es geht ohne Netz: die tägliche Sicherung läuft auch im
+Flugmodus, die Sync-App holt nach. Ohne Sync-App bleibt es eine Kopie auf dem
+Telefon, die man abholen kann.
+
+**Kein WebDAV mehr.** Es gab eine eigene WebDAV-Anbindung (0.33 bis 0.36); sie
+scheiterte an mailbox.org und an Icedrive — jeder Server hat seine Eigenheiten
+(`HEAD` auf einen Ordner gibt 404, `MKCOL` gibt 412, die Webseite antwortet auf
+`PROPFIND` mit 200), und eine Sicherung, die an ihnen scheitert, ist keine.
+Eine Sync-App wie DAVx5 kennt diese Eigenheiten; diese App muss sie nicht
+ein zweites Mal lernen. Mit WebDAV gingen auch der Passworttresor und OkHttp.
 
 ```
 Kiesel/
@@ -395,39 +393,17 @@ Kiesel/
     └── spur-1758486400.jsonl
 ```
 
-**Die Adresse ist der Ordner.** Was in den Einstellungen als Adresse steht,
-ist der Ordner, in den gesichert wird — den Namen wählt man selbst. Fehlt er,
-legt die App ihn beim Prüfen an; nur der übergeordnete Ordner muss schon da
-sein. Beispiele:
-
-| Dienst | Adresse | Benutzername |
-|---|---|---|
-| Nextcloud | `https://wolke.example/remote.php/dav/files/BENUTZER/Kiesel/` | Benutzername |
-| mailbox.org | `https://dav.mailbox.org/servlet/webdav.infostore/Userstore/Vorname, Nachname/Kiesel/` | die E-Mail-Adresse |
-
-**mailbox.org (Open-Xchange):** Der eigene Ordner unter `Userstore` heisst nach
-Vor- und Nachname aus den Kontodaten — »Vorname, Nachname« mit Komma und
-Leerzeichen, so wie es die mailbox-Anleitung zeigt; bei manchen Konten ohne
-Komma. `https://app.mailbox.org` ist die Webseite, kein WebDAV. Bei
-Zwei-Faktor-Anmeldung braucht es ein Anwendungspasswort.
-
-Geprüft wird mit `PROPFIND`, nicht mit `HEAD`: Open-Xchange antwortet auf
-`HEAD` zu einem Ordner mit 404, als gäbe es ihn nicht. Nur eine Antwort
-`207 Multi-Status` gilt als Ordner — eine Webseite antwortet mit 200, und das
-sähe sonst aus wie ein erreichbarer Ordner. Fehlt der Ordner und lässt er sich
-nicht anlegen, nennt die Prüfung die Ordner eine Stufe höher: so sieht man,
-wie der Server den eigenen nennt, statt zu raten.
-
 **Als Klartext, nicht als Datenbankabzug.** Ein JSON, das man öffnen und lesen
 kann, ist auch dann noch etwas wert, wenn es diese App nicht mehr gibt. Ein
 SQLite-Abzug wäre kleiner und in fünf Jahren ein Rätsel. In jeder Datei steht
 eine **Fassungsnummer**: eine Sicherung überlebt die App, die sie geschrieben
 hat.
 
-**Die Strecken gehen nur einmal hinauf.** Eine Stunde Laufen sind tausend
-Punkte; sie täglich erneut hochzuladen wäre jeden Tag dasselbe Megabyte. Eine
-Spur ändert sich nach dem Training nicht mehr — was oben liegt, steht in einer
-Liste daneben.
+**Die Strecken gehen nur einmal hinüber.** Eine Stunde Laufen sind tausend
+Punkte; sie täglich erneut zu schreiben wäre jeden Tag dasselbe Megabyte. Eine
+Spur ändert sich nach dem Training nicht mehr — was schon im Ordner liegt,
+steht in einer Liste daneben. Wird ein anderer Ordner gewählt, beginnt die
+Liste von vorn.
 
 ### Zurückholen ergänzt, es überschreibt nicht
 
@@ -439,33 +415,16 @@ eine vorhandene Strecke wird nicht angefasst.
 Das ist zugleich die Antwort auf zwei Telefone: beide ergänzen einander,
 keines löscht das andere.
 
-### Nur https, und das Passwort liegt verschlossen
+### Die Erlaubnis ist dauerhaft
 
-Über eine unverschlüsselte Verbindung gingen Passwort und ein Jahr
-Gesundheitsdaten im Klartext durchs Netz. Android verbietet Klartext ohnehin
-seit Fassung 9; die App sagt es zusätzlich, damit der **Grund** dasteht und
-nicht nur eine Fehlermeldung.
+Der Ordnerdialog gibt eine Erlaubnis für genau diesen Ordner, und die App
+behält sie (`takePersistableUriPermission`) über den Neustart hinaus. Sie fällt
+weg, wenn die Sync-App deinstalliert oder der Ordner gelöscht wird — dann sagt
+die Prüfung das, und der Ordner wird neu gewählt.
 
-**Ein Passwort in einer Einstellungsdatei ist kein Passwort.** Es liegt
-stattdessen mit AES-GCM verschlossen, mit einem Schlüssel aus dem
-Android-Schlüsselbund — in Hardware, wo sie da ist. Herausholen kann man ihn
-nicht, nur benutzen; das Telefon verlässt er nie. Nach einem Zurücksetzen ist
-er weg, und dann wird das Passwort einmal neu eingetippt: die Sicherung selbst
-liegt ja auf dem Server.
-
-Und: **in der Sicherung stehen keine Zugangsdaten.** Eine Sicherung, die das
-Passwort ihres eigenen Ablageorts enthält, wäre ein Schlüssel, der im Schloss
-steckt.
-
-### Zwei Bibliotheken, und warum
-
-* **OkHttp** — `HttpURLConnection` kennt `MKCOL` nicht. Ihre Liste erlaubter
-  Methoden ist fest eingebaut, und alles daneben endet in einer
-  `ProtocolException`. Man kann das mit Reflexion umgehen; man kann es auch
-  lassen.
-* **WorkManager** für die tägliche Sicherung. Ein Wecker, den Android im
-  Stromsparen verschluckt, wäre eine Sicherung, die es nur gibt, wenn man
-  daran denkt — und dann hätte man sie auch von Hand angestossen.
+**WorkManager** für die tägliche Sicherung. Ein Wecker, den Android im
+Stromsparen verschluckt, wäre eine Sicherung, die es nur gibt, wenn man daran
+denkt — und dann hätte man sie auch von Hand angestossen.
 
 Das Umwandeln selbst — Tabelle zu JSON und zurück, und die Frage, was eine
 Lücke ist — steht **ohne Netz und ohne Android** in einer eigenen Datei und
