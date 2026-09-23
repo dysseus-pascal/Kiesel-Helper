@@ -258,8 +258,9 @@ fun Context.wochenbild(
     werte: List<Gesundheit.Tageswert>,
     ziel: Double? = null,
     marke: Double? = null,
-    beschriftung: (Double) -> String = { Zahlen.ganz(it) ?: "" },
     farbe: Int? = null,
+    // Zuletzt, damit sie als Lambda hinter dem Aufruf stehen kann.
+    beschriftung: (Double) -> String = { Zahlen.ganz(it) ?: "" },
 ): View {
     val heute = Einstellungen.heute(this)
     return saeulenbild(
@@ -314,7 +315,7 @@ class SpannenView(
      * dem dieses Bild gehoert. Wer hier erst in onDraw nachfragt, malt die
      * Gesundheit gruen, sobald die Ernaehrung nach ihr geladen hat.
      */
-    private val akzent = farbe ?: ctx.akzentfarbe()
+    private val akzent = ctx.akzentfarbe()
 
     private val stift = Paint(Paint.ANTI_ALIAS_FLAG)
     private val schrift = Paint(Paint.ANTI_ALIAS_FLAG).apply {
