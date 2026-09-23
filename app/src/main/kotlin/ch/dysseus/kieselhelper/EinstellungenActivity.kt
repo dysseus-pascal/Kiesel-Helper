@@ -39,6 +39,7 @@ class EinstellungenActivity : ComponentActivity() {
     private lateinit var linkbefund: TextView
     private var erlaubnisStarter: ActivityResultLauncher<Set<String>>? = null
     private var ortStarter: ActivityResultLauncher<Array<String>>? = null
+    private var ordnerStarter: ActivityResultLauncher<android.net.Uri?>? = null
     private var wartetAufEinstellungen = false
     /** Das Nachladen wartet auf die Antwort zur Erlaubnis fuer aeltere Daten. */
     private var ladeNachErlaubnis = false
@@ -62,6 +63,22 @@ class EinstellungenActivity : ComponentActivity() {
         ortStarter = registerForActivityResult(
             androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
         ) { setContentView(baueAnsicht()) }
+        ordnerStarter = registerForActivityResult(
+            androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
+        ) { uri ->
+            if (uri == null) return@registerForActivityResult
+            // DAUERHAFT, sonst gilt die Erlaubnis nur bis zum Neustart - und
+            // die taegliche Sicherung liefe danach ins Leere.
+            contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+            Einstellungen.setzeSicherungOrdner(this, uri.toString())
+            lifecycleScope.launch {
+                melde(Sichern.pruefe(this@EinstellungenActivity))
+                setContentView(baueAnsicht())
+            }
+        }
         setContentView(baueAnsicht())
     }
 
@@ -556,7 +573,7 @@ class EinstellungenActivity : ComponentActivity() {
             else "Noch nie gesichert"
         ))
         k.addView(zartMitHinweis(
-            "Tagestabelle und Strecken in einen WebDAV-Ordner",
+            "Tagestabelle und Strecken in einen Ordner — auf dem Telefon oder per WebDAV",
             "Die Gesundheitsakte hält rund dreissig Tage. Alles, was diese App " +
                 "an Wochenprofilen und Zusammenhängen rechnet, steht danach nur " +
                 "noch in ihrer eigenen Tabelle — und die liegt in den App-Daten " +
@@ -566,6 +583,53 @@ class EinstellungenActivity : ComponentActivity() {
                 "gehen nur einmal hinauf."
         ))
 
+        // DER ORDNER AUF DEM TELEFON ZUERST: er geht mit jedem Anbieter. Die
+        // Cloud-App - mailbox.org Drive, Nextcloud, Icedrive, Syncthing -
+        // traegt ihn hinauf, mit ihrer eigenen Anmeldung. WebDAV bleibt fuer
+        // die, die keine App wollen.
+        val ordnerUri = Einstellungen.sicherungOrdner(this)
+        val ordnerName = if (ordnerUri.isNotBlank()) {
+            val uri = android.net.Uri.parse(ordnerUri)
+            if (OrdnerZiel.erlaubt(this, uri)) OrdnerZiel(this, uri).name else null
+        } else null
+        k.addView(schild(
+            ordnerName != null,
+            when {
+                ordnerName != null -> "Ordner auf dem Telefon: $ordnerName"
+                ordnerUri.isNotBlank() -> "Ordner auf dem Telefon nicht mehr erreichbar"
+                else -> "Kein Ordner auf dem Telefon gewählt"
+            }
+        ))
+        k.addView(zartMitHinweis(
+            "Der einfache Weg: einen Ordner wählen, den eine Cloud-App abgleicht",
+            "Wähle im Dialog einen Ordner, den die App deines Anbieters " +
+                "synchronisiert — der Ordner von mailbox.org Drive, Nextcloud, " +
+                "Icedrive oder Syncthing, oder ein Ordner in »Dokumente«. " +
+                "Kiesel-Helper schreibt dorthin, die Cloud-App trägt es hinauf; " +
+                "Anmeldung und Eigenheiten des Servers sind dann deren Sache. " +
+                "Ohne Cloud-App bleibt es eine Kopie auf dem Telefon, die man " +
+                "abholen kann."
+        ))
+        val ordnerReihe = reihe()
+        ordnerReihe.addView(knopfHaupt(
+            if (ordnerName != null) "Anderen Ordner wählen" else "Ordner auf dem Telefon wählen"
+        ) {
+            ordnerStarter?.launch(null)
+        }.breitInReihe())
+        if (ordnerUri.isNotBlank()) {
+            ordnerReihe.addView(knopfLeise("Ordner entfernen") {
+                Einstellungen.setzeSicherungOrdner(this, "")
+                setContentView(baueAnsicht())
+            }.breitInReihe())
+        }
+        k.addView(ordnerReihe)
+
+        k.addView(zartMitHinweis(
+            "Oder per WebDAV — ohne App des Anbieters",
+            "Nextcloud, ownCloud, Synology, ein Webspace mit mod_dav. Nicht " +
+                "jeder Server nimmt jede Anfrage: wer hier scheitert, nimmt den " +
+                "Ordner oben."
+        ))
         val adresse = feld(
             "https://wolke.example/remote.php/dav/files/ich/Kiesel/",
             Einstellungen.sicherungUrl(this),

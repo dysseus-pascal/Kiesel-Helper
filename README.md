@@ -362,7 +362,19 @@ nicht sterben.
 dem Nachttief hergeleiteten Wert sieht man in einem Jahresmittel nicht mehr an,
 woher er kam.
 
-## Sicherung in einen WebDAV-Ordner
+## Sicherung in einen Ordner — auf dem Telefon oder per WebDAV
+
+**Der einfache Weg ist ein Ordner auf dem Telefon.** Man wählt ihn im
+Ordnerdialog des Systems — am besten den Ordner, den die App des Anbieters
+abgleicht: mailbox.org Drive, Nextcloud, Icedrive, Syncthing. Kiesel-Helper
+schreibt dorthin, die Cloud-App trägt es hinauf; Anmeldung und Eigenheiten des
+Servers sind dann deren Sache. Das geht mit jedem Anbieter, und es geht auch
+ohne Netz. WebDAV bleibt für die, die keine App des Anbieters wollen — aber
+nicht jeder Server nimmt jede Anfrage (mailbox.org und Icedrive haben beide
+ihre Eigenheiten), und wer dort scheitert, nimmt den Ordner.
+
+Sind beide eingerichtet, bekommen beide dieselbe Sicherung. Zurückgeholt wird
+aus dem ersten, der eine hat — der Telefonordner vor dem Server.
 
 **Die Gesundheitsakte hält rund dreissig Tage.** Alles, was diese App an
 Wochenprofilen, typischen Tagen und Zusammenhängen rechnet, steht danach nur

@@ -17,8 +17,8 @@ android {
         // und deckt jedes Telefon ab, das die Pebble-App ueberhaupt betreibt.
         minSdk = 28
         targetSdk = 36
-        versionCode = 45
-        versionName = "0.35.3"
+        versionCode = 46
+        versionName = "0.36.0"
     }
 
     // EIN DEBUG-SCHLUESSEL IM REPO, nicht einer je Lauf. Jeder GitHub-Lauf
@@ -76,6 +76,7 @@ dependencies {
 
     implementation("androidx.health.connect:connect-client:1.1.0")
     implementation("androidx.activity:activity-ktx:1.9.3")
+    implementation("androidx.documentfile:documentfile:1.0.1")
     // Fuer die Fensterraender: seit targetSdk 35 zeichnet Android von Kante zu
     // Kante, und ViewCompat liefert die Masse der Systemleisten einheitlich
     // ueber alle Fassungen.

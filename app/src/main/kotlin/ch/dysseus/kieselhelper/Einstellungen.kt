@@ -117,6 +117,17 @@ object Einstellungen {
     private const val DAV_TAEGLICH = "sicherung_taeglich"
     private const val DAV_ZULETZT = "sicherung_zuletzt"
     private const val DAV_SPUREN = "sicherung_spuren"
+    private const val ORDNER_URI = "sicherung_ordner"
+
+    /** Der gewaehlte Ordner auf dem Telefon, als Baum-URI; leer = keiner. */
+    fun sicherungOrdner(context: Context): String =
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
+            .getString(ORDNER_URI, "").orEmpty()
+
+    fun setzeSicherungOrdner(context: Context, uri: String) {
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE).edit()
+            .putString(ORDNER_URI, uri).apply()
+    }
 
     fun sicherungUrl(context: Context): String =
         context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
@@ -158,18 +169,23 @@ object Einstellungen {
      * DAMIT NICHT JEDEN TAG DASSELBE MEGABYTE HINAUFGEHT. Eine Spur aendert
      * sich nach dem Training nicht mehr; einmal hochgeladen ist sie fertig.
      */
-    fun gesicherteSpuren(context: Context): Set<String> =
-        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
-            .getStringSet(DAV_SPUREN, emptySet()).orEmpty()
+    // Je Ziel eine Liste: "WebDAV" hat den alten Schluessel, damit nichts
+    // doppelt hinaufgeht, was schon oben liegt.
+    private fun spurenSchluessel(ziel: String) =
+        if (ziel == "WebDAV") DAV_SPUREN else DAV_SPUREN + "_" + ziel.hashCode()
 
-    fun merkeGesicherteSpur(context: Context, beginn: Long) {
+    fun gesicherteSpuren(context: Context, ziel: String = "WebDAV"): Set<String> =
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
+            .getStringSet(spurenSchluessel(ziel), emptySet()).orEmpty()
+
+    fun merkeGesicherteSpur(context: Context, beginn: Long, ziel: String = "WebDAV") {
         val laden = context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
         // Die Menge muss KOPIERT werden: getStringSet gibt die gespeicherte
         // Menge selbst zurueck, und wer sie aendert, aendert sie hinter dem
         // Ruecken der Ablage - beim naechsten Start stuende der alte Stand da.
-        val neu = laden.getStringSet(DAV_SPUREN, emptySet()).orEmpty().toMutableSet()
+        val neu = laden.getStringSet(spurenSchluessel(ziel), emptySet()).orEmpty().toMutableSet()
         neu += beginn.toString()
-        laden.edit().putStringSet(DAV_SPUREN, neu).apply()
+        laden.edit().putStringSet(spurenSchluessel(ziel), neu).apply()
     }
 
     /**

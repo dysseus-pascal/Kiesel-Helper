@@ -26,7 +26,9 @@ import java.util.concurrent.TimeUnit
  * ProtocolException. Man kann das mit Reflexion umgehen; man kann es auch
  * lassen.
  */
-class WebDav(basis: String, private val nutzer: String, private val geheim: String) {
+class WebDav(basis: String, private val nutzer: String, private val geheim: String) : Ziel {
+
+    override val name: String get() = "WebDAV"
 
     /** Der Ordner, immer mit Schrägstrich am Ende. */
     val basis: String = if (basis.endsWith("/")) basis else "$basis/"
@@ -74,7 +76,7 @@ class WebDav(basis: String, private val nutzer: String, private val geheim: Stri
      * welche Ordner es eine Stufe hoeher gibt - bei mailbox.org heisst der
      * eigene "Vorname, Nachname", und das raet niemand.
      */
-    fun pruefe(): Ergebnis {
+    override fun pruefe(): Ergebnis {
         val e = propfind(basis, tiefe = 0)
         if (e is Ergebnis.Gut && e.text != "207") {
             return Ergebnis.Schlecht(
@@ -156,14 +158,14 @@ class WebDav(basis: String, private val nutzer: String, private val geheim: Stri
     }
 
     /** Den Ordner anlegen. Gibt es ihn schon, ist das kein Fehler. */
-    fun ordner(name: String = ""): Ergebnis {
+    override fun ordner(name: String): Ergebnis {
         val ziel = if (name.isBlank()) basis else pfad(name)
         return versuche("MKCOL", erlaubtAuch = setOf(405, 301)) {
             kopf(Request.Builder().url(ziel).method("MKCOL", null)).build()
         }
     }
 
-    fun lege(name: String, inhalt: ByteArray, typ: String = "application/json"): Ergebnis =
+    override fun lege(name: String, inhalt: ByteArray, typ: String): Ergebnis =
         versuche("PUT") {
             kopf(
                 Request.Builder().url(pfad(name))
@@ -172,7 +174,7 @@ class WebDav(basis: String, private val nutzer: String, private val geheim: Stri
         }
 
     /** Holt eine Datei. null heisst: gibt es nicht oder ging nicht. */
-    fun hole(name: String): String? {
+    override fun hole(name: String): String? {
         if (!istSicher()) return null
         return try {
             kunde.newCall(kopf(Request.Builder().url(pfad(name)).get()).build())

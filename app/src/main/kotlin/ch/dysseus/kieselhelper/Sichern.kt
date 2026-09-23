@@ -37,28 +37,47 @@ object Sichern {
 
     private const val ARBEIT = "kiesel-sicherung"
 
-    fun bereit(context: Context): Boolean =
+    fun webdavBereit(context: Context): Boolean =
         Einstellungen.sicherungUrl(context).isNotBlank() &&
             Einstellungen.sicherungNutzer(context).isNotBlank() &&
             Tresor.hatGeheimnis(context)
 
-    private fun draht(context: Context): WebDav? {
-        if (!bereit(context)) return null
-        return WebDav(
-            Einstellungen.sicherungUrl(context),
-            Einstellungen.sicherungNutzer(context),
-            Tresor.lies(context),
-        )
+    fun ordnerBereit(context: Context): Boolean =
+        Einstellungen.sicherungOrdner(context).isNotBlank()
+
+    fun bereit(context: Context): Boolean = webdavBereit(context) || ordnerBereit(context)
+
+    /**
+     * Alle eingerichteten Ziele - der Ordner auf dem Telefon zuerst, weil er
+     * immer geht; WebDAV dazu, wenn es eingerichtet ist. Beide bekommen
+     * dieselbe Sicherung.
+     */
+    private fun ziele(context: Context): List<Ziel> {
+        val aus = mutableListOf<Ziel>()
+        if (ordnerBereit(context)) {
+            aus += OrdnerZiel(context, android.net.Uri.parse(Einstellungen.sicherungOrdner(context)))
+        }
+        if (webdavBereit(context)) {
+            aus += WebDav(
+                Einstellungen.sicherungUrl(context),
+                Einstellungen.sicherungNutzer(context),
+                Tresor.lies(context),
+            )
+        }
+        return aus
     }
 
     /** Zugang und Ordner prüfen; einen fehlenden Ordner anlegen. */
     suspend fun pruefe(context: Context): String = withContext(Dispatchers.IO) {
-        val dav = draht(context) ?: return@withContext "Adresse, Benutzer und Passwort fehlen"
-        when (val e = dav.pruefe()) {
-            is WebDav.Ergebnis.Gut ->
-                if (e.text == "angelegt") "Ordner angelegt, Zugang stimmt"
-                else "Ordner erreichbar, Zugang stimmt"
-            is WebDav.Ergebnis.Schlecht -> e.grund
+        val ziele = ziele(context)
+        if (ziele.isEmpty()) return@withContext "Kein Ziel: Ordner wählen oder WebDAV eintragen"
+        ziele.joinToString("\n") { ziel ->
+            ziel.name + ": " + when (val e = ziel.pruefe()) {
+                is WebDav.Ergebnis.Gut ->
+                    if (e.text == "angelegt") "Ordner angelegt, Zugang stimmt"
+                    else "Ordner erreichbar, Zugang stimmt"
+                is WebDav.Ergebnis.Schlecht -> e.grund
+            }
         }
     }
 
@@ -70,7 +89,8 @@ object Sichern {
      * dasselbe Megabyte. Was schon oben liegt, steht in einer Liste daneben.
      */
     suspend fun jetzt(context: Context): String = withContext(Dispatchers.IO) {
-        val dav = draht(context) ?: return@withContext "Nicht eingerichtet"
+        val ziele = ziele(context)
+        if (ziele.isEmpty()) return@withContext "Nicht eingerichtet"
 
         val tage = Speicher(context).alleTage()
         val spuren = Spur.alle(context)
@@ -81,16 +101,40 @@ object Sichern {
             erzeugt = Instant.now().toString(),
         )
 
-        when (val e = dav.lege(Sicherung.DATEINAME, text.toByteArray(Charsets.UTF_8))) {
+        val meldungen = mutableListOf<String>()
+        var eines = false
+        for (ziel in ziele) {
+            val fehler = sichereNach(context, ziel, text, spuren)
+            if (fehler != null) {
+                meldungen += ziel.name + ": " + fehler
+            } else {
+                eines = true
+            }
+        }
+        if (eines) Einstellungen.setzeSicherungZuletzt(context, Instant.now().toEpochMilli())
+        val meldung = if (eines) {
+            tage.size.toString() + " Tage gesichert" +
+                (if (ziele.size > 1) " (" + ziele.size + " Ziele)" else "") +
+                (if (meldungen.isNotEmpty()) " — " + meldungen.joinToString("; ") else "")
+        } else {
+            meldungen.joinToString("; ")
+        }
+        Verlauf(context).merkeMeldung(meldung)
+        meldung
+    }
+
+    /** Ein Ziel beschreiben; null heisst gut, sonst der Grund. */
+    private fun sichereNach(context: Context, ziel: Ziel, text: String, spuren: List<Long>): String? {
+        when (ziel.lege(Sicherung.DATEINAME, text.toByteArray(Charsets.UTF_8))) {
             is WebDav.Ergebnis.Schlecht -> {
                 // 409 heisst meistens: der Ordner ist nicht da. Einmal
                 // anlegen und noch einmal versuchen - das ist der haeufigste
                 // Fall beim allerersten Mal.
-                dav.ordner()
-                when (val zweit = dav.lege(
+                ziel.ordner()
+                when (val zweit = ziel.lege(
                     Sicherung.DATEINAME, text.toByteArray(Charsets.UTF_8)
                 )) {
-                    is WebDav.Ergebnis.Schlecht -> return@withContext zweit.grund
+                    is WebDav.Ergebnis.Schlecht -> return zweit.grund
                     else -> Unit
                 }
             }
@@ -99,28 +143,22 @@ object Sichern {
 
         // Die Spuren in ihren Unterordner. Schlaegt eine fehl, geht die
         // Sicherung trotzdem durch: die Tabelle ist das Wertvolle.
-        var neue = 0
+        //
+        // GEMERKT WIRD JE ZIEL, welche Spur schon dort liegt: der WebDAV-
+        // Ordner und der Telefonordner haben nicht denselben Stand.
         if (spuren.isNotEmpty()) {
-            dav.ordner(Sicherung.SPURORDNER)
-            val schonOben = Einstellungen.gesicherteSpuren(context)
+            ziel.ordner(Sicherung.SPURORDNER)
+            val schonOben = Einstellungen.gesicherteSpuren(context, ziel.name)
             spuren.filter { it.toString() !in schonOben }.forEach { beginn ->
                 val inhalt = Spur.roh(context, beginn) ?: return@forEach
-                val ziel = Sicherung.SPURORDNER + "/" + Sicherung.spurname(beginn)
-                when (dav.lege(ziel, inhalt.toByteArray(Charsets.UTF_8), "application/x-ndjson")) {
-                    is WebDav.Ergebnis.Gut -> {
-                        Einstellungen.merkeGesicherteSpur(context, beginn)
-                        neue++
-                    }
+                val pfad = Sicherung.SPURORDNER + "/" + Sicherung.spurname(beginn)
+                when (ziel.lege(pfad, inhalt.toByteArray(Charsets.UTF_8), "application/x-ndjson")) {
+                    is WebDav.Ergebnis.Gut -> Einstellungen.merkeGesicherteSpur(context, beginn, ziel.name)
                     is WebDav.Ergebnis.Schlecht -> Unit
                 }
             }
         }
-
-        Einstellungen.setzeSicherungZuletzt(context, Instant.now().toEpochMilli())
-        val meldung = tage.size.toString() + " Tage gesichert" +
-            (if (neue > 0) ", $neue neue Strecken" else "")
-        Verlauf(context).merkeMeldung(meldung)
-        meldung
+        return null
     }
 
     /**
@@ -131,9 +169,17 @@ object Sichern {
      * jede Kopie.
      */
     suspend fun zurueck(context: Context): String = withContext(Dispatchers.IO) {
-        val dav = draht(context) ?: return@withContext "Nicht eingerichtet"
-        val text = dav.hole(Sicherung.DATEINAME)
-            ?: return@withContext "Keine Sicherung gefunden"
+        val ziele = ziele(context)
+        if (ziele.isEmpty()) return@withContext "Nicht eingerichtet"
+        // Das erste Ziel, das eine Sicherung hat - der Telefonordner vor dem
+        // Server, weil er ohne Netz geht.
+        var dav: Ziel = ziele.first()
+        var text: String? = null
+        for (z in ziele) {
+            text = z.hole(Sicherung.DATEINAME)
+            if (text != null) { dav = z; break }
+        }
+        if (text == null) return@withContext "Keine Sicherung gefunden"
         val stand = Sicherung.ausJson(text)
             ?: return@withContext "Die Datei dort ist keine Sicherung dieser App"
 
@@ -162,8 +208,12 @@ object Sichern {
     // --- Täglich von selbst ---
 
     fun planen(context: Context) {
+        // Netz braucht nur der Server; der Ordner auf dem Telefon geht auch
+        // im Flugmodus, und die Cloud-App holt nach, wenn sie kann.
         val bedingung = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .setRequiredNetworkType(
+                if (webdavBereit(context)) NetworkType.CONNECTED else NetworkType.NOT_REQUIRED
+            )
             .build()
         val arbeit = PeriodicWorkRequestBuilder<Arbeit>(Duration.ofDays(1))
             .setConstraints(bedingung)
