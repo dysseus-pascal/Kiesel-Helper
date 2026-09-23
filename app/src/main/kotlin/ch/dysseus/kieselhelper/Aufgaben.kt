@@ -378,45 +378,76 @@ object Aufgaben {
         val runden =
             if (bahnen > 0) alsBahnen(abschnitte, anfang, ende, becken) else emptyList()
 
-        val satz = ExerciseSessionRecord(
+        val notiz = buildString {
+            if (puls > 0) append("Puls ⌀ $puls")
+            felder[SP_PULS_MAX]?.takeIf { it > 0 }?.let { append(", max $it") }
+            if (strecke > 0) {
+                append(", ")
+                append(Zahlen.eine(strecke / 1000) ?: "")
+                append(" km (GPS)")
+            } else {
+                felder[SP_METER]?.takeIf { it > 0 }?.let {
+                    append(", ${it / 1000},${(it % 1000) / 100} km")
+                }
+            }
+            if (kcal > 0) append(", $kcal kcal")
+            abschnittsnotiz(satzart, felder, abschnitte)?.let {
+                if (isNotEmpty()) append(" — ")
+                append(it)
+            }
+        }.ifBlank { null }
+
+        // ERST MIT ALLEM, DANN OHNE DIE ABSCHNITTE. Die Akte prueft Saetze
+        // und Bahnen streng - Ueberschneidung, Reihenfolge, ob die Satzart
+        // zur Sportart passt -, und weist im Zweifel den GANZEN Eintrag ab.
+        // Ein Krafttraining, das deshalb nie in der Akte steht, ist
+        // schlimmer als eines ohne seine Saetze: die stehen wenigstens noch
+        // in der Notiz. Also zweiter Anlauf ohne sie.
+        val satz = try {
+            ExerciseSessionRecord(
+                startTime = anfang,
+                startZoneOffset = null,
+                endTime = ende,
+                endZoneOffset = null,
+                exerciseType = satzart,
+                title = name,
+                // Was nicht als eigener Satz in die Akte geht, steht wenigstens
+                // daneben: die Zahlen der Uhr, unveraendert.
+                notes = notiz,
+                metadata = vonDerUhr("kieselsport-" + beginn),
+                segments = segmente,
+                laps = runden,
+                exerciseRoute = route,
+            )
+        } catch (e: IllegalArgumentException) {
+            Log.w(TAG, "Abschnitte abgewiesen, Training geht ohne sie: " + e.message)
+            null
+        }
+        val ohne = ExerciseSessionRecord(
             startTime = anfang,
             startZoneOffset = null,
             endTime = ende,
             endZoneOffset = null,
             exerciseType = satzart,
             title = name,
-            // Was nicht als eigener Satz in die Akte geht, steht wenigstens
-            // daneben: die Zahlen der Uhr, unveraendert.
-            notes = buildString {
-                if (puls > 0) append("Puls ⌀ $puls")
-                felder[SP_PULS_MAX]?.takeIf { it > 0 }?.let { append(", max $it") }
-                if (strecke > 0) {
-                    append(", ")
-                    append(Zahlen.eine(strecke / 1000) ?: "")
-                    append(" km (GPS)")
-                } else {
-                    felder[SP_METER]?.takeIf { it > 0 }?.let {
-                        append(", ${it / 1000},${(it % 1000) / 100} km")
-                    }
-                }
-                if (kcal > 0) append(", $kcal kcal")
-                abschnittsnotiz(satzart, felder, abschnitte)?.let {
-                    if (isNotEmpty()) append(" — ")
-                    append(it)
-                }
-            }.ifBlank { null },
+            notes = notiz,
             metadata = vonDerUhr("kieselsport-" + beginn),
-            segments = segmente,
-            laps = runden,
             exerciseRoute = route,
         )
-        val meldung = schreibe(context, satz, buildString {
+        val hatAbschnitte = satz != null && (segmente.isNotEmpty() || runden.isNotEmpty())
+        val kurz = buildString {
             append("$name, ${dauer / 60} min")
             if (strecke > 0) append(", " + (Zahlen.eine(strecke / 1000) ?: "") + " km")
             if (bahnen > 0) append(", $bahnen Bahnen")
             if (segmente.isNotEmpty()) append(", ${felder[SP_SAETZE] ?: 0} Sätze")
             append(" eingetragen")
-        }, riegel = "kieselsport")
+        }
+        var meldung = schreibe(context, satz ?: ohne, kurz, riegel = "kieselsport")
+        if (hatAbschnitte && meldung.startsWith("Nicht eingetragen")) {
+            Log.w(TAG, "Eintrag mit Abschnitten abgewiesen, zweiter Anlauf ohne")
+            meldung = schreibe(context, ohne, "$kurz (ohne die einzelnen Abschnitte)",
+                riegel = "kieselsport")
+        }
         return meldung
     }
 
