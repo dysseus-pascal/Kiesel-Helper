@@ -390,8 +390,8 @@ nicht mehr zum Hauptschirm.
 
 | Seite | Dienste | Was darauf steht |
 |---|---|---|
-| Gesundheit | Kieselsport | Schlaf, HRV und Ruhepuls aus der Nacht; das Schlaf-Ideal |
-| Training | Kieselsport | Strecke (Standort); **Maximalpuls, Pause, Empfindlichkeit, Becken, Timeline-Pin, Nachtfenster** |
+| Gesundheit | Kieselsport | Schlaf, HRV und Ruhepuls aus der Nacht; das Schlaf-Ideal; **Nachtfenster** (Nacht messen, von, bis) |
+| Training | Kieselsport | Strecke (Standort); **Maximalpuls, Pause, Empfindlichkeit, Becken, Timeline-Pin** |
 | Ernährung | Drinktervall, SupCycle, Koffein | heutiges Ziel; **Soll, Glasgrösse, Animation**; **der Plan** (sechs Plätze); was mit Koffein eingetragen wird |
 | Navigation | Kieselstrasse | OsmAnd-Verbindung, Kartenlinks (seit 0.49.0 eigene Seite: man navigiert auch ohne Training) |
 | Kiesel-Helper | — | Erscheinungsbild, Tagesgrenze, Sicherung, frühere Daten, Zustand, Verlauf |

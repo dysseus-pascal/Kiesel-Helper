@@ -426,6 +426,10 @@ class EinstellungenActivity : KieselActivity() {
         w.luft(8f)
         w.addView(abschnitt(getString(R.string.ei_schlaf)))
         w.addView(schlafkarte())
+        w.luft(8f)
+        // Das Zeitfenster der Nacht auf der Uhr - hier, nicht beim Sport.
+        w.addView(abschnitt(getString(R.string.uk_nacht)))
+        w.addView(uhr.nacht())
     }
 
     private fun seiteSupCycle(w: LinearLayout) {

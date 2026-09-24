@@ -42,6 +42,9 @@ class UhrKarten(private val a: Activity) {
     private val dt = Zustand("dt", "Drinktervall", Uhreinstellungen.DT_VORGABE)
     private val sp = Zustand("sp", "Kieselsport", Uhreinstellungen.SP_VORGABE)
     private val sc = Zustand("sc", "SupCycle", Uhreinstellungen.SC_VORGABE)
+    // Die Nacht von Kieselsport: dieselbe Meldung, eigene Karte auf der Seite
+    // Gesundheit (siehe nacht()).
+    private val sn = Zustand("sp", "Kieselsport", Uhreinstellungen.SP_VORGABE)
 
     /** Welche SupCycle-Plaetze aufgeklappt sind - bleibt beim Neufuellen. */
     private val scOffen = mutableSetOf<Int>()
@@ -64,6 +67,7 @@ class UhrKarten(private val a: Activity) {
     fun auffrischen() {
         pruefe(dt, standDt()) { fuelleDt() }
         pruefe(sp, standSp()) { fuelleSp() }
+        pruefe(sn, standSp()) { fuelleSn() }
         pruefe(sc, standSc()?.let(this::normal)) { fuelleSc() }
     }
 
@@ -197,28 +201,57 @@ class UhrKarten(private val a: Activity) {
             zeitKnopf.visibility = if (it > 0) View.VISIBLE else View.GONE
         })
         k.addView(zeitKnopf)
-        // DIE NACHT: ein Fenster, kein Wecker. Die Uhr misst darin von selbst
-        // und schickt morgens die Minuten; ausgewertet wird hier.
-        k.addView(unter(a.getString(R.string.uk_nacht)))
-        val fenster = a.spalte().apply { visibility = if (s.nachtAn) View.VISIBLE else View.GONE }
-        k.addView(schalter(a.getString(R.string.uk_nacht_messen), s.nachtAn) {
-            merke(sp, standSp(), jetzt().copy(nachtAn = it))
-            fenster.visibility = if (it) View.VISIBLE else View.GONE
-        })
-        fenster.addView(zeitknopf(a.getString(R.string.uk_nacht_von), hhmm(s.nachtVon), zweistellig = true) { neu ->
-            merke(sp, standSp(), jetzt().copy(nachtVon = minuten(neu)))
-        })
-        fenster.addView(zeitknopf(a.getString(R.string.uk_nacht_bis), hhmm(s.nachtBis), zweistellig = true) { neu ->
-            merke(sp, standSp(), jetzt().copy(nachtBis = minuten(neu)))
-        })
-        k.addView(fenster)
-        k.addView(a.zart(a.getString(R.string.uk_nacht_hinweis)).apply { setPadding(0, a.dp(8f), 0, 0) })
         fuss(sp, k, stand) {
-            val neu = jetzt()
+            // DIE NACHT KOMMT AUS DEM STAND, nicht aus diesem Entwurf: sie
+            // wird auf der Seite Gesundheit eingestellt (nacht()), und ein
+            // alter Entwurf hier soll sie nicht ueberschreiben.
+            val basis = standSp() ?: sp.vorgabe
+            val neu = jetzt().copy(nachtAn = basis.nachtAn, nachtVon = basis.nachtVon, nachtBis = basis.nachtBis)
             Uhreinstellungen.sendeKieselsport(a, neu)
             sp.entwurf = neu
             sp.gesendet = neu
             zeigeZeile(sp, standSp())
+        }
+    }
+
+    // --- Kieselsport: die Nacht ---
+    //
+    // DIESELBE UHR-APP, ABER EIN ANDERES THEMA. Das Zeitfenster der Nacht
+    // gehoert zu Gesundheit, nicht zum Sport - also eine eigene Karte dort.
+    // Sie schickt dieselbe Nachricht wie die Sportkarte, mit deren Werten
+    // aus dem Stand der Uhr, und nur die Nacht aus dem eigenen Entwurf.
+
+    fun nacht(): LinearLayout = a.karte().also { sn.karte = it; fuelleSn() }
+
+    private fun fuelleSn() {
+        val k = sn.karte ?: return
+        val stand = standSp()
+        val s = sn.entwurf ?: stand ?: sn.vorgabe
+        val jetzt = { sn.entwurf ?: s }
+        kopf(k)
+        k.luft(6f)
+        // Ein Fenster, kein Wecker. Die Uhr misst darin von selbst und
+        // schickt morgens die Minuten; ausgewertet wird hier.
+        val fenster = a.spalte().apply { visibility = if (s.nachtAn) View.VISIBLE else View.GONE }
+        k.addView(schalter(a.getString(R.string.uk_nacht_messen), s.nachtAn) {
+            merke(sn, standSp(), jetzt().copy(nachtAn = it))
+            fenster.visibility = if (it) View.VISIBLE else View.GONE
+        })
+        fenster.addView(zeitknopf(a.getString(R.string.uk_nacht_von), hhmm(s.nachtVon), zweistellig = true) { neu ->
+            merke(sn, standSp(), jetzt().copy(nachtVon = minuten(neu)))
+        })
+        fenster.addView(zeitknopf(a.getString(R.string.uk_nacht_bis), hhmm(s.nachtBis), zweistellig = true) { neu ->
+            merke(sn, standSp(), jetzt().copy(nachtBis = minuten(neu)))
+        })
+        k.addView(fenster)
+        k.addView(a.zart(a.getString(R.string.uk_nacht_hinweis)).apply { setPadding(0, a.dp(8f), 0, 0) })
+        fuss(sn, k, stand) {
+            val e = jetzt()
+            val neu = (standSp() ?: sn.vorgabe).copy(nachtAn = e.nachtAn, nachtVon = e.nachtVon, nachtBis = e.nachtBis)
+            Uhreinstellungen.sendeKieselsport(a, neu)
+            sn.entwurf = neu
+            sn.gesendet = neu
+            zeigeZeile(sn, standSp())
         }
     }
 
