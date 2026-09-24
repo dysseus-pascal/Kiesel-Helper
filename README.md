@@ -449,6 +449,28 @@ System. Deshalb bekommt es jede Farbe als Paar für hell und dunkel
 Schrift, Balken und Akzent aus der Systempalette. Vor Android 12 bleiben die
 Farben aus dem Layout, und die folgen dem System.
 
+## Sprachen
+
+Seit 0.50.0 spricht die App **Deutsch, Englisch, Französisch, Italienisch und
+Spanisch** — nach der Sprache des Telefons, ab Android 13 auch je App
+(*Einstellungen → System → Sprachen → App-Sprachen*). Für jede andere Sprache
+gilt Englisch. Die Texte stehen in `values/` (Englisch, der Rückfall) und in
+`values-de/`, `-fr/`, `-it/`, `-es/`; Datum, Uhrzeit, Wochentage und Zahlen
+kommen aus der Locale.
+
+Was die App in die Gesundheitsakte schreibt — der Titel eines Trainings, die
+Notiz mit Sätzen und Bahnen, »Schlaf (Uhr)« —, schreibt sie in der Sprache,
+die das Telefon **beim Eintragen** spricht. Was schon drinsteht, bleibt, wie
+es war; ebenso die alten Zeilen im Verlauf. Beim Mountainbike steht in jeder
+Sprache »MTB« im Titel, denn daran erkennt die App es wieder — die Akte kennt
+nur ein Radfahren.
+
+Nicht übersetzt werden die Namen der Uhr-Apps (Drinktervall, Kieselsport,
+SupCycle, Herzintervall, Kieselstrasse), OsmAnd, Material You und Fachwörter
+wie HRV und RMSSD. Ein Test prüft, dass alle fünf Dateien dieselben Schlüssel
+und dieselben Platzhalter tragen — ein fehlender Text fiele sonst niemandem
+auf, weil Android still den englischen nimmt.
+
 ## Das Wasserziel kommt von Drinktervall
 
 Seit 0.43.0 rechnet Kiesel-Helper nicht mehr mit festen acht Gläsern zu
