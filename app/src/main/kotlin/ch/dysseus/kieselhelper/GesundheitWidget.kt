@@ -81,7 +81,6 @@ class GesundheitWidget : AppWidgetProvider() {
         private const val WUNSCH_BIS = "wunsch_bis"
         const val ACTION_LAGE = "ch.dysseus.kieselhelper.WIDGET_LAGE"
         const val EXTRA_LAGE = "lage"
-        private const val GLAS_ML = 300.0
 
         /**
          * Spaetestens so alt darf der Stand werden.
@@ -245,7 +244,7 @@ class GesundheitWidget : AppWidgetProvider() {
                 schritte = stand.schritte.zahl, schritteZiel = stand.schritte.ziel,
                 aktivMin = stand.aktiv.zahl, aktivZiel = stand.aktiv.ziel,
                 wasserMl = stand.wasser.zahl, wasserZiel = stand.wasser.ziel,
-                glasMl = GLAS_ML,
+                glasMl = Einstellungen.glasMl(context).toDouble(),
                 offenePraeparate = stand.suppListe.filter { !it.genommen }.map { it.name },
                 koffeinMg = stand.koffeinMg,
                 wunsch = wunsch,

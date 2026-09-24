@@ -1124,7 +1124,8 @@ class Gesundheit(private val context: Context) {
      * eine erfundene Literzahl ist das allemal - und wenn Drinktervall es
      * einmal mitliefert, steht die Stelle schon.
      */
-    private fun wasserziel(): Double = 8 * 300.0
+    /** Das Wasserziel von Drinktervall: Glaeser mal Glasgroesse. */
+    private fun wasserziel(): Double = Einstellungen.wasserzielMl(context)
 
     private suspend fun letzterPuls(
         klient: HealthConnectClient,

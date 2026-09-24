@@ -110,6 +110,54 @@ object Einstellungen {
         context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
             .edit().putBoolean(FUEHRT, fuehrt).apply()
     }
+    // --- Das Wasserziel, von Drinktervall ---
+    //
+    // DIE UHR BESTIMMT ES, NICHT DIESE APP. In Drinktervall wird das Soll
+    // eingestellt und mit "Ziel+" fuer den Tag erhoeht; jede Standmeldung
+    // traegt das heutige Ziel in Glaesern mit, und jedes getrunkene Glas
+    // seine Groesse. Beides wird hier nur gemerkt.
+    //
+    // ZWEI ZAHLEN, WEIL "ZIEL+" NUR FUER HEUTE GILT. Das Tagesziel gilt fuer
+    // den Tag, an dem es kam. Am naechsten Morgen gilt das Grundziel - das
+    // erste Ziel, das an einem Tag ankam, bevor jemand "Ziel+" drueckte -,
+    // bis die Uhr sich meldet.
+    private const val DT_TAGESZIEL = "dt_tagesziel"
+    private const val DT_TAG = "dt_tag"
+    private const val DT_GRUNDZIEL = "dt_grundziel"
+    private const val DT_GLAS = "dt_glas_ml"
+    const val GLAESER_VORGABE = 8
+    const val GLAS_VORGABE = 300
+
+    fun merkeWasserziel(context: Context, glaeser: Int) {
+        if (glaeser < 1 || glaeser > 40) return
+        val p = context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
+        val heute = heute(context).toString()
+        val e = p.edit()
+        if (p.getString(DT_TAG, null) != heute) e.putInt(DT_GRUNDZIEL, glaeser)
+        e.putInt(DT_TAGESZIEL, glaeser).putString(DT_TAG, heute).apply()
+    }
+
+    fun merkeGlasgroesse(context: Context, ml: Int) {
+        if (ml < 50 || ml > 2000) return
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE).edit().putInt(DT_GLAS, ml).apply()
+    }
+
+    /** Das heutige Ziel in Glaesern - von der Uhr, sonst die Vorgabe. */
+    fun wasserGlaeser(context: Context): Int {
+        val p = context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
+        return if (p.getString(DT_TAG, null) == heute(context).toString()) {
+            p.getInt(DT_TAGESZIEL, GLAESER_VORGABE)
+        } else {
+            p.getInt(DT_GRUNDZIEL, p.getInt(DT_TAGESZIEL, GLAESER_VORGABE))
+        }
+    }
+
+    fun glasMl(context: Context): Int =
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE).getInt(DT_GLAS, GLAS_VORGABE)
+
+    /** Das Wasserziel in ml: Glaeser mal Glasgroesse, beides von Drinktervall. */
+    fun wasserzielMl(context: Context): Double = wasserGlaeser(context) * glasMl(context).toDouble()
+
     // --- Der Maximalpuls, fuer die Zonen ---
     //
     // DERSELBE WERT WIE AUF DER UHR, von Hand eingetragen: die Uhr schickt ihn

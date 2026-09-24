@@ -362,6 +362,19 @@ nicht sterben.
 dem Nachttief hergeleiteten Wert sieht man in einem Jahresmittel nicht mehr an,
 woher er kam.
 
+## Das Wasserziel kommt von Drinktervall
+
+Seit 0.43.0 rechnet Kiesel-Helper nicht mehr mit festen acht Gläsern zu
+300 ml. Das Ziel wird in Drinktervall eingestellt und dort mit »Ziel+« für den
+Tag erhöht; jede Standmeldung der Uhr trägt das heutige Ziel in Gläsern mit,
+jedes getrunkene Glas seine Grösse. Kiesel-Helper merkt sich beides und rechnet
+das Ziel in Millilitern daraus — im Ernährungs-Reiter, im Widget und in der
+Erinnerung »Gläser hinterher«. Ein »Ziel+« auf der Uhr zieht sofort nach.
+
+Weil »Ziel+« nur für heute gilt, merkt sich die App zwei Zahlen: das Ziel des
+Tages und das Grundziel, das an diesem Tag zuerst ankam. Am nächsten Morgen
+gilt das Grundziel, bis die Uhr sich meldet.
+
 ## Das Widget weiss, was gerade zählt
 
 Seit 0.42.0 hat das Widget eine **Bühne** und drei kleine Kacheln. Die Bühne

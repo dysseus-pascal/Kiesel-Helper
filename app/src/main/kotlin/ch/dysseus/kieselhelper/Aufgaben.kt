@@ -60,6 +60,7 @@ object Aufgaben {
      * dazwischenschiebt, verschiebt alle folgenden - und diese App traegt
      * danach still den falschen Wert ein.
      */
+    private const val DT_GLASSES = 10001   //< das heutige Ziel in Glaesern, bei jeder Meldung
     private const val DT_GLASS_ML = 10008
     private const val DT_DRANK_AT = 10009
 
@@ -626,6 +627,15 @@ object Aufgaben {
      * natuerliche Schluessel dafuer.
      */
     private suspend fun wasser(context: Context, felder: Map<Int, Long>): String? {
+        // DAS ZIEL KOMMT MIT JEDER MELDUNG, auch ohne Glas: so zieht ein
+        // "Ziel+" auf der Uhr sofort in Reiter und Widget nach.
+        felder[DT_GLASSES]?.let { neu ->
+            val vorher = Einstellungen.wasserGlaeser(context)
+            Einstellungen.merkeWasserziel(context, neu.toInt())
+            if (Einstellungen.wasserGlaeser(context) != vorher) GesundheitWidget.stosseAn(context)
+        }
+        felder[DT_GLASS_ML]?.let { Einstellungen.merkeGlasgroesse(context, it.toInt()) }
+
         val ml = felder[DT_GLASS_ML] ?: return null
         val wann = felder[DT_DRANK_AT] ?: return null
         if (ml <= 0 || wann <= 0) return null

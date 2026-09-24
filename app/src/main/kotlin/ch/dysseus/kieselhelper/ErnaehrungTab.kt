@@ -155,8 +155,11 @@ object ErnaehrungTab {
         val k = ctx.karte()
         val ton = ctx.farbe(R.color.wasser)
         val ml = stand.wasser.zahl ?: 0.0
-        val ziel = stand.wasser.ziel ?: (8 * GLAS)
-        val fehlt = Math.ceil((ziel - ml) / GLAS).toInt()
+        // Glasgroesse und Ziel kommen von Drinktervall - dort werden sie
+        // eingestellt, und "Ziel+" erhoeht das Ziel fuer heute.
+        val glas = Einstellungen.glasMl(ctx).toDouble()
+        val ziel = stand.wasser.ziel ?: Einstellungen.wasserzielMl(ctx)
+        val fehlt = Math.ceil((ziel - ml) / glas).toInt()
 
         k.addView(ctx.reihe().apply {
             gravity = android.view.Gravity.CENTER_VERTICAL
@@ -177,7 +180,7 @@ object ErnaehrungTab {
                             else -> "noch $fehlt Gläser"
                         }
                 ))
-                addView(ctx.glaeserreihe(ml, GLAS, ziel, ton))
+                addView(ctx.glaeserreihe(ml, glas, ziel, ton))
             })
         })
 
@@ -273,6 +276,5 @@ object ErnaehrungTab {
     }
 
     /** Ein Glas Drinktervall, in Millilitern. */
-    private const val GLAS = 300.0
 
 }
