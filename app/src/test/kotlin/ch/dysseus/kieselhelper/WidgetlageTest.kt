@@ -33,7 +33,7 @@ class WidgetlageTest {
             schritte = 120.0, wasserMl = 0.0,
         ))
         assertEquals(Widgetlage.Art.MORGEN, l.art)
-        assertEquals("7 h 10 min", l.gross)
+        assertEquals("7 h 10", l.gross)
         assertTrue(l.satz.contains("länger als sonst"))
         assertEquals(listOf("schritte", "aktiv", "wasser"), l.kacheln.map { it.schluessel })
     }
@@ -82,7 +82,7 @@ class WidgetlageTest {
     fun abendsDieBilanz() {
         val l = Widgetlage.ermittle(blick(jetzt = LocalDateTime.of(2026, 9, 24, 21, 0), wasserMl = 2100.0))
         assertEquals(Widgetlage.Art.ABEND, l.art)
-        assertTrue(l.satz.contains("noch 4000 Schritte"))
+        assertTrue(l.satz, l.satz.contains("noch 4 000 Schritte"))
         assertTrue(l.satz.contains("1 Glas fehlen"))
     }
 
