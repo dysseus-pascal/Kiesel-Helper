@@ -372,7 +372,7 @@ Wort dazu, damit man versteht, warum es anders aussieht als vor einer Stunde.
 |---|---|---|
 | **Training** | ein Training endete in den letzten zwei Stunden | Art, Dauer, Puls Ø, Strecke — ein Tipp öffnet die Trainingsseite |
 | **Nacht** | die Nacht ist eingetragen, seit dem Aufwachen unter drei Stunden | Schlafdauer gross, erholsamer Anteil, Ruhepuls, HRV, und ob es länger oder kürzer war als sonst |
-| **Erinnerung** | ab elf Uhr noch Präparate offen, oder zwei Gläser hinter dem Soll | »Magnesium, Zink noch offen« oder »3 Gläser hinterher« |
+| **Erinnerung** | ab elf Uhr noch Präparate offen, oder zwei Gläser hinter dem Soll (bis Mittag 40 %, bis 17 Uhr 75 %, bis 22 Uhr alles) | »Magnesium, Zink noch offen« oder »3 Gläser hinterher« |
 | **Bilanz** | ab 20 Uhr, oder Schrittziel erreicht | Schritte, was zum Ziel fehlt, was an Wasser fehlt, Koffein |
 | **Heute** | sonst | Schritte gross mit Balken, wie bisher |
 

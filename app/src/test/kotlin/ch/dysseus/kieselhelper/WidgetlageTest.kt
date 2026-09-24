@@ -71,11 +71,27 @@ class WidgetlageTest {
 
     @Test
     fun wasserImRueckstandErinnert() {
-        // Um 15 Uhr sollten 7/14 des Ziels drin sein: 1200 ml. 300 sind vier Glaeser dahinter.
+        // Um 15 Uhr sollen 61 % drin sein: 1464 ml. Bei 300 ml fehlen 1164, also drei volle Glaeser.
         val l = Widgetlage.ermittle(blick(jetzt = LocalDateTime.of(2026, 9, 24, 15, 0), wasserMl = 300.0))
         assertEquals(Widgetlage.Art.ERINNERUNG, l.art)
         assertEquals("Wasser", l.name)
         assertEquals("3 Gläser hinterher", l.satz)
+    }
+
+    @Test
+    fun wasserSollVorneMehr() {
+        assertEquals(0.0, Widgetlage.wasserSoll(7.0), 0.001)
+        assertEquals(0.20, Widgetlage.wasserSoll(10.0), 0.001)
+        assertEquals(0.40, Widgetlage.wasserSoll(12.0), 0.001)
+        assertEquals(0.75, Widgetlage.wasserSoll(17.0), 0.001)
+        assertEquals(1.0, Widgetlage.wasserSoll(23.0), 0.001)
+    }
+
+    @Test
+    fun nachmittagsKeinMahnenWennDerMorgenReichte() {
+        // 16 Uhr, Soll 68 % = 1632 ml. Mit 1200 ml fehlt ein Glas - keine Erinnerung.
+        val l = Widgetlage.ermittle(blick(jetzt = LocalDateTime.of(2026, 9, 24, 16, 0), wasserMl = 1200.0))
+        assertEquals(Widgetlage.Art.TAG, l.art)
     }
 
     @Test

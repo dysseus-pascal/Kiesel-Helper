@@ -158,17 +158,40 @@ object Widgetlage {
                 (if (b.offenePraeparate.size > 2) " …" else "")
             return "Präparate" to "$namen noch offen"
         }
-        // Wasser: was bis jetzt haette getrunken sein sollen, gleichmaessig
-        // von acht bis zweiundzwanzig Uhr - zwei Glaeser dahinter ist eine
-        // Erinnerung wert.
+        // Wasser: was bis jetzt haette getrunken sein sollen - zwei Glaeser
+        // dahinter ist eine Erinnerung wert. Das Soll folgt [wasserSoll].
         val ziel = b.wasserZiel
         val ml = b.wasserMl
         if (ziel != null && ml != null && b.jetzt.hour in 9..21) {
-            val soll = ziel * ((b.jetzt.hour - 8) + b.jetzt.minute / 60.0) / 14.0
+            val soll = ziel * wasserSoll(b.jetzt.hour + b.jetzt.minute / 60.0)
             val fehltGlaeser = ((soll - ml) / b.glasMl).toInt()
             if (fehltGlaeser >= 2) return "Wasser" to "$fehltGlaeser Gläser hinterher"
         }
         return null
+    }
+
+    /**
+     * Welcher Anteil des Tagesziels bis zu dieser Stunde getrunken sein soll.
+     *
+     * NICHT GLEICHMAESSIG. Wer morgens trinkt, holt nach der Nacht auf, und am
+     * Abend will niemand noch einen Liter nachschuetten. Deshalb vorne mehr:
+     * bis Mittag 40 %, bis fuenf Uhr nachmittags 75 %, bis zehn Uhr abends
+     * alles - dazwischen gleichmaessig. Eine gleichmaessige Kurve von acht
+     * bis zweiundzwanzig Uhr mahnte am Nachmittag, obwohl der Morgen schon
+     * die Arbeit gemacht hatte.
+     */
+    fun wasserSoll(stunde: Double): Double {
+        val punkte = listOf(8.0 to 0.0, 12.0 to 0.40, 17.0 to 0.75, 22.0 to 1.0)
+        if (stunde <= punkte.first().first) return 0.0
+        if (stunde >= punkte.last().first) return 1.0
+        for (i in 1 until punkte.size) {
+            val (h1, a1) = punkte[i]
+            if (stunde <= h1) {
+                val (h0, a0) = punkte[i - 1]
+                return a0 + (a1 - a0) * (stunde - h0) / (h1 - h0)
+            }
+        }
+        return 1.0
     }
 
     private fun erinnerungLage(b: Blick): Lage {
