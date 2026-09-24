@@ -110,6 +110,32 @@ object Einstellungen {
         context.getSharedPreferences(DATEI, Context.MODE_PRIVATE)
             .edit().putBoolean(FUEHRT, fuehrt).apply()
     }
+    // --- Das Erscheinungsbild (siehe Thema) ---
+    private const val THEMA_MODUS = "thema_modus"
+    private const val MATERIAL_YOU = "material_you"
+
+    fun themaModus(context: Context): Int =
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE).getInt(THEMA_MODUS, Thema.SYSTEM)
+
+    fun setzeThemaModus(context: Context, modus: Int) {
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE).edit().putInt(THEMA_MODUS, modus).apply()
+    }
+
+    fun materialYou(context: Context): Boolean =
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE).getBoolean(MATERIAL_YOU, false)
+
+    fun setzeMaterialYou(context: Context, an: Boolean) {
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE).edit().putBoolean(MATERIAL_YOU, an).apply()
+    }
+
+    /** Welche Seite der Einstellungen zuletzt offen war. */
+    private const val EINSTELLUNGEN_SEITE = "einstellungen_seite"
+    fun einstellungenSeite(context: Context): String =
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE).getString(EINSTELLUNGEN_SEITE, "app") ?: "app"
+    fun setzeEinstellungenSeite(context: Context, seite: String) {
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE).edit().putString(EINSTELLUNGEN_SEITE, seite).apply()
+    }
+
     // --- Das Wasserziel, von Drinktervall ---
     //
     // DIE UHR BESTIMMT ES, NICHT DIESE APP. In Drinktervall wird das Soll

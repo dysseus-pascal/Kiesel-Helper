@@ -34,7 +34,7 @@ import java.util.Locale
  * eine Training - so fuehrt der Zurueck-Knopf von der Einzelansicht wieder
  * in die Liste, wie man es erwartet.
  */
-class VergangeneActivity : ComponentActivity() {
+class VergangeneActivity : KieselActivity() {
 
     private lateinit var inhalt: LinearLayout
 

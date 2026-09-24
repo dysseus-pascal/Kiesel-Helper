@@ -29,7 +29,7 @@ import kotlinx.coroutines.withContext
  * automatisieren, und das ist richtig so: eine App, die sich unbemerkt vor
  * fremde Links setzen koennte, waere ein Angriffswerkzeug.
  */
-class KartenlinkActivity : ComponentActivity() {
+class KartenlinkActivity : KieselActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

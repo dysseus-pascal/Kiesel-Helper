@@ -28,7 +28,7 @@ import kotlinx.coroutines.withContext
  * sehen und was mit ihm zusammenhaengt, nicht einen Weg zum Herz. Wer das
  * Herz will, geht zurueck und tippt auf das Herz.
  */
-class TrendActivity : ComponentActivity() {
+class TrendActivity : KieselActivity() {
 
     private lateinit var wurzel: LinearLayout
     private lateinit var inhalt: LinearLayout

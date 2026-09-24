@@ -39,7 +39,8 @@ fun Context.dp(wert: Float): Int = TypedValue.applyDimension(
     TypedValue.COMPLEX_UNIT_DIP, wert, resources.displayMetrics
 ).toInt()
 
-fun Context.farbe(id: Int): Int = resources.getColor(id, theme)
+/** Eine Farbe aus colors.xml - mit Material You, wo es eingeschaltet ist (siehe Thema). */
+fun Context.farbe(id: Int): Int = Thema.farbe(this, id)
 
 /** Senkrechter Kasten, so breit wie sein Platz. */
 fun Context.spalte(): LinearLayout = LinearLayout(this).apply {
@@ -732,4 +733,39 @@ fun Context.bestaetige(frage: String, tue: () -> Unit) {
 
     val wurzel = (this as? android.app.Activity)?.window?.decorView ?: return
     fenster.showAtLocation(wurzel, Gravity.CENTER, 0, 0)
+}
+
+/**
+ * Das Zeichen fuer das Seitenmenue: drei Striche.
+ *
+ * GEZEICHNET, NICHT ALS ZEICHEN "☰". Das Unicode-Zeichen wird auf manchen
+ * Telefonen als Emoji gesetzt - bunt, gross und schief zur Schrift daneben.
+ */
+class HamburgerView(ctx: Context) : View(ctx) {
+    private val pinsel = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = ctx.dp(2.2f).toFloat()
+        strokeCap = Paint.Cap.ROUND
+        color = ctx.farbe(R.color.schrift)
+    }
+
+    init {
+        isClickable = true
+        background = RippleDrawable(
+            ColorStateList.valueOf(ctx.farbe(R.color.linie)),
+            null,
+            GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0xFFFFFFFF.toInt()) },
+        )
+    }
+
+    override fun onDraw(leinwand: Canvas) {
+        val b = width * 0.5f
+        val x0 = (width - b) / 2
+        val mitte = height / 2f
+        val abstand = context.dp(6f).toFloat()
+        for (k in -1..1) {
+            val y = mitte + k * abstand
+            leinwand.drawLine(x0, y, x0 + b, y, pinsel)
+        }
+    }
 }

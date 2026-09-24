@@ -2,6 +2,7 @@ package ch.dysseus.kieselhelper
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -30,7 +31,7 @@ import java.util.Date
  * Hinter dem Zahnrad ist es nicht versteckt, sondern einsortiert: dort sucht
  * man es, wenn man es sucht.
  */
-class EinstellungenActivity : ComponentActivity() {
+class EinstellungenActivity : KieselActivity() {
 
     private lateinit var zustand: LinearLayout
     private lateinit var schlafwert: TextView
@@ -45,6 +46,35 @@ class EinstellungenActivity : ComponentActivity() {
     private var ladeNachErlaubnis = false
     /** Einmal je Schirm fragen; wer ablehnt, bekommt trotzdem den Monat. */
     private var historieGefragt = false
+
+    /** Das Seitenmenue - und welche Seite gerade offen ist. */
+    private var lade: androidx.drawerlayout.widget.DrawerLayout? = null
+    private var seite: String = "app"
+    private val menueZu = object : androidx.activity.OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() {
+            lade?.closeDrawer(android.view.Gravity.START)
+        }
+    }
+
+    /**
+     * Die Seiten der Einstellungen: eine je Dienst auf der Uhr, und eine fuer
+     * Kiesel-Helper selbst.
+     *
+     * NACH DIENST, NICHT NACH ART DER EINSTELLUNG. Wer etwas an Drinktervall
+     * aendern will, sucht bei Drinktervall - nicht unter "Ziele" oder
+     * "Erlaubnisse". Was nur die App angeht (Erscheinungsbild, Sicherung,
+     * Zustand), steht auf ihrer eigenen Seite.
+     */
+    private data class Seite(val schluessel: String, val name: String, val unter: String, val farbe: Int)
+
+    private val UHR_SEITEN = listOf(
+        Seite("drinktervall", "Drinktervall", "Wasser", R.color.wasser),
+        Seite("herzintervall", "Herzintervall", "HRV, Schlaf, Ruhepuls", R.color.phase_rem),
+        Seite("supcycle", "SupCycle", "Präparate", R.color.akzent_ernaehrung),
+        Seite("kieselsport", "Kieselsport", "Training, Strecke, Puls", R.color.akzent_training),
+        Seite("kieselstrasse", "Kieselstrasse", "Navigation, Kartenlinks", R.color.sport_wandern),
+    )
+    private val APP_SEITE = Seite("app", "Kiesel-Helper", "Darstellung, Sicherung, Zustand", R.color.akzent)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,6 +109,8 @@ class EinstellungenActivity : ComponentActivity() {
                 setContentView(baueAnsicht())
             }
         }
+        seite = Einstellungen.einstellungenSeite(this)
+        onBackPressedDispatcher.addCallback(this, menueZu)
         setContentView(baueAnsicht())
     }
 
@@ -96,100 +128,296 @@ class EinstellungenActivity : ComponentActivity() {
         auffrischen()
     }
 
-    private fun baueAnsicht(): ScrollView {
-        val wurzel = spalte().apply {
-            setPadding(dp(16f), dp(24f), dp(16f), dp(28f))
-        }
-        zustand = spalte()
+    private fun alleSeiten() = UHR_SEITEN + APP_SEITE
+    private fun aktuelleSeite() = alleSeiten().firstOrNull { it.schluessel == seite } ?: APP_SEITE
 
-        wurzel.addView(knopfLeise(getString(R.string.zurueck)) { finish() })
-        wurzel.luft(14f)
-        wurzel.addView(kopf("Einstellungen"))
+    /**
+     * Der ganze Schirm: das Seitenmenue und die gewaehlte Seite.
+     *
+     * EIN SEITENMENUE STATT EINER LANGEN LISTE. Die Einstellungen waren eine
+     * Rolle von fuenfzehn Karten, und wer die Kartenlinks suchte, scrollte an
+     * Schlaf, Sicherung und Pulszonen vorbei. Jetzt hat jeder Dienst auf der
+     * Uhr seine Seite, und die App ihre.
+     */
+    private fun baueAnsicht(): View {
+        zustand = spalte()
+        val drawer = androidx.drawerlayout.widget.DrawerLayout(this)
+        drawer.setScrimColor(0x66000000)
+        drawer.addDrawerListener(object : androidx.drawerlayout.widget.DrawerLayout.SimpleDrawerListener() {
+            override fun onDrawerOpened(drawerView: View) { menueZu.isEnabled = true }
+            override fun onDrawerClosed(drawerView: View) { menueZu.isEnabled = false }
+        })
+        lade = drawer
+        menueZu.isEnabled = false
+
+        // --- Der Inhalt ---
+        val wurzel = spalte().apply { setPadding(dp(16f), dp(12f), dp(16f), dp(28f)) }
+        wurzel.addView(reihe().apply {
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            addView(HamburgerView(this@EinstellungenActivity).apply {
+                layoutParams = LinearLayout.LayoutParams(dp(44f), dp(44f)).apply { marginEnd = dp(8f) }
+                contentDescription = "Menü"
+                setOnClickListener { drawer.openDrawer(android.view.Gravity.START) }
+            })
+            addView(spalte().apply {
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                addView(zart("Einstellungen"))
+                addView(kopf(aktuelleSeite().name))
+            })
+        })
         wurzel.luft(6f)
-        wurzel.addView(fliesstext(
+        when (seite) {
+            "drinktervall" -> seiteDrinktervall(wurzel)
+            "herzintervall" -> seiteHerzintervall(wurzel)
+            "supcycle" -> seiteSupCycle(wurzel)
+            "kieselsport" -> seiteKieselsport(wurzel)
+            "kieselstrasse" -> seiteKieselstrasse(wurzel)
+            else -> seiteApp(wurzel)
+        }
+        val roller = ScrollView(this).apply {
+            layoutParams = androidx.drawerlayout.widget.DrawerLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            addView(wurzel)
+        }
+        roller.randUmSystemleisten()
+        drawer.addView(roller)
+
+        // --- Das Menue ---
+        drawer.addView(menue(drawer))
+        return drawer
+    }
+
+    private fun menue(drawer: androidx.drawerlayout.widget.DrawerLayout): View {
+        val liste = spalte().apply { setPadding(dp(12f), dp(20f), dp(12f), dp(20f)) }
+        liste.addView(kopf("Einstellungen").apply { setPadding(dp(12f), 0, 0, dp(12f)) })
+        liste.addView(abschnitt("AUF DER UHR").apply { setPadding(dp(12f), dp(8f), 0, dp(6f)) })
+        UHR_SEITEN.forEach { liste.addView(menuepunkt(it, drawer)) }
+        liste.addView(strich().apply {
+            (layoutParams as? LinearLayout.LayoutParams)?.setMargins(dp(12f), dp(10f), dp(12f), dp(10f))
+        })
+        liste.addView(menuepunkt(APP_SEITE, drawer))
+
+        val roller = ScrollView(this).apply {
+            setBackgroundColor(farbe(R.color.karte))
+            layoutParams = androidx.drawerlayout.widget.DrawerLayout.LayoutParams(
+                dp(296f), ViewGroup.LayoutParams.MATCH_PARENT, android.view.Gravity.START
+            )
+            addView(liste)
+            elevation = dp(6f).toFloat()
+        }
+        roller.randUmSystemleisten()
+        return roller
+    }
+
+    private fun menuepunkt(s: Seite, drawer: androidx.drawerlayout.widget.DrawerLayout): View {
+        val gewaehlt = s.schluessel == seite
+        val ton = farbe(s.farbe)
+        return reihe().apply {
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding(dp(12f), dp(10f), dp(12f), dp(10f))
+            background = android.graphics.drawable.RippleDrawable(
+                android.content.res.ColorStateList.valueOf(farbe(R.color.linie)),
+                android.graphics.drawable.GradientDrawable().apply {
+                    cornerRadius = dp(12f).toFloat()
+                    setColor(if (gewaehlt) (akzentfarbe() and 0x00FFFFFF) or 0x26000000 else 0)
+                },
+                null,
+            )
+            isClickable = true
+            setOnClickListener {
+                seite = s.schluessel
+                Einstellungen.setzeEinstellungenSeite(this@EinstellungenActivity, seite)
+                drawer.closeDrawer(android.view.Gravity.START)
+                setContentView(baueAnsicht())
+                if (seite == "app") auffrischen()
+            }
+            addView(View(this@EinstellungenActivity).apply {
+                layoutParams = LinearLayout.LayoutParams(dp(12f), dp(12f)).apply { marginEnd = dp(14f) }
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.OVAL
+                    setColor(ton)
+                }
+            })
+            addView(spalte().apply {
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                addView(fliesstext(s.name).apply {
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    if (gewaehlt) setTextColor(akzentfarbe())
+                })
+                addView(zart(s.unter))
+            })
+        }.also {
+            (it.layoutParams as LinearLayout.LayoutParams).bottomMargin = dp(2f)
+        }
+    }
+
+    // --- Die Seiten ---------------------------------------------------------
+
+    private fun seiteApp(w: LinearLayout) {
+        w.addView(fliesstext(
             "Nimmt entgegen, was die Uhr meldet, und holt bei OsmAnd, was für " +
                 "die Navigation auf die Uhr gehört."
         ))
+        w.luft(8f)
+        w.addView(abschnitt("ERSCHEINUNGSBILD"))
+        w.addView(darstellungskarte())
+        w.luft(8f)
+        w.addView(abschnitt("DER TAG"))
+        w.addView(grenzkarte())
+        w.luft(8f)
+        w.addView(abschnitt("SICHERUNG"))
+        w.addView(sicherungskarte())
+        w.luft(8f)
+        w.addView(abschnitt("FRÜHERE DATEN"))
+        w.addView(historienkarte())
+        w.luft(8f)
+        w.addView(abschnitt("ZUSTAND"))
+        w.addView(zustand)
+        w.luft(8f)
+        w.addView(abschnitt("EIGENE EINTRÄGE"))
+        w.addView(aufgabenKarte(
+            "Koffein → Gesundheitsakte",
+            "Was du in der App antippst, wird als Ernährungssatz mit " +
+                "Koffeinmenge eingetragen. Die Akte ist damit auch hier die " +
+                "Quelle: gelesen wird, was dort steht, nicht die eigene Zählung."
+        ))
+        w.luft(12f)
+        w.addView(knopfHaupt("Verlauf ansehen", breit = true) {
+            startActivity(Intent(this, VerlaufActivity::class.java))
+        })
+    }
 
-        wurzel.luft(8f)
-        wurzel.addView(abschnitt("SCHLAF"))
-        wurzel.addView(schlafkarte())
-
-        wurzel.luft(8f)
-        wurzel.addView(abschnitt("DER TAG"))
-        wurzel.addView(grenzkarte())
-
-        wurzel.luft(8f)
-        wurzel.addView(abschnitt("TRAINING"))
-        wurzel.addView(spurkarte())
-        wurzel.addView(pulskarte())
-
-        wurzel.luft(8f)
-        wurzel.addView(abschnitt("SICHERUNG"))
-        wurzel.addView(sicherungskarte())
-
-        wurzel.luft(8f)
-        wurzel.addView(abschnitt("FRÜHERE DATEN"))
-        wurzel.addView(historienkarte())
-
-        wurzel.luft(8f)
-        wurzel.addView(abschnitt("KARTENLINKS"))
-        wurzel.addView(linkkarte())
-
-        wurzel.luft(8f)
-        wurzel.addView(abschnitt("ZUSTAND"))
-        wurzel.addView(zustand)
-
-        wurzel.luft(8f)
-        wurzel.addView(abschnitt("WAS SIE TUT"))
-        wurzel.addView(aufgabenKarte(
+    private fun seiteDrinktervall(w: LinearLayout) {
+        w.addView(aufgabenKarte(
             "Drinktervall → Gesundheitsakte",
             "Jedes getrunkene Glas wird als Wassermenge eingetragen, mit dem " +
                 "Zeitpunkt von der Uhr. Dasselbe Glas nur einmal."
         ))
-        wurzel.addView(aufgabenKarte(
+        w.luft(8f)
+        w.addView(abschnitt("VON DER UHR"))
+        w.addView(karte().apply {
+            addView(kartentitel("Tagesziel"))
+            val glaeser = Einstellungen.wasserGlaeser(this@EinstellungenActivity)
+            val ml = Einstellungen.glasMl(this@EinstellungenActivity)
+            addView(TextView(this@EinstellungenActivity).apply {
+                text = "$glaeser × $ml ml"
+                setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 30f)
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setTextColor(farbe(R.color.schrift))
+                setPadding(0, dp(10f), 0, dp(6f))
+            })
+            addView(zart(
+                "Eingestellt wird es in Drinktervall — dort das Soll, und mit " +
+                    "»Ziel+« mehr für heute. Jede Meldung der Uhr bringt das " +
+                    "heutige Ziel mit, jedes Glas seine Grösse. Hier steht nur, " +
+                    "was zuletzt ankam."
+            ))
+        })
+    }
+
+    private fun seiteHerzintervall(w: LinearLayout) {
+        w.addView(aufgabenKarte(
             "Herzintervall → Gesundheitsakte",
             "Die nächtliche RMSSD-Messung wird als Herzratenvariabilität " +
-                "eingetragen."
+                "eingetragen. Mit ihr kommen die letzte Nacht — Schlafbeginn " +
+                "und -ende — und der mittlere Nachtpuls als Ruhepuls."
         ))
-        wurzel.addView(aufgabenKarte(
+        w.luft(8f)
+        w.addView(abschnitt("SCHLAF"))
+        w.addView(schlafkarte())
+    }
+
+    private fun seiteSupCycle(w: LinearLayout) {
+        w.addView(aufgabenKarte(
             "SupCycle → Ernährung",
             "Was heute ansteht, was davon abgehakt ist, und die Namen dazu. " +
                 "Jedes genommene Präparat geht als Ernährungssatz in die Akte " +
                 "— ohne Mengen, denn SupCycle kennt Namen und Zyklen, keine " +
                 "Milligramm."
         ))
-        wurzel.addView(aufgabenKarte(
+        w.addView(zart(
+            "Präparate, Uhrzeiten und Zyklen werden in den Einstellungen von " +
+                "SupCycle in der Pebble-App eingetragen, nicht hier."
+        ).apply { setPadding(dp(4f), dp(4f), dp(4f), 0) })
+    }
+
+    private fun seiteKieselsport(w: LinearLayout) {
+        w.addView(aufgabenKarte(
             "Kieselsport → Gesundheitsakte",
-            "Ein beendetes Training wird als Trainingssitzung eingetragen — " +
-                "nur die Sitzung, nicht die Zahlen darin. Schritte, Distanz " +
-                "und Kalorien trägt die Pebble-App längst selbst ein; sie hier " +
-                "zu wiederholen zählte denselben Kilometer zweimal."
+            "Ein beendetes Training wird als Trainingssitzung eingetragen, mit " +
+                "Sätzen oder Bahnen, der Pulskurve und — bei Laufen, Bike, " +
+                "Wandern — der Strecke vom Telefon. Schritte, Distanz und " +
+                "Kalorien trägt die Pebble-App selbst ein."
         ))
-        wurzel.addView(aufgabenKarte(
-            "Koffein → Gesundheitsakte",
-            "Was du in der App antippst, wird als Ernährungssatz mit " +
-                "Koffeinmenge eingetragen. Die Akte ist damit auch hier die " +
-                "Quelle: gelesen wird, was dort steht, nicht die eigene Zählung."
-        ))
-        wurzel.addView(aufgabenKarte(
+        w.luft(8f)
+        w.addView(abschnitt("STRECKE"))
+        w.addView(spurkarte())
+        w.luft(8f)
+        w.addView(abschnitt("PULS"))
+        w.addView(pulskarte())
+    }
+
+    private fun seiteKieselstrasse(w: LinearLayout) {
+        w.addView(aufgabenKarte(
             "OsmAnd → Kieselstrasse",
             "Abbiegeart, Entfernung, Strasse und Ankunftszeit gehen an die Uhr " +
                 "— aus OsmAnds eigener Schnittstelle, nicht aus seiner " +
                 "Benachrichtigung."
         ))
-
-        wurzel.luft(12f)
-        wurzel.addView(knopfHaupt("Verlauf ansehen", breit = true) {
-            startActivity(Intent(this, VerlaufActivity::class.java))
-        })
-
-        val roller = ScrollView(this)
-        roller.addView(wurzel)
-        roller.randUmSystemleisten()
-        return roller
+        w.addView(osmandKarte())
+        w.luft(8f)
+        w.addView(abschnitt("KARTENLINKS"))
+        w.addView(linkkarte())
     }
 
+    /**
+     * Hell, dunkel oder wie das System - und Material You.
+     *
+     * DREI KNOEPFE STATT EINES SCHALTERS: "wie das System" ist eine eigene
+     * Wahl, kein Zwischending. Der gewaehlte ist gefuellt.
+     */
+    private fun darstellungskarte(): LinearLayout {
+        val k = karte()
+        k.addView(kartentitel("Hell oder dunkel"))
+        val modus = Einstellungen.themaModus(this)
+        val reihe = reihe()
+        listOf(Thema.SYSTEM to "System", Thema.HELL to "Hell", Thema.DUNKEL to "Dunkel").forEach { (m, name) ->
+            val knopf = if (m == modus) knopfHaupt(name) {} else knopfLeise(name) {
+                Einstellungen.setzeThemaModus(this, m)
+                GesundheitWidget.stosseAn(this)
+                recreate()
+            }
+            reihe.addView(knopf.apply {
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    marginEnd = if (m != Thema.DUNKEL) dp(8f) else 0
+                }
+            })
+        }
+        k.addView(reihe.apply { setPadding(0, dp(10f), 0, dp(4f)) })
+        k.addView(zart(
+            "»System« folgt dem Nachtschalter des Telefons. Das Widget folgt " +
+                "immer dem System — der Startbildschirm gehört nicht dieser App."
+        ))
+
+        k.luft(14f)
+        k.addView(kartentitel("Material You"))
+        if (Thema.materialYouMoeglich()) {
+            val an = Einstellungen.materialYou(this)
+            k.addView(zart(
+                "Grund, Karten, Schrift und die Farben der drei Reiter kommen aus " +
+                    "dem Hintergrundbild. Sportarten, Schlafphasen, Pulszonen, " +
+                    "Wasser und Koffein behalten ihre Farben — sie tragen Bedeutung."
+            ))
+            k.addView(knopfLeise(if (an) "Material You: an" else "Material You: aus") {
+                Einstellungen.setzeMaterialYou(this, !an)
+                recreate()
+            }.apply { (layoutParams as? LinearLayout.LayoutParams)?.topMargin = dp(8f) })
+        } else {
+            k.addView(zart("Material You gibt es ab Android 12."))
+        }
+        return k
+    }
     /**
      * Der persoenliche Idealwert fuer den Schlaf.
      *
@@ -735,6 +963,8 @@ class EinstellungenActivity : ComponentActivity() {
     }
 
     private fun auffrischen() {
+        // Der Zustand steht nur auf der Seite von Kiesel-Helper.
+        if (seite != "app" || !::zustand.isInitialized) return
         zustand.removeAllViews()
 
         val k = karte()
@@ -748,33 +978,6 @@ class EinstellungenActivity : ComponentActivity() {
         ))
         zustand.addView(k)
 
-        // OSMAND STEHT HIER, weil man es sonst nirgends sieht. Der erste
-        // Anlauf scheiterte daran, dass OsmAnd im Manifest nicht unter
-        // <queries> stand und damit unsichtbar war - nichts stuerzte ab,
-        // nichts warnte, und auf der Uhr kam einfach nichts an.
-        val ko = karte()
-        val lage = OsmandNavigation.lage
-        ko.addView(schild(lage.startsWith("verbunden"), "OsmAnd: $lage"))
-        if (!lage.startsWith("verbunden")) {
-            ko.addView(zart(
-                if (lage.startsWith("in OsmAnd freischalten"))
-                    "OsmAnd lässt fremde Apps erst nach einem Schalter zu. " +
-                        "Kiesel-Helper steht dort schon in der Liste — der " +
-                        "erste Verbindungsversuch hat ihn eingetragen, nur " +
-                        "ausgeschaltet. Nach dem Umlegen hierher " +
-                        "zurückkehren, das genügt."
-                else
-                    "Ohne Verbindung zu OsmAnd bleibt Kieselstrasse auf der " +
-                        "Uhr leer. OsmAnd muss installiert sein; die " +
-                        "Verbindung entsteht, sobald dieser Dienst läuft."
-            ))
-            ko.addView(knopfHaupt("OsmAnd öffnen", breit = true) {
-                val start = packageManager.getLaunchIntentForPackage("net.osmand.plus")
-                    ?: packageManager.getLaunchIntentForPackage("net.osmand")
-                if (start != null) startActivity(start) else melde("OsmAnd nicht gefunden")
-            })
-        }
-        zustand.addView(ko)
 
         lifecycleScope.launch {
             val kk = karte()
@@ -829,6 +1032,37 @@ class EinstellungenActivity : ComponentActivity() {
                 zustand.addView(kb)
             }
         }
+    }
+
+    /** OsmAnd: verbunden oder nicht - und was zu tun ist. */
+    private fun osmandKarte(): LinearLayout {
+        // OSMAND STEHT HIER, weil man es sonst nirgends sieht. Der erste
+        // Anlauf scheiterte daran, dass OsmAnd im Manifest nicht unter
+        // <queries> stand und damit unsichtbar war - nichts stuerzte ab,
+        // nichts warnte, und auf der Uhr kam einfach nichts an.
+        val ko = karte()
+        val lage = OsmandNavigation.lage
+        ko.addView(schild(lage.startsWith("verbunden"), "OsmAnd: $lage"))
+        if (!lage.startsWith("verbunden")) {
+            ko.addView(zart(
+                if (lage.startsWith("in OsmAnd freischalten"))
+                    "OsmAnd lässt fremde Apps erst nach einem Schalter zu. " +
+                        "Kiesel-Helper steht dort schon in der Liste — der " +
+                        "erste Verbindungsversuch hat ihn eingetragen, nur " +
+                        "ausgeschaltet. Nach dem Umlegen hierher " +
+                        "zurückkehren, das genügt."
+                else
+                    "Ohne Verbindung zu OsmAnd bleibt Kieselstrasse auf der " +
+                        "Uhr leer. OsmAnd muss installiert sein; die " +
+                        "Verbindung entsteht, sobald dieser Dienst läuft."
+            ))
+            ko.addView(knopfHaupt("OsmAnd öffnen", breit = true) {
+                val start = packageManager.getLaunchIntentForPackage("net.osmand.plus")
+                    ?: packageManager.getLaunchIntentForPackage("net.osmand")
+                if (start != null) startActivity(start) else melde("OsmAnd nicht gefunden")
+            })
+        }
+        return ko
     }
 
     private fun melde(text: String) {

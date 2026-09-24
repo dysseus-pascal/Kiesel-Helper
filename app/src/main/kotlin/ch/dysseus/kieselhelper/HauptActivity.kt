@@ -44,7 +44,7 @@ import kotlinx.coroutines.withContext
  * Zahnrad steht fest, dazwischen scrollt der Inhalt und laesst sich von oben
  * zum Auffrischen ziehen.
  */
-class HauptActivity : ComponentActivity(), Eingaben {
+class HauptActivity : KieselActivity(), Eingaben {
 
     private lateinit var wurzel: LinearLayout
     private lateinit var gesundheit: LinearLayout

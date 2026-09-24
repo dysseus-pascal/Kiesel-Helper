@@ -2,8 +2,13 @@
 <resources>
     <!-- Material.Light und NICHT DeviceDefault: DeviceDefault ist das, was der
          Hersteller daraus gemacht hat - auf diesem Telefon Material You, also
-         die Systemfarbe ueber alles. Material.Light ist der Android-Grundstand
-         und laesst die Farben hier unten gelten. -->
+         die Systemfarbe ueber alles, auch ueber die Schrift. Material.Light
+         laesst die Farben hier unten gelten.
+
+         Hell oder dunkel und Material You waehlt man in den Einstellungen
+         (siehe Thema.kt): der Modus stellt die Konfiguration um, damit dieses
+         Thema oder das aus values-night gilt; Material You ersetzt einzelne
+         Farben Ton fuer Ton, statt alles zu faerben. -->
     <style name="KieselTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/grund</item>
         <item name="android:colorBackground">@color/grund</item>

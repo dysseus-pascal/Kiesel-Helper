@@ -362,6 +362,45 @@ nicht sterben.
 dem Nachttief hergeleiteten Wert sieht man in einem Jahresmittel nicht mehr an,
 woher er kam.
 
+## Einstellungen mit Seitenmenü
+
+Seit 0.44.0 haben die Einstellungen ein **Seitenmenü** (die drei Striche oben
+links, oder vom linken Rand wischen): eine Seite je Dienst auf der Uhr —
+Drinktervall, Herzintervall, SupCycle, Kieselsport, Kieselstrasse — und eine
+für Kiesel-Helper selbst. Wer etwas an Drinktervall ändern will, sucht bei
+Drinktervall, nicht unter »Ziele« oder »Erlaubnisse«. Die zuletzt offene Seite
+bleibt gemerkt.
+
+| Seite | Was darauf steht |
+|---|---|
+| Drinktervall | was eingetragen wird, das Tagesziel von der Uhr |
+| Herzintervall | HRV, Nacht und Ruhepuls; das Schlaf-Ideal |
+| SupCycle | was eingetragen wird |
+| Kieselsport | Strecke (Standort), Maximalpuls für die Zonen |
+| Kieselstrasse | OsmAnd-Verbindung, Kartenlinks ausprobieren |
+| Kiesel-Helper | Erscheinungsbild, Tagesgrenze, Sicherung, frühere Daten, Zustand, Verlauf |
+
+## Hell, dunkel, Material You
+
+Auf der Seite von Kiesel-Helper: **System**, **Hell** oder **Dunkel**, und
+**Material You** (ab Android 12). Der Modus stellt die Konfiguration der
+Schirme um — damit gilt `values/` oder `values-night/` für alles, auch das
+Thema und die Leistensymbole. Material You ersetzt **nur die Grundfarben**
+Ton für Ton durch die Systempalette: Grund, Karten, Linien, Schrift und die
+drei Akzente der Reiter (Gesundheit, Ernährung und Training bekommen die drei
+Akzentfamilien des Systems, damit sie unterscheidbar bleiben). Sportarten,
+Schlafphasen, Pulszonen, Wasser und Koffein behalten ihre Farben — sie tragen
+Bedeutung.
+
+Der erste Versuch mit Material You war eine rosa Wand mit Schrift, die kaum
+vom Grund abstand: das Thema DeviceDefault färbte alles. Hier bekommt die
+Schrift den dunkelsten (hell) oder hellsten (dunkel) neutralen Ton und der
+Grund den gegenüberliegenden — der Abstand bleibt.
+
+Eine Änderung erreicht auch die Schirme, die darunter noch offen sind: jede
+eigene Activity erbt von `KieselActivity` und baut sich neu, wenn sich Modus
+oder Material You geändert haben. Das Widget folgt weiter dem System.
+
 ## Das Wasserziel kommt von Drinktervall
 
 Seit 0.43.0 rechnet Kiesel-Helper nicht mehr mit festen acht Gläsern zu

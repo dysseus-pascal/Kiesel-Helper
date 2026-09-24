@@ -19,7 +19,7 @@ import java.util.Date
  * Der Verlauf steht deshalb in der App. Er übersteht Neustarts, braucht kein
  * Kabel und keinen Rechner, und man liest ihn, wo man gerade steht.
  */
-class VerlaufActivity : ComponentActivity() {
+class VerlaufActivity : KieselActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
