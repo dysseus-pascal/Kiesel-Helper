@@ -42,4 +42,13 @@ class UhreinstellungenTest {
         val p = magnesium.copy(anker = 20500)
         assertEquals(20500, Uhreinstellungen.planAus(Uhreinstellungen.planAlsBytes(listOf(p)))!![0]!!.anker)
     }
+
+    @Test
+    fun nachtfensterAlsZahlOderText() {
+        assertEquals(1320, Uhreinstellungen.minutenAus(1320L, null))
+        assertEquals(480, Uhreinstellungen.minutenAus(null, "08:00"))
+        assertEquals(1350, Uhreinstellungen.minutenAus(null, "22:30"))
+        assertNull(Uhreinstellungen.minutenAus(1440L, "25:00"))
+        assertNull(Uhreinstellungen.minutenAus(null, null))
+    }
 }

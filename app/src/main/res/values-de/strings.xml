@@ -253,6 +253,11 @@
     <string name="uk_becken">Beckenlänge</string>
     <string name="uk_pin">PIN IN DER TIMELINE</string>
     <string name="uk_uhrzeit">Uhrzeit</string>
+    <string name="uk_nacht">NACHT</string>
+    <string name="uk_nacht_messen">Nacht messen</string>
+    <string name="uk_nacht_von">Beginn</string>
+    <string name="uk_nacht_bis">Ende</string>
+    <string name="uk_nacht_hinweis">In diesem Fenster zeichnet die Uhr jede Minute Bewegung und Puls auf und alle halbe Stunde die HRV. Morgens rechnet diese App daraus den Schlaf aus.</string>
     <string name="uk_sportart">Sportart</string>
     <string name="uk_platz_leer">Platz %1$d — leer</string>
     <string name="uk_name_hinweis">Name — leer heisst kein Präparat</string>
@@ -434,7 +439,7 @@
     <string name="v_leicht_gefallen">Der Puls ist leicht gefallen, um %1$s Schläge.</string>
     <string name="v_geblieben">Der Puls blieb, wo er war.</string>
     <string name="v_gestiegen">Der Puls ist gestiegen — eine fordernde Stunde.</string>
-    <string name="v_hrv_text">Die Herzratenvariabilität aus dieser Stunde, von der Uhr gemessen. Höher heisst entspannter; vergleichbar ist sie mit den Nachtwerten von Herzintervall.</string>
+    <string name="v_hrv_text">Die Herzratenvariabilität aus dieser Stunde, von der Uhr gemessen. Höher heisst entspannter; vergleichbar ist sie mit den Nachtwerten von Kieselsport.</string>
     <string name="v_kein_puls_hrv">Kein Puls und keine HRV zu dieser Stunde.</string>
     <string name="v_keine_hrv">Keine HRV zu dieser Stunde — die Uhr misst sie erst seit Kieselsport 0.9.0.</string>
     <string name="v_jede_zweite_bahn">Jede zweite Bahn als Band</string>
@@ -481,8 +486,8 @@
     <string name="a_schlaf_titel">Schlaf (Uhr)</string>
     <string name="a_schlaf_eingetragen">Schlaf %1$d h %2$d min eingetragen</string>
     <string name="a_ruhepuls_eingetragen">Ruhepuls %1$d eingetragen</string>
-    <string name="a_uebersprungen_messung">Übersprungen — %1$s hat die Messung schon eingetragen</string>
-    <string name="a_ms_eingetragen">%1$d ms eingetragen</string>
+    <string name="a_nacht_phasen">Schlaf %1$s, Tief %2$s, REM %3$s</string>
+    <string name="a_nacht_keine">Nacht ohne Schlaf — nichts eingetragen</string>
     <string name="a_koffein_eingetragen">%1$d mg Koffein eingetragen</string>
     <string name="a_nicht_eingetragen">Nicht eingetragen — Erlaubnis in der App prüfen</string>
     <string name="o_nie">noch nicht versucht</string>
@@ -506,7 +511,7 @@
     <string name="o_felder">OsmAnd-Felder: %1$s</string>
     <string name="o_ausfahrt">%1$d. Ausfahrt</string>
     <string name="o_ende">OsmAnd: Navigation beendet</string>
-    <string name="ei_unter_gesundheit">Herzintervall · HRV, Schlaf, Ruhepuls</string>
+    <string name="ei_unter_gesundheit">Kieselsport · Schlaf, HRV, Ruhepuls</string>
     <string name="ei_unter_training">Kieselsport · Strecke, Puls, Pin</string>
     <string name="ei_unter_ernaehrung">Drinktervall, SupCycle, Koffein</string>
     <string name="ei_navigation">Navigation</string>
@@ -530,8 +535,8 @@
     <string name="ei_tagesziel">Tagesziel</string>
     <string name="ei_tagesziel_text">Das heutige Ziel, wie die Uhr es zuletzt gemeldet hat — mit »Ziel+« kann es über dem Soll liegen.</string>
     <string name="ei_einstellungen_gross">EINSTELLUNGEN</string>
-    <string name="ei_hz_akte">Herzintervall → Gesundheitsakte</string>
-    <string name="ei_hz_akte_text">Die nächtliche RMSSD-Messung wird als Herzratenvariabilität eingetragen. Mit ihr kommen die letzte Nacht — Schlafbeginn und -ende — und der mittlere Nachtpuls als Ruhepuls.</string>
+    <string name="ei_nacht_akte">Kieselsport → Gesundheitsakte</string>
+    <string name="ei_nacht_akte_text">Nachts zeichnet Kieselsport jede Minute Bewegung und Puls auf und misst alle halbe Stunde die HRV. Morgens rechnet Kiesel-Helper daraus den Schlaf aus — eingeschlafen, aufgewacht, Tief-, REM- und Leichtschlaf — und trägt ihn mit Ruhepuls und nächtlicher HRV ein. Auch eine einzelne HRV-Messung aus dem Menü der Uhr wird eingetragen. Das Nachtfenster steht unter Training → Kieselsport.</string>
     <string name="ei_schlaf">SCHLAF</string>
     <string name="ei_sc_akte">SupCycle → Ernährung</string>
     <string name="ei_sc_akte_text">Was heute ansteht, was davon abgehakt ist, und die Namen dazu. Jedes genommene Präparat geht als Ernährungssatz in die Akte — ohne Mengen, denn SupCycle kennt Namen und Zyklen, keine Milligramm.</string>

@@ -197,6 +197,22 @@ class UhrKarten(private val a: Activity) {
             zeitKnopf.visibility = if (it > 0) View.VISIBLE else View.GONE
         })
         k.addView(zeitKnopf)
+        // DIE NACHT: ein Fenster, kein Wecker. Die Uhr misst darin von selbst
+        // und schickt morgens die Minuten; ausgewertet wird hier.
+        k.addView(unter(a.getString(R.string.uk_nacht)))
+        val fenster = a.spalte().apply { visibility = if (s.nachtAn) View.VISIBLE else View.GONE }
+        k.addView(schalter(a.getString(R.string.uk_nacht_messen), s.nachtAn) {
+            merke(sp, standSp(), jetzt().copy(nachtAn = it))
+            fenster.visibility = if (it) View.VISIBLE else View.GONE
+        })
+        fenster.addView(zeitknopf(a.getString(R.string.uk_nacht_von), hhmm(s.nachtVon), zweistellig = true) { neu ->
+            merke(sp, standSp(), jetzt().copy(nachtVon = minuten(neu)))
+        })
+        fenster.addView(zeitknopf(a.getString(R.string.uk_nacht_bis), hhmm(s.nachtBis), zweistellig = true) { neu ->
+            merke(sp, standSp(), jetzt().copy(nachtBis = minuten(neu)))
+        })
+        k.addView(fenster)
+        k.addView(a.zart(a.getString(R.string.uk_nacht_hinweis)).apply { setPadding(0, a.dp(8f), 0, 0) })
         fuss(sp, k, stand) {
             val neu = jetzt()
             Uhreinstellungen.sendeKieselsport(a, neu)
@@ -369,6 +385,14 @@ class UhrKarten(private val a: Activity) {
     }
 
     // --- Bausteine ---
+
+    /** Minuten seit Mitternacht als "HH:MM" und zurueck - die Uhr rechnet in Minuten. */
+    private fun hhmm(min: Int): String = "%02d:%02d".format(min / 60, min % 60)
+
+    private fun minuten(hhmm: String): Int {
+        val (h, m) = hhmm.split(":").map { it.toIntOrNull() ?: 0 }
+        return h * 60 + m
+    }
 
     private fun unter(text: String): TextView = TextView(a).apply {
         this.text = text

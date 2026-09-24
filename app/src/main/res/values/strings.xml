@@ -256,6 +256,11 @@
     <string name="uk_becken">Pool length</string>
     <string name="uk_pin">PIN IN THE TIMELINE</string>
     <string name="uk_uhrzeit">Time</string>
+    <string name="uk_nacht">NIGHT</string>
+    <string name="uk_nacht_messen">Measure night</string>
+    <string name="uk_nacht_von">Start</string>
+    <string name="uk_nacht_bis">End</string>
+    <string name="uk_nacht_hinweis">Within this window the watch records movement and heart rate every minute and HRV every half hour. In the morning this app works out the sleep from it.</string>
     <string name="uk_sportart">Sport</string>
     <string name="uk_platz_leer">Slot %1$d — empty</string>
     <string name="uk_name_hinweis">Name — empty means no supplement</string>
@@ -437,7 +442,7 @@
     <string name="v_leicht_gefallen">The heart rate fell slightly, by %1$s beats.</string>
     <string name="v_geblieben">The heart rate stayed where it was.</string>
     <string name="v_gestiegen">The heart rate rose — a demanding session.</string>
-    <string name="v_hrv_text">The heart rate variability from this session, measured by the watch. Higher means more relaxed; it is comparable with the night values from Herzintervall.</string>
+    <string name="v_hrv_text">The heart rate variability from this session, measured by the watch. Higher means more relaxed; it is comparable with the night values from Kieselsport.</string>
     <string name="v_kein_puls_hrv">No heart rate and no HRV for this session.</string>
     <string name="v_keine_hrv">No HRV for this session — the watch only measures it since Kieselsport 0.9.0.</string>
     <string name="v_jede_zweite_bahn">Every second length as a band</string>
@@ -484,8 +489,8 @@
     <string name="a_schlaf_titel">Sleep (watch)</string>
     <string name="a_schlaf_eingetragen">Sleep %1$d h %2$d min logged</string>
     <string name="a_ruhepuls_eingetragen">Resting HR %1$d logged</string>
-    <string name="a_uebersprungen_messung">Skipped — %1$s already logged the measurement</string>
-    <string name="a_ms_eingetragen">%1$d ms logged</string>
+    <string name="a_nacht_phasen">Sleep %1$s, deep %2$s, REM %3$s</string>
+    <string name="a_nacht_keine">Night without sleep — nothing logged</string>
     <string name="a_koffein_eingetragen">%1$d mg caffeine logged</string>
     <string name="a_nicht_eingetragen">Not logged — check the permission in the app</string>
     <string name="o_nie">not tried yet</string>
@@ -509,7 +514,7 @@
     <string name="o_felder">OsmAnd fields: %1$s</string>
     <string name="o_ausfahrt">Exit %1$d</string>
     <string name="o_ende">OsmAnd: navigation ended</string>
-    <string name="ei_unter_gesundheit">Herzintervall · HRV, sleep, resting HR</string>
+    <string name="ei_unter_gesundheit">Kieselsport · sleep, HRV, resting HR</string>
     <string name="ei_unter_training">Kieselsport · route, heart rate, pin</string>
     <string name="ei_unter_ernaehrung">Drinktervall, SupCycle, caffeine</string>
     <string name="ei_navigation">Navigation</string>
@@ -533,8 +538,8 @@
     <string name="ei_tagesziel">Daily goal</string>
     <string name="ei_tagesziel_text">Today\'s goal as the watch last reported it — with “Goal+” it can be above the target.</string>
     <string name="ei_einstellungen_gross">SETTINGS</string>
-    <string name="ei_hz_akte">Herzintervall → health record</string>
-    <string name="ei_hz_akte_text">The nightly RMSSD measurement is logged as heart rate variability. With it come last night — sleep start and end — and the average night heart rate as resting heart rate.</string>
+    <string name="ei_nacht_akte">Kieselsport → health record</string>
+    <string name="ei_nacht_akte_text">At night Kieselsport records movement and heart rate every minute and measures HRV every half hour. In the morning Kiesel-Helper works out the sleep from it — asleep, woken, deep, REM and light sleep — and logs it together with resting heart rate and night HRV. A single HRV measurement from the watch menu is logged as well. The night window is set under Workout → Kieselsport.</string>
     <string name="ei_schlaf">SLEEP</string>
     <string name="ei_sc_akte">SupCycle → nutrition</string>
     <string name="ei_sc_akte_text">What is due today, what of it is ticked off, and the names. Every supplement taken goes into the record as a nutrition entry — without amounts, because SupCycle knows names and cycles, not milligrams.</string>

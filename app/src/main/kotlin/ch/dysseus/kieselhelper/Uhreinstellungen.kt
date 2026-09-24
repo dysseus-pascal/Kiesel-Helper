@@ -41,6 +41,11 @@ object Uhreinstellungen {
     private const val SP_EMPFIND = 10012
     private const val SP_PIN_ART = 10018
     private const val SP_PIN_ZEIT = 10019
+    // Das Fenster der Nachtmessung, seit Kieselsport 0.14.0: an/aus und
+    // Beginn und Ende in Minuten seit Mitternacht.
+    private const val SP_NACHT_AN = 10023
+    private const val SP_NACHT_VON = 10024
+    private const val SP_NACHT_BIS = 10025
 
     // --- Was es gibt ---
 
@@ -53,6 +58,10 @@ object Uhreinstellungen {
         val becken: Int,
         val pinArt: Int,
         val pinZeit: String,
+        val nachtAn: Boolean = true,
+        /** Minuten seit Mitternacht. */
+        val nachtVon: Int = 22 * 60,
+        val nachtBis: Int = 8 * 60,
     )
 
     /** Ein Platz im Plan von SupCycle. `anker` in Tagen, wie auf der Uhr. */
@@ -147,6 +156,7 @@ object Uhreinstellungen {
         return Kieselsport(
             p.getInt("sp_maxpuls", 190), p.getInt("sp_pause", 90), p.getInt("sp_empfind", 2),
             p.getInt("sp_becken", 25), p.getInt("sp_pin_art", 0), p.getString("sp_pin_zeit", "18:00") ?: "18:00",
+            p.getBoolean("sp_nacht_an", true), p.getInt("sp_nacht_von", 22 * 60), p.getInt("sp_nacht_bis", 8 * 60),
         )
     }
 
@@ -160,10 +170,16 @@ object Uhreinstellungen {
             becken = (felder[SP_BECKEN] ?: 25).toInt(),
             pinArt = (felder[SP_PIN_ART] ?: 0).toInt(),
             pinZeit = texte[SP_PIN_ZEIT] ?: "18:00",
+            // EINE UHR VOR 0.14.0 SCHICKT KEIN FENSTER. Dann gilt die Vorgabe
+            // der Uhr - dieselbe, mit der sie nach dem Update anfaengt.
+            nachtAn = (felder[SP_NACHT_AN] ?: 1L) != 0L,
+            nachtVon = minutenAus(felder[SP_NACHT_VON], texte[SP_NACHT_VON]) ?: 22 * 60,
+            nachtBis = minutenAus(felder[SP_NACHT_BIS], texte[SP_NACHT_BIS]) ?: 8 * 60,
         )
         prefs(context).edit()
             .putInt("sp_maxpuls", neu.maxpuls).putInt("sp_pause", neu.pause).putInt("sp_empfind", neu.empfind)
             .putInt("sp_becken", neu.becken).putInt("sp_pin_art", neu.pinArt).putString("sp_pin_zeit", neu.pinZeit)
+            .putBoolean("sp_nacht_an", neu.nachtAn).putInt("sp_nacht_von", neu.nachtVon).putInt("sp_nacht_bis", neu.nachtBis)
             .putLong("sp_um", System.currentTimeMillis())
             .apply()
         // Die Pulszonen der Auswertung sind die der Uhr.
@@ -180,7 +196,24 @@ object Uhreinstellungen {
             SP_BECKEN to Wert.Zahl(k.becken.toLong()),
             SP_PIN_ART to Wert.Zahl(k.pinArt.toLong()),
             SP_PIN_ZEIT to Wert.Text(k.pinZeit),
+            SP_NACHT_AN to Wert.Zahl(if (k.nachtAn) 1L else 0L),
+            SP_NACHT_VON to Wert.Zahl(k.nachtVon.toLong()),
+            SP_NACHT_BIS to Wert.Zahl(k.nachtBis.toLong()),
         )) { kieselsport(context) == k }
+    }
+
+    /**
+     * Minuten seit Mitternacht - als Zahl, oder als "HH:MM", falls es einmal
+     * als Text kommt. Die Uhr nimmt beides an; gemeldet hat sie bisher Zahlen.
+     */
+    internal fun minutenAus(zahl: Long?, text: String?): Int? {
+        zahl?.let { if (it in 0..1439) return it.toInt() }
+        val t = text?.trim()?.split(":") ?: return null
+        if (t.size != 2) return null
+        val h = t[0].toIntOrNull() ?: return null
+        val m = t[1].toIntOrNull() ?: return null
+        if (h !in 0..23 || m !in 0..59) return null
+        return h * 60 + m
     }
 
     // --- SupCycle ---

@@ -64,20 +64,6 @@ object Aufgaben {
     private const val DT_GLASS_ML = 10008
     private const val DT_DRANK_AT = 10009
 
-    // --- Herzintervall: naechtliche RMSSD-Messung ---
-
-    private val HERZINTERVALL: UUID =
-        UUID.fromString("7e1b28b2-cd13-4b50-ac4e-187b92707707")
-
-    private const val HZ_RMSSD = 10000
-    private const val HZ_WHEN = 10005
-    // Die letzte abgeschlossene Nacht, von der Uhr gemessen - Herzintervall
-    // schickt sie mit dem Ergebnis, weil es ohnehin nachts misst.
-    private const val HZ_SLEEP_START = 10006
-    private const val HZ_SLEEP_END = 10007
-    private const val HZ_SLEEP_RESTFUL = 10008
-    private const val HZ_RESTING_HR = 10009
-
     // --- SupCycle: was heute ansteht und was davon genommen ist ---
 
     private val SUPCYCLE: UUID =
@@ -151,6 +137,19 @@ object Aufgaben {
     private const val SP_KURVE_ANZAHL = 10021
     private const val SP_KURVE = 10022
     private const val KURVE_TAKT_S = 10
+
+    // DIE NACHT, seit Kieselsport 0.14.0 - wie die Pulskurve in Stuecken:
+    // der Beginn der Nacht als Schluessel, ab welcher Minute, wie viele
+    // insgesamt, und je Minute zwei Byte [bewegung, puls]. Die HRV-Fenster
+    // fahren nur im ersten Stueck mit.
+    private const val SP_NACHT_BEGINN = 10026
+    private const val SP_NACHT_AB = 10027
+    private const val SP_NACHT_ANZAHL = 10028
+    private const val SP_NACHT_MINUTEN = 10029
+    private const val SP_NACHT_HRV = 10030
+    // Eine einzelne HRV-Messung aus dem Menue der Uhr: ihr Zeitpunkt, der
+    // Wert steht in SP_HRV.
+    private const val SP_HRV_ZEIT = 10031
     private const val SP_SAETZE = 10013
     private const val SP_REPS = 10014
     private const val SP_BAHNEN = 10015
@@ -343,6 +342,14 @@ object Aufgaben {
             }
         }
 
+        // EIN STUECK NACHT - morgens, in Stuecken von bis zu 150 Minuten.
+        rohdaten[SP_NACHT_MINUTEN]?.let { minuten ->
+            return nachtstueck(context, felder, minuten, rohdaten[SP_NACHT_HRV])
+        }
+
+        // EINE HRV VON HAND GEMESSEN - ohne Art, mit Zeitpunkt.
+        if (felder[SP_ART] == null) felder[SP_HRV_ZEIT]?.let { wann -> return hrvEinzeln(context, felder, wann) }
+
         // DIE EINSTELLUNGEN DER UHR - beim Start der App und nach jeder
         // Aenderung, ohne Art. Nur merken; ins Protokoll gehoeren sie nicht.
         if (felder[SP_ART] == null && Uhreinstellungen.vonKieselsport(context, felder, texte)) return null
@@ -513,7 +520,7 @@ object Aufgaben {
         }
 
         // YOGA BRINGT EINE HRV MIT. Sie gehoert als eigener Satz in die Akte,
-        // zum Ende des Trainings - so wie die naechtliche von Herzintervall.
+        // zum Ende des Trainings - so wie die naechtliche.
         felder[SP_HRV]?.takeIf { it in 5..300 }?.let { hrv ->
             if (Riegel.neu(context, "kieselsport-hrv", beginn.toString())) {
                 schreibe(context, HeartRateVariabilityRmssdRecord(
@@ -532,8 +539,153 @@ object Aufgaben {
         return meldung
     }
 
+    /**
+     * Ein Stueck der Nacht einsetzen - und ist sie damit vollstaendig, sie
+     * auswerten und eintragen.
+     *
+     * NACHZUEGLER NACH DEM EINTRAGEN werden verworfen: bleibt die Bestaetigung
+     * des letzten Stuecks aus, schickt die Uhr es noch einmal, und es begaenne
+     * sonst eine neue, nie vollstaendige Nacht.
+     */
+    private suspend fun nachtstueck(
+        context: Context,
+        felder: Map<Int, Long>,
+        minuten: ByteArray,
+        hrv: ByteArray?,
+    ): String? {
+        val beginn = felder[SP_NACHT_BEGINN] ?: return null
+        val anzahl = (felder[SP_NACHT_ANZAHL] ?: 0).toInt()
+        val ab = (felder[SP_NACHT_AB] ?: 0).toInt()
+        if (beginn <= 0 || anzahl <= 0) return null
+        if (Riegel.schon(context, "schlaf", beginn.toString())) return null
+        val voll = withContext(Dispatchers.IO) {
+            Nachtdaten.einsetzen(context, beginn, anzahl, ab, minuten, if (ab == 0) hrv else null)
+        }
+        if (!voll) return null
+        // MIT IHR AUCH DIE, DIE FRUEHER SCHEITERTEN - Akte nicht da, Erlaubnis
+        // fehlte. Ihre Dateien liegen noch; die aelteste zuerst, damit der
+        // Riegel am Ende auf der neuesten steht.
+        val offen = withContext(Dispatchers.IO) { Nachtdaten.vollstaendige(context) }
+        return (offen - beginn).sorted().plus(beginn)
+            .mapNotNull { nachtEintragen(context, it) }
+            .joinToString(" · ")
+            .ifBlank { null }
+    }
+
+    /**
+     * Die Nacht auswerten und in die Akte: Schlaf mit Phasen, Ruhepuls, HRV.
+     *
+     * DIE EIGENE AUSWERTUNG GILT, auch wenn die Pebble-App schon einen Schlaf
+     * eingetragen hat. Hier wird darum NICHT nachgesehen wie beim Wasser;
+     * doppelt gezaehlt wird trotzdem nichts, weil [Gesundheit] beim Lesen
+     * fuer jede Nacht nur die eigenen Sitzungen nimmt, wo es welche gibt.
+     *
+     * Ruhepuls und HRV stehen zum Aufwachen: dort sucht jede App den Wert
+     * "dieser Nacht", und dort stand er auch bei Herzintervall.
+     */
+    private suspend fun nachtEintragen(context: Context, beginn: Long): String? {
+        if (!Riegel.neu(context, "schlaf", beginn.toString())) return null
+        val daten = withContext(Dispatchers.IO) { Nachtdaten.lies(context, beginn) } ?: return null
+        val (bewegung, puls, hrvBytes) = daten
+        val nacht = Schlafanalyse.werte(bewegung, puls, Schlafanalyse.hrvAus(hrvBytes))
+        if (nacht == null) {
+            // Keine Nacht darin - die Uhr lag auf dem Tisch. Das ist eine
+            // Antwort, kein Fehler: die Daten sind fertig ausgewertet.
+            withContext(Dispatchers.IO) { Nachtdaten.loesche(context, beginn) }
+            return context.getString(R.string.a_nacht_keine)
+        }
+
+        val null0 = Instant.ofEpochSecond(beginn)
+        fun zeit(minute: Int): Instant = null0.plusSeconds(minute * 60L)
+        val aufgewacht = zeit(nacht.aufwachen)
+        val satz = SleepSessionRecord(
+            startTime = zeit(nacht.einschlafen),
+            startZoneOffset = null,
+            endTime = aufgewacht,
+            endZoneOffset = null,
+            title = context.getString(R.string.a_schlaf_titel),
+            metadata = vonDerUhr("kieselsport-schlaf-" + beginn),
+            stages = nacht.phasen.map {
+                SleepSessionRecord.Stage(zeit(it.von), zeit(it.bis), stufe(it.phase))
+            },
+        )
+        val kurz = nachtMeldung(context, nacht)
+        val meldung = schreibe(context, satz, kurz, riegel = "schlaf")
+        // Gescheitert: die Datei bleibt liegen, der Riegel ist wieder offen -
+        // mit dem naechsten Stueck einer Nacht kommt sie noch einmal dran.
+        if (meldung != kurz) return meldung
+        val teile = mutableListOf(meldung)
+
+        nacht.ruhepuls?.takeIf { it in 30..120 }?.let { ruhe ->
+            if (Riegel.neu(context, "ruhepuls", beginn.toString())) {
+                teile += schreibe(context, RestingHeartRateRecord(
+                    time = aufgewacht,
+                    zoneOffset = null,
+                    beatsPerMinute = ruhe.toLong(),
+                    metadata = vonDerUhr("kieselsport-ruhepuls-" + beginn),
+                ), context.getString(R.string.a_ruhepuls_eingetragen, ruhe), riegel = "ruhepuls")
+            }
+        }
+        nacht.hrv?.takeIf { it in 5..300 }?.let { ms ->
+            if (Riegel.neu(context, "nacht-hrv", beginn.toString())) {
+                teile += schreibe(context, HeartRateVariabilityRmssdRecord(
+                    time = aufgewacht,
+                    zoneOffset = null,
+                    heartRateVariabilityMillis = ms.toDouble(),
+                    metadata = vonDerUhr("kieselsport-nacht-hrv-" + beginn),
+                ), context.getString(R.string.a_hrv_eingetragen, ms), riegel = "nacht-hrv")
+            }
+        }
+        withContext(Dispatchers.IO) { Nachtdaten.loesche(context, beginn) }
+        return teile.joinToString(", ")
+    }
+
+    /** Die Phasen der Auswertung in die Satzarten der Akte. */
+    private fun stufe(p: Schlafanalyse.Phase): Int = when (p) {
+        Schlafanalyse.Phase.WACH -> SleepSessionRecord.STAGE_TYPE_AWAKE
+        Schlafanalyse.Phase.LEICHT -> SleepSessionRecord.STAGE_TYPE_LIGHT
+        Schlafanalyse.Phase.TIEF -> SleepSessionRecord.STAGE_TYPE_DEEP
+        Schlafanalyse.Phase.REM -> SleepSessionRecord.STAGE_TYPE_REM
+        Schlafanalyse.Phase.SCHLAF -> SleepSessionRecord.STAGE_TYPE_SLEEPING
+    }
+
+    /** "Schlaf 7 h 12, Tief 1 h 20, REM 1 h 35" - oder ohne Puls nur die Dauer. */
+    private fun nachtMeldung(context: Context, n: Schlafanalyse.Nacht): String {
+        val schlaf = n.schlafMinuten
+        if (n.phasen.none { it.phase == Schlafanalyse.Phase.TIEF || it.phase == Schlafanalyse.Phase.REM ||
+                it.phase == Schlafanalyse.Phase.LEICHT }) {
+            return context.getString(R.string.a_schlaf_eingetragen, schlaf / 60, schlaf % 60)
+        }
+        fun hm(min: Int) = "%d h %02d".format(min / 60, min % 60)
+        return context.getString(
+            R.string.a_nacht_phasen,
+            hm(schlaf), hm(n.minuten(Schlafanalyse.Phase.TIEF)), hm(n.minuten(Schlafanalyse.Phase.REM)),
+        )
+    }
+
+    /**
+     * Eine HRV, von Hand auf der Uhr gemessen (Menuepunkt "HRV" in
+     * Kieselsport): ein Satz zu ihrem Zeitpunkt, und je Zeitpunkt einmal.
+     */
+    private suspend fun hrvEinzeln(context: Context, felder: Map<Int, Long>, wann: Long): String? {
+        val ms = felder[SP_HRV] ?: return null
+        if (wann <= 0 || ms !in 5..300) return null
+        if (!Riegel.neu(context, "kieselsport-hrv-einzeln", wann.toString())) return null
+        return schreibe(context, HeartRateVariabilityRmssdRecord(
+            time = Instant.ofEpochSecond(wann),
+            zoneOffset = null,
+            heartRateVariabilityMillis = ms.toDouble(),
+            metadata = vonDerUhr("kieselsport-hrv-zeit-" + wann),
+        ), context.getString(R.string.a_hrv_eingetragen, ms.toInt()), riegel = "kieselsport-hrv-einzeln")
+    }
+
     /** Alle Uhr-Apps, von denen diese App ueberhaupt etwas annimmt. */
-    val BEKANNTE_UHREN = setOf(DRINKTERVALL, HERZINTERVALL, SUPCYCLE, KIESELSPORT)
+    //
+    // HERZINTERVALL NICHT MEHR: seit Kieselsport 0.14.0 misst Kieselsport die
+    // Nacht selbst. Eine zweite App, die dieselbe HRV eintraegt, gaebe nur
+    // doppelte Werte - und wer Herzintervall noch installiert hat, soll
+    // nicht still zwei Naechte in der Akte finden.
+    val BEKANNTE_UHREN = setOf(DRINKTERVALL, SUPCYCLE, KIESELSPORT)
 
     /** Die Berechtigungen, die dafuer noetig sind. */
     val BERECHTIGUNGEN: Set<String> = setOf(
@@ -571,7 +723,6 @@ object Aufgaben {
     ): String? =
         when (von) {
             DRINKTERVALL -> wasser(context, felder)
-            HERZINTERVALL -> herz(context, felder)
             SUPCYCLE -> {
                 // Plan und Animation, wie sie auf der Uhr gelten - mit der
                 // Tagesmeldung und beim Start der App.
@@ -696,105 +847,6 @@ object Aufgaben {
             metadata = vonDerUhr("drinktervall-" + wann),
         )
         return schreibe(context, satz, context.getString(R.string.a_ml_eingetragen, ml.toInt()), riegel = "drinktervall")
-    }
-
-    /**
-     * Die Nacht von der Uhr (Herzintervall): Schlafbeginn, Schlafende, Ruhepuls.
-     *
-     * DIE PEBBLE-APP SCHREIBT SCHLAF WOMOEGLICH SELBST in die Akte. Dann
-     * steht er schon da, und ein zweiter Eintrag ueber dieselbe Nacht waere
-     * eine doppelte Nacht - deshalb erst nachsehen, wie beim Wasser.
-     */
-    private suspend fun nacht(context: Context, felder: Map<Int, Long>): String? {
-        val meldungen = mutableListOf<String>()
-        val start = felder[HZ_SLEEP_START] ?: 0
-        val ende = felder[HZ_SLEEP_END] ?: 0
-        val klient = Akte(context).bereit()
-
-        if (start > 0 && ende > start + 1800 && Riegel.neu(context, "schlaf", ende.toString())) {
-            if (klient == null) {
-                Riegel.loese(context, "schlaf")
-                return context.getString(R.string.g_akte_fehlt)
-            }
-            val von = Instant.ofEpochSecond(start)
-            val bis = Instant.ofEpochSecond(ende)
-            val fremd = schonDa(context, klient, SleepSessionRecord::class, bis, FENSTER_SCHLAF)
-            if (fremd != null) {
-                Log.i(TAG, "Schlaf steht schon da, von " + fremd)
-            } else {
-                val satz = SleepSessionRecord(
-                    startTime = von,
-                    startZoneOffset = null,
-                    endTime = bis,
-                    endZoneOffset = null,
-                    title = context.getString(R.string.a_schlaf_titel),
-                    metadata = vonDerUhr("uhr-schlaf-" + ende),
-                )
-                val stunden = Duration.between(von, bis).toMinutes()
-                meldungen += schreibe(context, satz,
-                    context.getString(R.string.a_schlaf_eingetragen, (stunden / 60).toInt(), (stunden % 60).toInt()),
-                    riegel = "schlaf")
-            }
-        }
-
-        // Der Ruhepuls gehoert zu dieser Nacht: eingetragen zu ihrem Ende, und
-        // je Nacht einmal.
-        val ruhe = felder[HZ_RESTING_HR] ?: 0
-        if (ruhe in 30..120 && klient != null && ende > 0) {
-            val tag = ende.toString()
-            if (Riegel.neu(context, "ruhepuls", tag)) {
-                val satz = RestingHeartRateRecord(
-                    time = Instant.ofEpochSecond(ende),
-                    zoneOffset = null,
-                    beatsPerMinute = ruhe,
-                    metadata = vonDerUhr("uhr-ruhepuls-" + tag),
-                )
-                meldungen += schreibe(context, satz, context.getString(R.string.a_ruhepuls_eingetragen, ruhe.toInt()),
-                    riegel = "ruhepuls")
-            }
-        }
-        return meldungen.takeIf { it.isNotEmpty() }?.joinToString(", ")
-    }
-
-    /**
-     * Die Herzratenvariabilitaet eintragen.
-     *
-     * Auch hier ein Riegel auf dem Zeitpunkt: die Uhr schickt die Messung der
-     * letzten Nacht, bis sie bestaetigt ist, und das kann mehrfach geschehen.
-     */
-    private suspend fun herz(context: Context, felder: Map<Int, Long>): String? {
-        // Die Nacht faehrt mit dem Ergebnis mit - und kommt auch ohne eines,
-        // wenn die Messung scheiterte. Beides unabhaengig voneinander.
-        val nacht = nacht(context, felder)
-        val ms = felder[HZ_RMSSD] ?: return nacht
-        val wann = felder[HZ_WHEN] ?: return nacht
-        if (ms <= 0 || wann <= 0) return nacht
-        if (!Riegel.neu(context, "herzintervall", wann.toString())) return null
-
-        // DIE PEBBLE-APP KOENNTE DIESELBE MESSUNG EINTRAGEN. Sie synchronisiert
-        // die Gesundheitsdaten der Uhr selbst, und die Akte fuehrt nur
-        // zusammen, was aus derselben App kommt.
-        val klient = Akte(context).bereit()
-        if (klient == null) {
-            Riegel.loese(context, "herzintervall")
-            return context.getString(R.string.g_akte_fehlt)
-        }
-        val zeitpunkt = Instant.ofEpochSecond(wann)
-        schonDa(
-            context, klient, HeartRateVariabilityRmssdRecord::class,
-            zeitpunkt, FENSTER_HRV,
-        )?.let {
-            Log.i(TAG, "HRV steht schon da, von " + it)
-            return context.getString(R.string.a_uebersprungen_messung, it)
-        }
-
-        val satz = HeartRateVariabilityRmssdRecord(
-            time = Instant.ofEpochSecond(wann),
-            zoneOffset = null,
-            heartRateVariabilityMillis = ms.toDouble(),
-            metadata = vonDerUhr("herzintervall-" + wann),
-        )
-        return schreibe(context, satz, context.getString(R.string.a_ms_eingetragen, ms.toInt()), riegel = "herzintervall")
     }
 
     /**
@@ -927,13 +979,9 @@ object Aufgaben {
      * Wie weit zwei Eintraege auseinanderliegen duerfen und trotzdem
      * derselbe sind.
      *
-     * Fuenf Minuten fuer die HRV: sie wird einmal in der Nacht gemessen, und
-     * zwei Apps, die dieselbe Messung melden, tun das nicht auf die Sekunde
-     * genau. Beim Wasser enger - zwei Glaeser in fuenf Minuten sind moeglich,
-     * zwei Eintraege in derselben Minute nicht.
+     * Beim Wasser eng - zwei Glaeser in fuenf Minuten sind moeglich, zwei
+     * Eintraege in derselben Minute nicht.
      */
-    private val FENSTER_HRV: Duration = Duration.ofMinutes(5)
-    private val FENSTER_SCHLAF: Duration = Duration.ofHours(2)
     private val FENSTER_WASSER: Duration = Duration.ofMinutes(1)
     // Ein Training beginnt man nicht zweimal in derselben Viertelstunde.
     private val FENSTER_TRAINING: Duration = Duration.ofMinutes(15)
@@ -989,6 +1037,10 @@ object Aufgaben {
  */
 object Riegel {
     private const val DATEI = "kiesel-riegel"
+
+    /** Schon dagewesen? Nur nachsehen, nicht vormerken. */
+    fun schon(context: Context, aufgabe: String, merkmal: String): Boolean =
+        context.getSharedPreferences(DATEI, Context.MODE_PRIVATE).getString(aufgabe, null) == merkmal
 
     /** true heisst: noch nicht dagewesen, jetzt vormerken. */
     fun neu(context: Context, aufgabe: String, merkmal: String): Boolean {

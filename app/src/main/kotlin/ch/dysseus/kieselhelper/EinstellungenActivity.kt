@@ -346,8 +346,10 @@ class EinstellungenActivity : KieselActivity() {
     }
 
     private fun seiteGesundheit(w: LinearLayout) {
-        w.addView(dienstkopf("Herzintervall", R.color.phase_rem, erster = true))
-        seiteHerzintervall(w)
+        // SEIT 0.51.0 KIESELSPORT STATT HERZINTERVALL: die Uhr misst die Nacht
+        // jetzt dort, und die Auswertung steckt in dieser App.
+        w.addView(dienstkopf("Kieselsport", R.color.phase_rem, erster = true))
+        seiteNacht(w)
     }
 
     private fun seiteTraining(w: LinearLayout) {
@@ -416,10 +418,10 @@ class EinstellungenActivity : KieselActivity() {
         w.addView(uhr.drinktervall())
     }
 
-    private fun seiteHerzintervall(w: LinearLayout) {
+    private fun seiteNacht(w: LinearLayout) {
         w.addView(aufgabenKarte(
-            getString(R.string.ei_hz_akte),
-            getString(R.string.ei_hz_akte_text)
+            getString(R.string.ei_nacht_akte),
+            getString(R.string.ei_nacht_akte_text)
         ))
         w.luft(8f)
         w.addView(abschnitt(getString(R.string.ei_schlaf)))

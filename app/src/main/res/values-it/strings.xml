@@ -262,6 +262,11 @@
     <string name="uk_becken">Lunghezza vasca</string>
     <string name="uk_pin">PIN NELLA TIMELINE</string>
     <string name="uk_uhrzeit">Ora</string>
+    <string name="uk_nacht">NOTTE</string>
+    <string name="uk_nacht_messen">Misura la notte</string>
+    <string name="uk_nacht_von">Inizio</string>
+    <string name="uk_nacht_bis">Fine</string>
+    <string name="uk_nacht_hinweis">In questa fascia l\'orologio registra ogni minuto movimento e battito e ogni mezz\'ora la HRV. Al mattino questa app ne ricava il sonno.</string>
     <string name="uk_sportart">Sport</string>
     <string name="uk_platz_leer">Posto %1$d — vuoto</string>
     <string name="uk_name_hinweis">Nome — vuoto vuol dire nessun integratore</string>
@@ -443,7 +448,7 @@
     <string name="v_leicht_gefallen">Il battito è sceso leggermente, di %1$s battiti.</string>
     <string name="v_geblieben">Il battito è rimasto dov\'era.</string>
     <string name="v_gestiegen">Il battito è salito — una sessione impegnativa.</string>
-    <string name="v_hrv_text">La variabilità della frequenza cardiaca di questa sessione, misurata dall\'orologio. Più alta vuol dire più rilassato; è confrontabile con i valori notturni di Herzintervall.</string>
+    <string name="v_hrv_text">La variabilità della frequenza cardiaca di questa sessione, misurata dall\'orologio. Più alta vuol dire più rilassato; è confrontabile con i valori notturni di Kieselsport.</string>
     <string name="v_kein_puls_hrv">Nessun battito e nessuna HRV per questa sessione.</string>
     <string name="v_keine_hrv">Nessuna HRV per questa sessione — l\'orologio la misura solo da Kieselsport 0.9.0.</string>
     <string name="v_jede_zweite_bahn">Una vasca su due come fascia</string>
@@ -490,8 +495,8 @@
     <string name="a_schlaf_titel">Sonno (orologio)</string>
     <string name="a_schlaf_eingetragen">Sonno %1$d h %2$d min registrato</string>
     <string name="a_ruhepuls_eingetragen">Battito a riposo %1$d registrato</string>
-    <string name="a_uebersprungen_messung">Saltato — %1$s ha già registrato la misurazione</string>
-    <string name="a_ms_eingetragen">%1$d ms registrati</string>
+    <string name="a_nacht_phasen">Sonno %1$s, profondo %2$s, REM %3$s</string>
+    <string name="a_nacht_keine">Notte senza sonno — nulla registrato</string>
     <string name="a_koffein_eingetragen">%1$d mg di caffeina registrati</string>
     <string name="a_nicht_eingetragen">Non registrato — controlla il permesso nell\'app</string>
     <string name="o_nie">non ancora provato</string>
@@ -515,7 +520,7 @@
     <string name="o_felder">Campi OsmAnd: %1$s</string>
     <string name="o_ausfahrt">%1$dª uscita</string>
     <string name="o_ende">OsmAnd: navigazione terminata</string>
-    <string name="ei_unter_gesundheit">Herzintervall · HRV, sonno, battito a riposo</string>
+    <string name="ei_unter_gesundheit">Kieselsport · sonno, HRV, battito a riposo</string>
     <string name="ei_unter_training">Kieselsport · percorso, battito, pin</string>
     <string name="ei_unter_ernaehrung">Drinktervall, SupCycle, caffeina</string>
     <string name="ei_navigation">Navigazione</string>
@@ -539,8 +544,8 @@
     <string name="ei_tagesziel">Obiettivo del giorno</string>
     <string name="ei_tagesziel_text">L\'obiettivo di oggi come l\'orologio l\'ha comunicato per ultimo — con «Obiettivo+» può superare il valore previsto.</string>
     <string name="ei_einstellungen_gross">IMPOSTAZIONI</string>
-    <string name="ei_hz_akte">Herzintervall → cartella salute</string>
-    <string name="ei_hz_akte_text">La misurazione RMSSD notturna viene registrata come variabilità della frequenza cardiaca. Con essa arrivano l\'ultima notte — inizio e fine del sonno — e il battito notturno medio come battito a riposo.</string>
+    <string name="ei_nacht_akte">Kieselsport → cartella salute</string>
+    <string name="ei_nacht_akte_text">Di notte Kieselsport registra ogni minuto movimento e battito e misura la HRV ogni mezz\'ora. Al mattino Kiesel-Helper ne ricava il sonno — addormentamento, risveglio, sonno profondo, REM e leggero — e lo registra con battito a riposo e HRV notturna. Anche una singola misurazione HRV dal menu dell\'orologio viene registrata. La fascia notturna si imposta in Allenamento → Kieselsport.</string>
     <string name="ei_schlaf">SONNO</string>
     <string name="ei_sc_akte">SupCycle → alimentazione</string>
     <string name="ei_sc_akte_text">Cosa è previsto oggi, cosa è stato spuntato, e i nomi. Ogni integratore preso va nella cartella come voce alimentare — senza quantità, perché SupCycle conosce nomi e cicli, non milligrammi.</string>

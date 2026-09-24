@@ -262,6 +262,11 @@
     <string name="uk_becken">Longueur du bassin</string>
     <string name="uk_pin">PIN DANS LA TIMELINE</string>
     <string name="uk_uhrzeit">Heure</string>
+    <string name="uk_nacht">NUIT</string>
+    <string name="uk_nacht_messen">Mesurer la nuit</string>
+    <string name="uk_nacht_von">Début</string>
+    <string name="uk_nacht_bis">Fin</string>
+    <string name="uk_nacht_hinweis">Dans cette plage, la montre enregistre chaque minute le mouvement et le pouls, et la HRV toutes les demi-heures. Le matin, cette app en calcule le sommeil.</string>
     <string name="uk_sportart">Sport</string>
     <string name="uk_platz_leer">Emplacement %1$d — vide</string>
     <string name="uk_name_hinweis">Nom — vide signifie aucun complément</string>
@@ -443,7 +448,7 @@
     <string name="v_leicht_gefallen">Le pouls a légèrement baissé, de %1$s battements.</string>
     <string name="v_geblieben">Le pouls est resté au même niveau.</string>
     <string name="v_gestiegen">Le pouls a augmenté — une séance exigeante.</string>
-    <string name="v_hrv_text">La variabilité de la fréquence cardiaque de cette séance, mesurée par la montre. Plus haut signifie plus détendu ; elle est comparable aux valeurs nocturnes de Herzintervall.</string>
+    <string name="v_hrv_text">La variabilité de la fréquence cardiaque de cette séance, mesurée par la montre. Plus haut signifie plus détendu ; elle est comparable aux valeurs nocturnes de Kieselsport.</string>
     <string name="v_kein_puls_hrv">Ni pouls ni HRV pour cette séance.</string>
     <string name="v_keine_hrv">Pas de HRV pour cette séance — la montre ne la mesure que depuis Kieselsport 0.9.0.</string>
     <string name="v_jede_zweite_bahn">Une longueur sur deux en bande</string>
@@ -490,8 +495,8 @@
     <string name="a_schlaf_titel">Sommeil (montre)</string>
     <string name="a_schlaf_eingetragen">Sommeil %1$d h %2$d min enregistré</string>
     <string name="a_ruhepuls_eingetragen">Pouls au repos %1$d enregistré</string>
-    <string name="a_uebersprungen_messung">Ignoré — %1$s a déjà enregistré la mesure</string>
-    <string name="a_ms_eingetragen">%1$d ms enregistrés</string>
+    <string name="a_nacht_phasen">Sommeil %1$s, profond %2$s, REM %3$s</string>
+    <string name="a_nacht_keine">Nuit sans sommeil — rien enregistré</string>
     <string name="a_koffein_eingetragen">%1$d mg de caféine enregistrés</string>
     <string name="a_nicht_eingetragen">Non enregistré — vérifier l\'autorisation dans l\'app</string>
     <string name="o_nie">pas encore essayé</string>
@@ -515,7 +520,7 @@
     <string name="o_felder">Champs OsmAnd : %1$s</string>
     <string name="o_ausfahrt">%1$de sortie</string>
     <string name="o_ende">OsmAnd : navigation terminée</string>
-    <string name="ei_unter_gesundheit">Herzintervall · HRV, sommeil, pouls au repos</string>
+    <string name="ei_unter_gesundheit">Kieselsport · sommeil, HRV, pouls au repos</string>
     <string name="ei_unter_training">Kieselsport · parcours, pouls, pin</string>
     <string name="ei_unter_ernaehrung">Drinktervall, SupCycle, caféine</string>
     <string name="ei_navigation">Navigation</string>
@@ -539,8 +544,8 @@
     <string name="ei_tagesziel">Objectif du jour</string>
     <string name="ei_tagesziel_text">L\'objectif du jour tel que la montre l\'a signalé en dernier — avec « Objectif+ » il peut dépasser la cible.</string>
     <string name="ei_einstellungen_gross">RÉGLAGES</string>
-    <string name="ei_hz_akte">Herzintervall → dossier santé</string>
-    <string name="ei_hz_akte_text">La mesure RMSSD nocturne est enregistrée comme variabilité de la fréquence cardiaque. Avec elle arrivent la dernière nuit — début et fin du sommeil — et le pouls nocturne moyen comme pouls au repos.</string>
+    <string name="ei_nacht_akte">Kieselsport → dossier santé</string>
+    <string name="ei_nacht_akte_text">La nuit, Kieselsport enregistre chaque minute le mouvement et le pouls, et mesure la HRV toutes les demi-heures. Le matin, Kiesel-Helper en calcule le sommeil — endormissement, réveil, sommeil profond, paradoxal (REM) et léger — et l\'enregistre avec le pouls au repos et la HRV nocturne. Une mesure HRV isolée depuis le menu de la montre est aussi enregistrée. La plage de nuit se règle sous Entraînement → Kieselsport.</string>
     <string name="ei_schlaf">SOMMEIL</string>
     <string name="ei_sc_akte">SupCycle → nutrition</string>
     <string name="ei_sc_akte_text">Ce qui est prévu aujourd\'hui, ce qui en est coché, et les noms. Chaque complément pris va dans le dossier comme entrée nutritionnelle — sans quantités, car SupCycle connaît des noms et des cycles, pas des milligrammes.</string>

@@ -335,20 +335,13 @@ class Gesundheit(private val context: Context) {
             }
         }
 
-        val schlafMin = async {
-            fange("Schlaf") {
-                klient.aggregate(
-                    AggregateRequest(
-                        metrics = setOf(SleepSessionRecord.SLEEP_DURATION_TOTAL),
-                        timeRangeFilter = nacht,
-                    )
-                )[SleepSessionRecord.SLEEP_DURATION_TOTAL]?.toMinutes()?.toDouble()
-            }
-        }
-
+        // DIE DAUER AUS DEN SITZUNGEN, nicht aus der Summe der Akte. Die Summe
+        // zaehlte jede Nacht doppelt, die zwei Apps eingetragen haben - die
+        // Pebble-App und diese hier. Gelesen wird deshalb einmal, gewaehlt
+        // wird in [gewaehlt], und gezaehlt in [geschlafen].
         val sitzungen = async {
             fange("Schlafphasen") {
-                klient.readRecords(ReadRecordsRequest(SleepSessionRecord::class, nacht)).records
+                gewaehlt(klient.readRecords(ReadRecordsRequest(SleepSessionRecord::class, nacht)).records)
             } ?: emptyList()
         }
 
@@ -435,7 +428,7 @@ class Gesundheit(private val context: Context) {
             wasser = Wert(context.getString(R.string.wasser),
                           sum?.get(HydrationRecord.VOLUME_TOTAL)?.inMilliliters,
                           "ml", wasserziel()),
-            schlaf = Wert(context.getString(R.string.schlaf), schlafMin.await(), "min",
+            schlaf = Wert(context.getString(R.string.schlaf), geschlafen(schlafsitzungen, nachtgrenzen(heute)), "min",
                           Einstellungen.schlafziel(context).toDouble()),
             ruhepuls = ruhe.await(),
             puls = Wert(context.getString(R.string.puls), puls.await(), "bpm"),
@@ -635,12 +628,10 @@ class Gesundheit(private val context: Context) {
         withContext(Dispatchers.IO) {
             eimer.forEach { e ->
                 val tag = e.startTime.toLocalDate()
-                val nacht = naechte[tag].orEmpty()
+                val nacht = gewaehlt(naechte[tag].orEmpty())
                 val phasen = phasenAus(nacht)
                 val zeiten = zeitenAus(nacht, tag)
-                val geschlafen = nacht.sumOf {
-                    Duration.between(it.startTime, it.endTime).toMinutes()
-                }.toDouble().takeIf { it > 0 }
+                val geschlafen = geschlafen(nacht, nachtgrenzen(tag))
 
                 val werte = mapOf(
                     "schritte" to e.result[StepsRecord.COUNT_TOTAL]?.toDouble(),
@@ -888,14 +879,53 @@ class Gesundheit(private val context: Context) {
     ): List<Tageswert> = (0 until TAGE_GEHOLT).map { i ->
         val tag = heute.minusDays((TAGE - 1 - i).toLong())
         Tageswert(tag, fange("Schlafwoche") {
-            klient.aggregate(
-                AggregateRequest(
-                    metrics = setOf(SleepSessionRecord.SLEEP_DURATION_TOTAL),
-                    timeRangeFilter = nachtfenster(tag),
-                )
-            )[SleepSessionRecord.SLEEP_DURATION_TOTAL]?.toMinutes()?.toDouble()
+            geschlafen(
+                gewaehlt(klient.readRecords(ReadRecordsRequest(SleepSessionRecord::class, nachtfenster(tag))).records),
+                nachtgrenzen(tag),
+            )
         })
     }
+
+    /**
+     * Die Sitzungen einer Nacht, die zaehlen: die eigenen, wo es welche gibt,
+     * sonst die fremden.
+     *
+     * ZWEI APPS, EINE NACHT. Die Pebble-App kann Schlaf selbst in die Akte
+     * schreiben, und seit 0.51.0 tut es diese App aus den Minutendaten von
+     * Kieselsport auch. Beide nebeneinander gaeben sechzehn Stunden Schlaf.
+     * Die eigene Auswertung gilt - sie hat Phasen und ist die, deren
+     * Rechnung man kennt. Fehlt sie (Uhr nicht getragen, Kieselsport aelter),
+     * bleibt die fremde, statt dass die Nacht leer dasteht.
+     */
+    private fun gewaehlt(sitzungen: List<SleepSessionRecord>): List<SleepSessionRecord> {
+        val eigene = sitzungen.filter { it.metadata.dataOrigin.packageName == context.packageName }
+        return eigene.ifEmpty { sitzungen }
+    }
+
+    /**
+     * Geschlafene Minuten: die Sitzungen ohne ihre Wachphasen, beschnitten
+     * auf die Nacht. Das ist, was SLEEP_DURATION_TOTAL rechnete - nur ueber
+     * die gewaehlten Sitzungen statt ueber alle.
+     */
+    private fun geschlafen(sitzungen: List<SleepSessionRecord>, grenzen: Pair<Instant, Instant>): Double? {
+        val (von, bis) = grenzen
+        fun minuten(a: Instant, b: Instant): Long {
+            val s = maxOf(a, von)
+            val e = minOf(b, bis)
+            return if (e.isAfter(s)) Duration.between(s, e).toMinutes() else 0L
+        }
+        val summe = sitzungen.sumOf { sitzung ->
+            minuten(sitzung.startTime, sitzung.endTime) -
+                sitzung.stages.filter { it.stage in WACH_STUFEN }.sumOf { minuten(it.startTime, it.endTime) }
+        }
+        return summe.toDouble().takeIf { it > 0 }
+    }
+
+    private val WACH_STUFEN = setOf(
+        SleepSessionRecord.STAGE_TYPE_AWAKE,
+        SleepSessionRecord.STAGE_TYPE_AWAKE_IN_BED,
+        SleepSessionRecord.STAGE_TYPE_OUT_OF_BED,
+    )
 
     /**
      * Alle Pulsmessungen des Tages - als EINZELNE Punkte.
@@ -1115,6 +1145,11 @@ class Gesundheit(private val context: Context) {
         tag.minusDays(1).atTime(NACHT_AB),
         minOf(tag.atTime(NACHT_AB), LocalDateTime.now(zone)),
     )
+
+    /** Dasselbe Fenster als Zeitpunkte - zum Beschneiden der Sitzungen. */
+    private fun nachtgrenzen(tag: LocalDate): Pair<Instant, Instant> =
+        tag.minusDays(1).atTime(NACHT_AB).atZone(zone).toInstant() to
+            minOf(tag.atTime(NACHT_AB), LocalDateTime.now(zone)).atZone(zone).toInstant()
 
     /**
      * Das Wasserziel kennt Drinktervall, nicht die Akte.

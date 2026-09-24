@@ -288,12 +288,15 @@ sind Hausnummern, an denen sich ohnehin niemand misst.
 
 ## Was in der Gesundheitsakte landet
 
-**Alles, wofür sie einen Platz hat.** Vier Satzarten schreibt die App:
+**Alles, wofür sie einen Platz hat.** Diese Satzarten schreibt die App (dazu die Trainings, siehe unten):
 
 | Was | Satzart | Kennung |
 |---|---|---|
 | Wasser (Drinktervall) | `HydrationRecord` | `drinktervall-<Zeitpunkt>` |
-| HRV (Herzintervall) | `HeartRateVariabilityRmssdRecord` | `herzintervall-<Zeitpunkt>` |
+| Schlaf mit Phasen (Kieselsport) | `SleepSessionRecord` | `kieselsport-schlaf-<Nachtbeginn>` |
+| Ruhepuls der Nacht (Kieselsport) | `RestingHeartRateRecord` | `kieselsport-ruhepuls-<Nachtbeginn>` |
+| HRV der Nacht (Kieselsport) | `HeartRateVariabilityRmssdRecord` | `kieselsport-nacht-hrv-<Nachtbeginn>` |
+| HRV von Hand (Kieselsport) | `HeartRateVariabilityRmssdRecord` | `kieselsport-hrv-zeit-<Zeitpunkt>` |
 | Koffein | `NutritionRecord` (`caffeine`) | `koffein-<Zeitpunkt>` |
 | Präparate (SupCycle) | `NutritionRecord` (nur `name`) | `supcycle-<Tag>-<Platz>` |
 
@@ -327,7 +330,6 @@ schaut die App deshalb nach, ob dort schon etwas steht:
 
 | | Fenster | Warum |
 |---|---|---|
-| HRV | ± 5 min | einmal pro Nacht gemessen; zwei Apps melden sie nicht sekundengenau |
 | Wasser | ± 1 min | zwei Gläser in fünf Minuten sind möglich, zwei Einträge in derselben Minute nicht |
 
 Findet sich ein fremder Satz, wird **nicht** geschrieben, und im Verlauf steht,
@@ -336,6 +338,13 @@ den Einstellungen — sie nennt zu jeder Satzart die schreibende App.
 
 **Was schon doppelt drinsteht, räumt das nicht auf.** Die Prüfung greift ab
 jetzt; ältere Dubletten müsstest du in Health Connect selbst löschen.
+
+**Beim Schlaf ist es umgekehrt: die eigene Auswertung gilt.** Seit 0.51.0 wird
+die Nacht eingetragen, auch wenn die Pebble-App schon eine geschrieben hat —
+beim **Lesen** nimmt die App dann für jede Nacht nur die eigenen Sitzungen und
+lässt die fremden weg, damit nichts doppelt zählt. Gibt es keine eigene (Uhr
+nicht getragen, Kieselsport zu alt), zählt die fremde. Andere Apps sehen in der
+Akte aber zwei Nächte; siehe *Schlaf*.
 
 ## Der eigene Speicher
 
@@ -381,8 +390,8 @@ nicht mehr zum Hauptschirm.
 
 | Seite | Dienste | Was darauf steht |
 |---|---|---|
-| Gesundheit | Herzintervall | HRV, Nacht und Ruhepuls; das Schlaf-Ideal |
-| Training | Kieselsport | Strecke (Standort); **Maximalpuls, Pause, Empfindlichkeit, Becken, Timeline-Pin** |
+| Gesundheit | Kieselsport | Schlaf, HRV und Ruhepuls aus der Nacht; das Schlaf-Ideal |
+| Training | Kieselsport | Strecke (Standort); **Maximalpuls, Pause, Empfindlichkeit, Becken, Timeline-Pin, Nachtfenster** |
 | Ernährung | Drinktervall, SupCycle, Koffein | heutiges Ziel; **Soll, Glasgrösse, Animation**; **der Plan** (sechs Plätze); was mit Koffein eingetragen wird |
 | Navigation | Kieselstrasse | OsmAnd-Verbindung, Kartenlinks (seit 0.49.0 eigene Seite: man navigiert auch ohne Training) |
 | Kiesel-Helper | — | Erscheinungsbild, Tagesgrenze, Sicherung, frühere Daten, Zustand, Verlauf |
@@ -466,7 +475,7 @@ Sprache »MTB« im Titel, denn daran erkennt die App es wieder — die Akte kenn
 nur ein Radfahren.
 
 Nicht übersetzt werden die Namen der Uhr-Apps (Drinktervall, Kieselsport,
-SupCycle, Herzintervall, Kieselstrasse), OsmAnd, Material You und Fachwörter
+SupCycle, Kieselstrasse), OsmAnd, Material You und Fachwörter
 wie HRV und RMSSD. Ein Test prüft, dass alle fünf Dateien dieselben Schlüssel
 und dieselben Platzhalter tragen — ein fehlender Text fiele sonst niemandem
 auf, weil Android still den englischen nimmt.
@@ -560,14 +569,55 @@ direkt von der Uhr — und landen von hier aus in der Akte:
   nicht an klassische Companion-Apps weiter. Der Empfänger dafür bleibt drin,
   falls sich das ändert.
 - **Tempo auf dem Rad in km/h**, beim Laufen und Wandern in min/km.
-- **Die Nacht und der Ruhepuls**, von Herzintervall (ab 0.7.0): die letzte
-  abgeschlossene Nacht — Schlafbeginn, Schlafende — und der mittlere Puls
-  darin als Ruhepuls fahren mit dem Ergebnis der Nachtmessung mit, meist einen
-  Tag versetzt, aber mit den echten Zeiten. Schlaf wird nur eingetragen, wenn
-  nicht schon eine andere App dieselbe Nacht geschrieben hat; der Ruhepuls
-  einmal je Nacht, zu ihrem Ende.
+- **Die Nacht**, von Kieselsport (ab 0.14.0): die Minutendaten, aus denen
+  diese App Schlaf, Phasen, Ruhepuls und HRV rechnet — siehe *Schlaf*. Bis
+  0.50.0 kamen Nacht und HRV von Herzintervall; das ist in Kieselsport
+  aufgegangen, und Kiesel-Helper nimmt von Herzintervall nichts mehr an.
 - **HRV aus dem Yoga**, von Kieselsport: der RMSSD des Trainings, als eigener
-  Satz zum Trainingsende — wie die nächtliche Messung von Herzintervall.
+  Satz zum Trainingsende. Ebenso eine **einzelne HRV-Messung** aus dem Menü
+  von Kieselsport, zu ihrem Zeitpunkt.
+
+## Schlaf
+
+Seit 0.51.0 rechnet die App den Schlaf **selbst** aus. Kieselsport (ab 0.14.0)
+zeichnet in einem Zeitfenster — Vorgabe 22:00 bis 08:00, einstellbar unter
+*Training → Kieselsport* — jede Minute Bewegung und Puls auf und misst alle
+halbe Stunde fünf Minuten lang die HRV. Kein Wecker, kein Knopf: das Fenster
+genügt. Morgens kommen die Minuten in Stücken zu 150 herüber; sie werden je
+Nacht an ihren Platz geschrieben, sodass ein wiederholtes Stück nichts
+verdoppelt. Ist die Nacht vollständig, wird sie ausgewertet:
+
+1. **Schlaf oder wach** nach Cole-Kripke: ein gewichteter Mittelwert der
+   Bewegung von vier Minuten davor bis zwei danach, gegen eine Schwelle. Wach
+   ist auch, wer still liegt, aber einen Puls mehr als 20 über dem der ruhigen
+   Minuten hat, und jede Minute ohne Uhr am Arm.
+2. **Webster-Regeln**: nach vier Minuten wach gilt die nächste noch als wach,
+   nach zehn die nächsten drei, nach fünfzehn die nächsten vier; höchstens
+   sechs Minuten Schlaf zwischen zwei Wachphasen von zehn Minuten sind keiner.
+3. **Einschlafen** ist der Beginn des ersten Schlafs von mindestens zehn
+   Minuten, **Aufwachen** das Ende des letzten. Unter einer Stunde Schlaf ist
+   es keine Nacht.
+4. **Phasen** aus dem Puls: *tief*, wo der geglättete Puls im unteren Drittel
+   der Nacht liegt, ringsum Ruhe ist und die HRV in der Nähe mindestens mittel;
+   *REM* frühestens eine Stunde nach dem Einschlafen, wo der Puls hoch oder
+   unruhig ist; sonst *leicht*. Phasen unter fünf Minuten gehen im Nachbarn
+   auf. **Ohne Puls gibt es keine Phasen**, nur Schlaf und wach.
+5. **Ruhepuls** ist die ruhigste halbe Stunde des Schlafs, **die HRV der
+   Nacht** der Median ihrer Messungen.
+
+In die Akte gehen die Schlafsitzung mit Phasen und, zum Aufwachen, Ruhepuls
+und HRV; im Verlauf steht »Schlaf 7 h 12, Tief 1 h 20, REM 1 h 35«.
+
+**Das ist eine Schätzung, kein Schlaflabor.** Bewegung und Puls am Handgelenk
+unterscheiden Schlaf und Wachsein recht gut, die Phasen nur ungefähr. Die
+Schwelle der Bewegung (`Schlafanalyse.SCHWELLE`) ist von Hand gesetzt und
+noch nicht an echten Nächten der Pebble geprüft: Die Pebble zählt Bewegung in
+ihrer eigenen Einheit, nicht in der, für die Cole und Kripke ihre Gewichte
+bestimmt haben.
+
+**Schlaf von der Pebble-App abschalten.** Schreibt die Pebble-App ihren Schlaf
+ebenfalls in Health Connect, stehen dort zwei Nächte. Kiesel-Helper zählt nur
+die eigene, andere Apps aber beide.
 
 ## Sicherung in einen Ordner auf dem Telefon
 
@@ -966,12 +1016,12 @@ war weg.
 
 ## Was sie einträgt
 
-Drei feste Aufgaben, **im Code**, nicht in einer Datei aus dem Netz:
+Feste Aufgaben, **im Code**, nicht in einer Datei aus dem Netz:
 
 | Von | Nach | Was |
 |---|---|---|
 | Drinktervall | Gesundheitsakte | jedes getrunkene Glas als Wassermenge, mit dem Zeitpunkt von der Uhr |
-| Herzintervall | Gesundheitsakte | die nächtliche RMSSD-Messung als Herzratenvariabilität |
+| Kieselsport | Gesundheitsakte | die Nacht, ausgewertet: Schlaf mit Phasen, Ruhepuls, HRV |
 | Kieselsport | Gesundheitsakte | ein beendetes Training als Trainingssitzung — **nur die Sitzung**, nicht die Zahlen darin; die Strecke kommt vom Telefon dazu |
 | Kieselsport | Trainings-Reiter | dieselben Sitzungen, aus der Akte zurückgelesen, mit Strecke auf der Karte |
 | Kieselsport | Gesundheitsakte | jeder **Satz** mit seinen Wiederholungen, jede **Pause** dazwischen, jede **Bahn** mit ihrer Länge |
