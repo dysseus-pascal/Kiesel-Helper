@@ -47,6 +47,9 @@ class EinstellungenActivity : KieselActivity() {
     /** Einmal je Schirm fragen; wer ablehnt, bekommt trotzdem den Monat. */
     private var historieGefragt = false
 
+    /** Die Einstellungen der Uhr-Apps, zum Aendern (siehe UhrKarten). */
+    private val uhr by lazy { UhrKarten(this) }
+
     /** Das Seitenmenue - und welche Seite gerade offen ist. */
     private var lade: androidx.drawerlayout.widget.DrawerLayout? = null
     private var seite: String = "app"
@@ -126,6 +129,14 @@ class EinstellungenActivity : KieselActivity() {
         // hat, kommt als Naechstes hierher und will sehen, dass es wirkt.
         OsmandNavigation.versucheErneut(this)
         auffrischen()
+        // Meldet die Uhr ihren Stand, zieht die offene Seite nach.
+        Uhreinstellungen.beobachter = { uhr.auffrischen() }
+        uhr.auffrischen()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        Uhreinstellungen.beobachter = null
     }
 
     private fun alleSeiten() = UHR_SEITEN + APP_SEITE
@@ -295,7 +306,7 @@ class EinstellungenActivity : KieselActivity() {
                 "Zeitpunkt von der Uhr. Dasselbe Glas nur einmal."
         ))
         w.luft(8f)
-        w.addView(abschnitt("VON DER UHR"))
+        w.addView(abschnitt("HEUTE"))
         w.addView(karte().apply {
             addView(kartentitel("Tagesziel"))
             val glaeser = Einstellungen.wasserGlaeser(this@EinstellungenActivity)
@@ -308,12 +319,13 @@ class EinstellungenActivity : KieselActivity() {
                 setPadding(0, dp(10f), 0, dp(6f))
             })
             addView(zart(
-                "Eingestellt wird es in Drinktervall — dort das Soll, und mit " +
-                    "»Ziel+« mehr für heute. Jede Meldung der Uhr bringt das " +
-                    "heutige Ziel mit, jedes Glas seine Grösse. Hier steht nur, " +
-                    "was zuletzt ankam."
+                "Das heutige Ziel, wie die Uhr es zuletzt gemeldet hat — mit »Ziel+« " +
+                    "kann es über dem Soll liegen."
             ))
         })
+        w.luft(8f)
+        w.addView(abschnitt("EINSTELLUNGEN"))
+        w.addView(uhr.drinktervall())
     }
 
     private fun seiteHerzintervall(w: LinearLayout) {
@@ -336,10 +348,9 @@ class EinstellungenActivity : KieselActivity() {
                 "— ohne Mengen, denn SupCycle kennt Namen und Zyklen, keine " +
                 "Milligramm."
         ))
-        w.addView(zart(
-            "Präparate, Uhrzeiten und Zyklen werden in den Einstellungen von " +
-                "SupCycle in der Pebble-App eingetragen, nicht hier."
-        ).apply { setPadding(dp(4f), dp(4f), dp(4f), 0) })
+        w.luft(8f)
+        w.addView(abschnitt("PLAN"))
+        w.addView(uhr.supCycle())
     }
 
     private fun seiteKieselsport(w: LinearLayout) {
@@ -354,8 +365,8 @@ class EinstellungenActivity : KieselActivity() {
         w.addView(abschnitt("STRECKE"))
         w.addView(spurkarte())
         w.luft(8f)
-        w.addView(abschnitt("PULS"))
-        w.addView(pulskarte())
+        w.addView(abschnitt("EINSTELLUNGEN"))
+        w.addView(uhr.kieselsport())
     }
 
     private fun seiteKieselstrasse(w: LinearLayout) {
@@ -655,34 +666,6 @@ class EinstellungenActivity : KieselActivity() {
      * gefragt wird, wer eine Strecke will. Ohne sie laeuft alles andere
      * weiter - das Training wird eingetragen, nur ohne Karte.
      */
-    /**
-     * Der Maximalpuls - derselbe wie auf der Uhr, damit die Zonen der
-     * Auswertung die sind, die man beim Training gesehen hat.
-     */
-    private fun pulskarte(): LinearLayout {
-        val k = karte()
-        k.addView(kartentitel("Pulszonen"))
-        k.addView(zart(
-            "Die Zonen rechnen sich aus dem Maximalpuls: Zone 1 ab 50 %, Zone 5 ab " +
-                "90 %. Trag denselben Wert ein wie in den Einstellungen von " +
-                "Kieselsport — die Uhr schickt ihn nicht mit."
-        ))
-        val feld = feld("Maximalpuls", Einstellungen.maxpuls(this).toString()).apply {
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER
-        }
-        k.addView(feld)
-        k.addView(knopfLeise("Speichern") {
-            val wert = feld.text().toIntOrNull()
-            if (wert == null || wert < 120 || wert > 230) {
-                melde("Zwischen 120 und 230")
-            } else {
-                Einstellungen.setzeMaxpuls(this, wert)
-                melde("Maximalpuls $wert gespeichert")
-            }
-        })
-        return k
-    }
-
     private fun spurkarte(): LinearLayout {
         val k = karte()
         k.addView(kartentitel("Strecke aufzeichnen"))

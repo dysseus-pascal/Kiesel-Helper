@@ -336,6 +336,10 @@ object Aufgaben {
             }
         }
 
+        // DIE EINSTELLUNGEN DER UHR - beim Start der App und nach jeder
+        // Aenderung, ohne Art. Nur merken; ins Protokoll gehoeren sie nicht.
+        if (felder[SP_ART] == null && Uhreinstellungen.vonKieselsport(context, felder, texte)) return null
+
         val zustand = felder[SP_ZUSTAND]
         val dauer = felder[SP_DAUER]
 
@@ -529,6 +533,9 @@ object Aufgaben {
 
     /** Fuer den Datenlog-Empfaenger: nur Kieselsport schreibt Logs. */
     val KIESELSPORT_UUID: UUID get() = KIESELSPORT
+    /** Fuer die Einstellungen, die von hier an die Uhr gehen. */
+    val DRINKTERVALL_UUID: UUID get() = DRINKTERVALL
+    val SUPCYCLE_UUID: UUID get() = SUPCYCLE
 
     /**
      * Eine Nachricht von der Uhr verarbeiten.
@@ -547,7 +554,12 @@ object Aufgaben {
         when (von) {
             DRINKTERVALL -> wasser(context, felder)
             HERZINTERVALL -> herz(context, felder)
-            SUPCYCLE -> supplemente(context, felder, texte)
+            SUPCYCLE -> {
+                // Plan und Animation, wie sie auf der Uhr gelten - mit der
+                // Tagesmeldung und beim Start der App.
+                Uhreinstellungen.vonSupCycle(context, felder, rohdaten)
+                supplemente(context, felder, texte)
+            }
             KIESELSPORT -> training(context, felder, texte, rohdaten)
             else -> null
         }
@@ -634,7 +646,11 @@ object Aufgaben {
             Einstellungen.merkeWasserziel(context, neu.toInt())
             if (Einstellungen.wasserGlaeser(context) != vorher) GesundheitWidget.stosseAn(context)
         }
-        felder[DT_GLASS_ML]?.let { Einstellungen.merkeGlasgroesse(context, it.toInt()) }
+        // DIE GLASGROESSE NUR OHNE GLAS: traegt die Meldung ein Glas, steht
+        // in GLASS_ML dessen Menge - und die kann eine andere sein.
+        val mitGlas = felder[DT_DRANK_AT] != null
+        if (!mitGlas) felder[DT_GLASS_ML]?.let { Einstellungen.merkeGlasgroesse(context, it.toInt()) }
+        Uhreinstellungen.vonDrinktervall(context, felder, mitGlas)
 
         val ml = felder[DT_GLASS_ML] ?: return null
         val wann = felder[DT_DRANK_AT] ?: return null

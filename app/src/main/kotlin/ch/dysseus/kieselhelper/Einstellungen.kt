@@ -186,9 +186,10 @@ object Einstellungen {
 
     // --- Der Maximalpuls, fuer die Zonen ---
     //
-    // DERSELBE WERT WIE AUF DER UHR, von Hand eingetragen: die Uhr schickt ihn
-    // nicht mit, und die Zonen der Auswertung sollen dieselben sein, die man
-    // beim Training gesehen hat. Vorgabe wie dort: 190.
+    // DERSELBE WERT WIE AUF DER UHR: Kieselsport meldet ihn seit 0.11.0 mit
+    // seinen Einstellungen (siehe Uhreinstellungen), und die Zonen der
+    // Auswertung sollen dieselben sein, die man beim Training gesehen hat.
+    // Vorgabe wie dort: 190.
     private const val MAXPULS = "maxpuls"
     const val MAXPULS_VORGABE = 190
 

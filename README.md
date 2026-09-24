@@ -373,12 +373,41 @@ bleibt gemerkt.
 
 | Seite | Was darauf steht |
 |---|---|
-| Drinktervall | was eingetragen wird, das Tagesziel von der Uhr |
+| Drinktervall | was eingetragen wird, das heutige Ziel; **Soll, Glasgrösse, Animation** |
 | Herzintervall | HRV, Nacht und Ruhepuls; das Schlaf-Ideal |
-| SupCycle | was eingetragen wird |
-| Kieselsport | Strecke (Standort), Maximalpuls für die Zonen |
+| SupCycle | was eingetragen wird; **der Plan** (sechs Plätze) und die Animation |
+| Kieselsport | Strecke (Standort); **Maximalpuls, Pause, Empfindlichkeit, Becken, Timeline-Pin** |
 | Kieselstrasse | OsmAnd-Verbindung, Kartenlinks ausprobieren |
 | Kiesel-Helper | Erscheinungsbild, Tagesgrenze, Sicherung, frühere Daten, Zustand, Verlauf |
+
+## Einstellungen der Uhr-Apps — hier oder auf der Konfigseite
+
+Seit 0.45.0 lassen sich die Einstellungen von Drinktervall, SupCycle und
+Kieselsport **auch hier** ändern, nicht nur auf der Konfigseite in der
+Pebble-App. **Gültig ist, was auf der Uhr steht.** Beide Seiten schicken an
+die Uhr, und die Uhr meldet danach ihren Stand: Drinktervall mit jeder
+Standmeldung, SupCycle mit der Tagesmeldung und beim Start, Kieselsport beim
+Start und nach jeder Änderung. Kiesel-Helper merkt sich diese Meldung
+(`Uhreinstellungen`), die Konfigseite übernimmt sie ebenso — so zeigen beide
+denselben Stand.
+
+Geändert wird ein Entwurf; **An die Uhr schicken** startet die App auf der
+Uhr (eine AppMessage erreicht nur die laufende App) und schickt, nach 2,5 und
+6 Sekunden noch einmal, falls die Uhr den neuen Stand noch nicht gemeldet hat.
+Die Zeile darunter sagt, wo er ist: geändert, unterwegs, bestätigt — oder
+nicht angekommen.
+
+| App | Felder (Nummer) |
+|---|---|
+| Drinktervall | `TARGET` 10007, `GLASS_ML` 10008, `ANIMATION` 10010 |
+| SupCycle | `PLAN` 10001 (6 × 26 Byte, Format in `plan.h`), `FX` 10043 |
+| Kieselsport | `MAXPULS` 10008, `BECKEN` 10010, `PAUSENZIEL` 10011, `EMPFIND` 10012, `PIN_ART` 10018, `PIN_ZEIT` 10019 |
+
+Der **Ankertag** eines SupCycle-Zyklus ist in Tagen gezählt wie auf der Uhr:
+Mitternacht der Ortszeit als Unix-Sekunden durch 86400 — nicht
+`LocalDate.toEpochDay`, das östlich von Greenwich einen Tag daneben läge.
+»Zyklus läuft seit« verschiebt ihn um ganze Wochen, damit der Wochentag des
+Phasenwechsels bleibt.
 
 ## Hell, dunkel, Material You
 
@@ -448,9 +477,8 @@ und führt beim Antippen auf eine eigene Seite mit allem, was mehr ist als der
 erste Blick:
 
 - **Pulszonen** — Zeit je Zone als Balken und Liste, in den Farben der Uhr.
-  Die Zonen rechnen sich aus dem **Maximalpuls** in den Einstellungen; er ist
-  von Hand einzutragen, derselbe wie in Kieselsport, die Uhr schickt ihn nicht
-  mit. Ein Satz darunter sagt, was für ein Training es war.
+  Die Zonen rechnen sich aus dem **Maximalpuls** von Kieselsport; die Uhr
+  meldet ihn mit ihren Einstellungen (seit Kieselsport 0.11.0). Ein Satz darunter sagt, was für ein Training es war.
 - **Puls über die Strecke** — die Kurve über den Kilometern, die Zonen als
   Bänder dahinter. Die Strecke ist die Achse, nicht die Zeit: »am Anstieg bei
   Kilometer vier« ist, wie man sich an eine Fahrt erinnert.
