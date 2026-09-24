@@ -50,6 +50,11 @@ class EinstellungenActivity : KieselActivity() {
     /** Die Einstellungen der Uhr-Apps, zum Aendern (siehe UhrKarten). */
     private val uhr by lazy { UhrKarten(this) }
 
+    /** Seite und Menue, zum Neufuellen ohne neues Seitenmenue (siehe fuelle). */
+    private var inhalt: LinearLayout? = null
+    private var inhaltRoller: ScrollView? = null
+    private var menueListe: LinearLayout? = null
+
     /** Das Seitenmenue - und welche Seite gerade offen ist. */
     private var lade: androidx.drawerlayout.widget.DrawerLayout? = null
     private var seite: String = "app"
@@ -75,15 +80,19 @@ class EinstellungenActivity : KieselActivity() {
 
     private val THEMEN = listOf(
         Seite("gesundheit", "Gesundheit", "Herzintervall · HRV, Schlaf, Ruhepuls", R.color.akzent, Ton.GESUNDHEIT),
-        Seite("training", "Training", "Kieselsport, Kieselstrasse", R.color.akzent_training, Ton.TRAINING),
+        Seite("training", "Training", "Kieselsport · Strecke, Puls, Pin", R.color.akzent_training, Ton.TRAINING),
         Seite("ernaehrung", "Ernährung", "Drinktervall, SupCycle, Koffein", R.color.akzent_ernaehrung, Ton.ERNAEHRUNG),
+        // KEIN REITER, ABER EIN EIGENES THEMA: Navigation ist kein Training -
+        // man faehrt auch zum Einkaufen mit OsmAnd.
+        Seite("navigation", "Navigation", "Kieselstrasse · OsmAnd, Kartenlinks", R.color.sport_wandern, Ton.GESUNDHEIT),
     )
     private val APP_SEITE = Seite("app", "Kiesel-Helper", "Darstellung, Sicherung, Zustand", R.color.akzent, Ton.GESUNDHEIT)
 
     /** Die Seiten bis 0.45.0 hiessen nach den Uhr-Apps; gemerkt ist womoeglich noch eine davon. */
     private fun thema(alt: String): String = when (alt) {
         "herzintervall" -> "gesundheit"
-        "kieselsport", "kieselstrasse" -> "training"
+        "kieselsport" -> "training"
+        "kieselstrasse" -> "navigation"
         "drinktervall", "supcycle" -> "ernaehrung"
         else -> alt
     }
@@ -104,7 +113,7 @@ class EinstellungenActivity : KieselActivity() {
         }
         ortStarter = registerForActivityResult(
             androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
-        ) { setContentView(baueAnsicht()) }
+        ) { neuAufbauen() }
         ordnerStarter = registerForActivityResult(
             androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
         ) { uri ->
@@ -118,7 +127,7 @@ class EinstellungenActivity : KieselActivity() {
             Einstellungen.setzeSicherungOrdner(this, uri.toString())
             lifecycleScope.launch {
                 melde(Sichern.pruefe(this@EinstellungenActivity))
-                setContentView(baueAnsicht())
+                neuAufbauen()
             }
         }
         // Vom Zahnrad kommt die Seite des Reiters mit; sonst die zuletzt offene.
@@ -128,7 +137,7 @@ class EinstellungenActivity : KieselActivity() {
             ?.also { Einstellungen.setzeEinstellungenSeite(this, it) }
             ?: thema(Einstellungen.einstellungenSeite(this))
         onBackPressedDispatcher.addCallback(this, menueZu)
-        setContentView(baueAnsicht())
+        neuAufbauen()
     }
 
     override fun onResume() {
@@ -137,7 +146,7 @@ class EinstellungenActivity : KieselActivity() {
         // erlaubnis geaendert haben, und der Schirm zeigte sonst den alten Stand.
         if (wartetAufEinstellungen) {
             wartetAufEinstellungen = false
-            setContentView(baueAnsicht())
+            neuAufbauen()
         }
         // Nochmal bei OsmAnd anklopfen. Wer dort eben den Schalter umgelegt
         // hat, kommt als Naechstes hierher und will sehen, dass es wirkt.
@@ -165,10 +174,6 @@ class EinstellungenActivity : KieselActivity() {
      * Uhr seine Seite, und die App ihre.
      */
     private fun baueAnsicht(): View {
-        zustand = spalte()
-        // DIE SEITE TRAEGT DEN TON IHRES REITERS - Knoepfe und Auswahl in
-        // derselben Farbe wie dort.
-        Ton.setze(aktuelleSeite().ton)
         val drawer = androidx.drawerlayout.widget.DrawerLayout(this)
         drawer.setScrimColor(0x66000000)
         drawer.addDrawerListener(object : androidx.drawerlayout.widget.DrawerLayout.SimpleDrawerListener() {
@@ -180,6 +185,40 @@ class EinstellungenActivity : KieselActivity() {
 
         // --- Der Inhalt ---
         val wurzel = spalte().apply { setPadding(dp(16f), dp(12f), dp(16f), dp(28f)) }
+        inhalt = wurzel
+        val roller = ScrollView(this).apply {
+            layoutParams = androidx.drawerlayout.widget.DrawerLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            addView(wurzel)
+        }
+        inhaltRoller = roller
+        roller.randUmSystemleisten()
+        drawer.addView(roller)
+
+        // --- Das Menue ---
+        drawer.addView(menue(drawer))
+        fuelle()
+        return drawer
+    }
+
+    /**
+     * Seite und Menue neu fuellen - IN DEMSELBEN SEITENMENUE.
+     *
+     * FRUEHER WURDE DAS GANZE SEITENMENUE ERSETZT, auch beim Wechsel der
+     * Seite, waehrend es noch zuging. Das alte meldet sich unter Android 13+
+     * fuer die Zurueck-Geste an, solange es offen ist - und abgehaengt, bevor
+     * es zu war, meldete es sich nie wieder ab. Zurueck tat danach nichts
+     * mehr, der Weg zum Hauptschirm war verbaut.
+     */
+    private fun fuelle() {
+        val wurzel = inhalt ?: return
+        val drawer = lade ?: return
+        zustand = spalte()
+        // DIE SEITE TRAEGT DEN TON IHRES REITERS - Knoepfe und Auswahl in
+        // derselben Farbe wie dort.
+        Ton.setze(aktuelleSeite().ton)
+        wurzel.removeAllViews()
         wurzel.addView(reihe().apply {
             gravity = android.view.Gravity.CENTER_VERTICAL
             addView(HamburgerView(this@EinstellungenActivity).apply {
@@ -198,30 +237,30 @@ class EinstellungenActivity : KieselActivity() {
             "gesundheit" -> seiteGesundheit(wurzel)
             "training" -> seiteTraining(wurzel)
             "ernaehrung" -> seiteErnaehrung(wurzel)
+            "navigation" -> seiteNavigation(wurzel)
             else -> seiteApp(wurzel)
         }
-        val roller = ScrollView(this).apply {
-            layoutParams = androidx.drawerlayout.widget.DrawerLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
-            )
-            addView(wurzel)
-        }
-        roller.randUmSystemleisten()
-        drawer.addView(roller)
-
-        // --- Das Menue ---
-        drawer.addView(menue(drawer))
-        return drawer
+        menueListe?.let { fuelleMenue(it, drawer) }
     }
 
-    private fun menue(drawer: androidx.drawerlayout.widget.DrawerLayout): View {
-        val liste = spalte().apply { setPadding(dp(12f), dp(20f), dp(12f), dp(20f)) }
+    /** Statt setContentView(baueAnsicht()): dasselbe Seitenmenue behalten. */
+    private fun neuAufbauen() {
+        if (inhalt == null) setContentView(baueAnsicht()) else fuelle()
+    }
+
+    private fun fuelleMenue(liste: LinearLayout, drawer: androidx.drawerlayout.widget.DrawerLayout) {
+        liste.removeAllViews()
         liste.addView(kopf("Einstellungen").apply { setPadding(dp(12f), 0, 0, dp(12f)) })
         THEMEN.forEach { liste.addView(menuepunkt(it, drawer)) }
         liste.addView(strich().apply {
             (layoutParams as? LinearLayout.LayoutParams)?.setMargins(dp(12f), dp(10f), dp(12f), dp(10f))
         })
         liste.addView(menuepunkt(APP_SEITE, drawer))
+    }
+
+    private fun menue(drawer: androidx.drawerlayout.widget.DrawerLayout): View {
+        val liste = spalte().apply { setPadding(dp(12f), dp(20f), dp(12f), dp(20f)) }
+        menueListe = liste
 
         val roller = ScrollView(this).apply {
             setBackgroundColor(farbe(R.color.karte))
@@ -254,7 +293,8 @@ class EinstellungenActivity : KieselActivity() {
                 seite = s.schluessel
                 Einstellungen.setzeEinstellungenSeite(this@EinstellungenActivity, seite)
                 drawer.closeDrawer(android.view.Gravity.START)
-                setContentView(baueAnsicht())
+                fuelle()
+                inhaltRoller?.scrollTo(0, 0)
                 if (seite == "app") auffrischen()
             }
             addView(View(this@EinstellungenActivity).apply {
@@ -313,7 +353,10 @@ class EinstellungenActivity : KieselActivity() {
     private fun seiteTraining(w: LinearLayout) {
         w.addView(dienstkopf("Kieselsport", R.color.akzent_training, erster = true))
         seiteKieselsport(w)
-        w.addView(dienstkopf("Kieselstrasse", R.color.sport_wandern))
+    }
+
+    private fun seiteNavigation(w: LinearLayout) {
+        w.addView(dienstkopf("Kieselstrasse", R.color.sport_wandern, erster = true))
         seiteKieselstrasse(w)
     }
 
@@ -654,7 +697,7 @@ class EinstellungenActivity : KieselActivity() {
                 ).apply { marginEnd = dp(6f) }
                 setOnClickListener {
                     Einstellungen.setzeKartenlinkFuehrt(this@EinstellungenActivity, fuehrt)
-                    setContentView(baueAnsicht())
+                    neuAufbauen()
                 }
             })
         }
@@ -909,7 +952,7 @@ class EinstellungenActivity : KieselActivity() {
         if (ordnerUri.isNotBlank()) {
             ordnerReihe.addView(knopfLeise("Ordner entfernen") {
                 Einstellungen.setzeSicherungOrdner(this, "")
-                setContentView(baueAnsicht())
+                neuAufbauen()
             }.breitInReihe())
         }
         k.addView(ordnerReihe)
@@ -919,7 +962,7 @@ class EinstellungenActivity : KieselActivity() {
             lifecycleScope.launch {
                 melde("Sichere …")
                 melde(Sichern.jetzt(this@EinstellungenActivity))
-                setContentView(baueAnsicht())
+                neuAufbauen()
             }
         }.breitInReihe())
         reihe.addView(knopfLeise("Zurückholen") {
@@ -945,7 +988,7 @@ class EinstellungenActivity : KieselActivity() {
             val neu = !taeglich
             Einstellungen.setzeSicherungTaeglich(this, neu)
             if (neu) Sichern.planen(this) else Sichern.abbestellen(this)
-            setContentView(baueAnsicht())
+            neuAufbauen()
         })
         return k
     }

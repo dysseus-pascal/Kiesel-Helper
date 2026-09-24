@@ -371,13 +371,20 @@ selbst. Wer sein Wasserziel ändern will, denkt an Ernährung, nicht an den
 Namen der Uhr-App. Auf jeder Seite stehen die Dienste des Themas
 untereinander, jeder mit seinem Namen und seiner Farbe darüber; die Seite
 trägt den Ton ihres Reiters. **Das Zahnrad öffnet die Seite des Reiters, in
-dem man steht** (seit 0.47.0); die Seite Kiesel-Helper liegt im Seitenmenü.
+dem man steht** (seit 0.47.0); Navigation und Kiesel-Helper liegen im
+Seitenmenü.
+
+**Beim Seitenwechsel bleibt das Seitenmenü dasselbe**, nur Seite und Menü
+werden neu gefüllt. Bis 0.48.0 wurde es ersetzt, während es noch zuging; das
+alte blieb unter Android 13+ für die Zurück-Geste angemeldet, und Zurück führte
+nicht mehr zum Hauptschirm.
 
 | Seite | Dienste | Was darauf steht |
 |---|---|---|
 | Gesundheit | Herzintervall | HRV, Nacht und Ruhepuls; das Schlaf-Ideal |
-| Training | Kieselsport, Kieselstrasse | Strecke (Standort); **Maximalpuls, Pause, Empfindlichkeit, Becken, Timeline-Pin**; OsmAnd-Verbindung, Kartenlinks |
+| Training | Kieselsport | Strecke (Standort); **Maximalpuls, Pause, Empfindlichkeit, Becken, Timeline-Pin** |
 | Ernährung | Drinktervall, SupCycle, Koffein | heutiges Ziel; **Soll, Glasgrösse, Animation**; **der Plan** (sechs Plätze); was mit Koffein eingetragen wird |
+| Navigation | Kieselstrasse | OsmAnd-Verbindung, Kartenlinks (seit 0.49.0 eigene Seite: man navigiert auch ohne Training) |
 | Kiesel-Helper | — | Erscheinungsbild, Tagesgrenze, Sicherung, frühere Daten, Zustand, Verlauf |
 
 ## Einstellungen der Uhr-Apps — hier oder auf der Konfigseite
