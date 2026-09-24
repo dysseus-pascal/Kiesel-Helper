@@ -286,6 +286,7 @@ class GesundheitWidget : AppWidgetProvider() {
 
             merkeZeitpunkt(context)
             v.setTextViewText(R.id.w_stand, alter(context))
+            faerbe(context, v)
 
             if (stand == null || blick == null) {
                 v.setTextViewText(R.id.w_lage, "Heute")
@@ -351,6 +352,39 @@ class GesundheitWidget : AppWidgetProvider() {
 
             v.setTextViewText(R.id.w_fuss, fusszeile(stand))
             return v
+        }
+
+        /**
+         * Die Farben: hell/dunkel nach den Einstellungen der App, und Material
+         * You, wenn es dort an ist.
+         *
+         * ERST AB ANDROID 12. Vorher kann ein Widget eine Farbe nicht fuer
+         * Tag und Nacht getrennt bekommen; dort bleiben die Farben aus dem
+         * Layout, und die folgen dem System.
+         */
+        private fun faerbe(context: Context, v: RemoteViews) {
+            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) return
+            fun text(id: Int, farbe: Int) {
+                val (h, d) = Thema.widgetPaar(context, farbe)
+                v.setColorInt(id, "setTextColor", h, d)
+            }
+            fun liste(id: Int, methode: String, farbe: Int) {
+                val (h, d) = Thema.widgetPaar(context, farbe)
+                v.setColorStateList(id, methode,
+                    android.content.res.ColorStateList.valueOf(h),
+                    android.content.res.ColorStateList.valueOf(d))
+            }
+            liste(R.id.w_wurzel, "setBackgroundTintList", R.color.karte)
+            text(R.id.w_lage, R.color.akzent)
+            listOf(R.id.w_titel, R.id.w_stand, R.id.w_name, R.id.w_einheit, R.id.w_fuss,
+                   R.id.w_k1_name, R.id.w_k2_name, R.id.w_k3_name).forEach { text(it, R.color.schrift_zart) }
+            listOf(R.id.w_gross, R.id.w_satz, R.id.w_k1_wert, R.id.w_k2_wert, R.id.w_k3_wert)
+                .forEach { text(it, R.color.schrift) }
+            listOf(R.id.w_balken, R.id.w_k1_balken, R.id.w_k2_balken, R.id.w_k3_balken).forEach {
+                liste(it, "setProgressTintList", R.color.akzent)
+                liste(it, "setProgressBackgroundTintList", R.color.linie)
+            }
+            liste(R.id.w_auffrischen, "setImageTintList", R.color.schrift_zart)
         }
 
         private fun kachel(

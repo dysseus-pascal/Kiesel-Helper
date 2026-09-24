@@ -397,7 +397,7 @@ class EinstellungenActivity : KieselActivity() {
         k.addView(reihe.apply { setPadding(0, dp(10f), 0, dp(4f)) })
         k.addView(zart(
             "»System« folgt dem Nachtschalter des Telefons. Das Widget folgt " +
-                "immer dem System — der Startbildschirm gehört nicht dieser App."
+                "der Wahl hier ab Android 12; davor folgt es dem System."
         ))
 
         k.luft(14f)
@@ -411,6 +411,7 @@ class EinstellungenActivity : KieselActivity() {
             ))
             k.addView(knopfLeise(if (an) "Material You: an" else "Material You: aus") {
                 Einstellungen.setzeMaterialYou(this, !an)
+                GesundheitWidget.stosseAn(this)
                 recreate()
             }.apply { (layoutParams as? LinearLayout.LayoutParams)?.topMargin = dp(8f) })
         } else {

@@ -399,7 +399,15 @@ Grund den gegenüberliegenden — der Abstand bleibt.
 
 Eine Änderung erreicht auch die Schirme, die darunter noch offen sind: jede
 eigene Activity erbt von `KieselActivity` und baut sich neu, wenn sich Modus
-oder Material You geändert haben. Das Widget folgt weiter dem System.
+oder Material You geändert haben.
+
+**Das Widget auch** (ab Android 12, seit 0.44.1). Es lebt im Startbildschirm,
+nicht in dieser App — ob dort gerade Tag oder Nacht ist, entscheidet das
+System. Deshalb bekommt es jede Farbe als Paar für hell und dunkel
+(`RemoteViews.setColorInt`) und wählt selbst; steht in den Einstellungen
+»Hell« oder »Dunkel«, sind beide gleich. Mit Material You kommen Grund,
+Schrift, Balken und Akzent aus der Systempalette. Vor Android 12 bleiben die
+Farben aus dem Layout, und die folgen dem System.
 
 ## Das Wasserziel kommt von Drinktervall
 

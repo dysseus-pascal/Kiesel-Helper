@@ -58,6 +58,34 @@ object Thema {
     fun signatur(ctx: Context): String =
         "${Einstellungen.themaModus(ctx)}/${Einstellungen.materialYou(ctx)}/${dunkel(ctx)}"
 
+    /**
+     * Eine Farbe fuer das Widget - als Paar fuer hell und dunkel.
+     *
+     * DAS WIDGET LEBT IM STARTBILDSCHIRM, nicht in dieser App: welcher Modus
+     * gerade gilt, entscheidet dort das System. Deshalb bekommt es beide
+     * Farben und waehlt selbst - ausser in den Einstellungen steht "Hell"
+     * oder "Dunkel", dann ist es in beiden Faellen dieselbe.
+     */
+    fun widgetPaar(ctx: Context, id: Int): Pair<Int, Int> {
+        fun eigene(nacht: Boolean): Int {
+            val conf = Configuration(ctx.resources.configuration)
+            conf.uiMode = (conf.uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
+                (if (nacht) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO)
+            return ctx.createConfigurationContext(conf).getColor(id)
+        }
+        fun eine(nacht: Boolean): Int {
+            if (materialYouMoeglich() && Einstellungen.materialYou(ctx)) {
+                palette(id, nacht)?.let { return ctx.getColor(it) }
+            }
+            return eigene(nacht)
+        }
+        return when (Einstellungen.themaModus(ctx)) {
+            HELL -> eine(false).let { it to it }
+            DUNKEL -> eine(true).let { it to it }
+            else -> eine(false) to eine(true)
+        }
+    }
+
     /** Die Farbe zu einer Ressource - mit Material You, wo es gilt. */
     fun farbe(ctx: Context, id: Int): Int {
         if (materialYouMoeglich() && Einstellungen.materialYou(ctx)) {
@@ -80,8 +108,7 @@ object Thema {
         return palette(id, dunkel)
     }
 
-    @androidx.annotation.RequiresApi(Build.VERSION_CODES.S)
-    private fun palette(id: Int, dunkel: Boolean): Int? = when (id) {
+    private fun palette(id: Int, dunkel: Boolean): Int? = if (!materialYouMoeglich()) null else when (id) {
         R.color.grund -> if (dunkel) android.R.color.system_neutral1_900 else android.R.color.system_neutral1_50
         R.color.karte -> if (dunkel) android.R.color.system_neutral1_800 else android.R.color.system_neutral1_10
         R.color.linie -> if (dunkel) android.R.color.system_neutral2_700 else android.R.color.system_neutral2_100
