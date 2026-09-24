@@ -354,6 +354,17 @@ class GesundheitWidget : AppWidgetProvider() {
             return v
         }
 
+        private fun kachel(
+            v: RemoteViews,
+            wertId: Int,
+            balkenId: Int,
+            text: String?,
+            anteil: Float,
+        ) {
+            v.setTextViewText(wertId, text ?: "—")
+            v.setProgressBar(balkenId, 100, (anteil * 100).toInt(), false)
+        }
+
         /**
          * Die leise Zeile unten: was keinen Balken hat.
          *
