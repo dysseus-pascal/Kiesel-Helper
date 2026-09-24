@@ -19,6 +19,6 @@
     <string name="dienst_hinweis">Der Empfang läuft im Hintergrund weiter; die Meldung in der Leiste gehört dazu. Die App muss dafür nicht offen sein.</string>
 
     <!-- Steht im Auswahlblatt der Widgets, unter dem Namen. -->
-    <string name="widget_beschreibung">Schritte, Bewegung, Schlaf und Wasser auf dem Startbildschirm</string>
+    <string name="widget_beschreibung">Was gerade zählt: morgens die Nacht, nach dem Training das Training, sonst die Schritte</string>
     <string name="widget_auffrischen">Jetzt auffrischen</string>
 </resources>

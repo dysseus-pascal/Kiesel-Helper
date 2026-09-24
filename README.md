@@ -362,6 +362,25 @@ nicht sterben.
 dem Nachttief hergeleiteten Wert sieht man in einem Jahresmittel nicht mehr an,
 woher er kam.
 
+## Das Widget weiss, was gerade zählt
+
+Seit 0.42.0 hat das Widget eine **Bühne** und drei kleine Kacheln. Die Bühne
+wechselt nach Lage, die Kacheln zeigen den Rest — und oben links steht das
+Wort dazu, damit man versteht, warum es anders aussieht als vor einer Stunde.
+
+| Lage | Woran erkannt | Was auf der Bühne steht |
+|---|---|---|
+| **Training** | ein Training endete in den letzten zwei Stunden | Art, Dauer, Puls Ø, Strecke — ein Tipp öffnet die Trainingsseite |
+| **Nacht** | die Nacht ist eingetragen, seit dem Aufwachen unter drei Stunden | Schlafdauer gross, erholsamer Anteil, Ruhepuls, HRV, und ob es länger oder kürzer war als sonst |
+| **Erinnerung** | ab elf Uhr noch Präparate offen, oder zwei Gläser hinter dem Soll | »Magnesium, Zink noch offen« oder »3 Gläser hinterher« |
+| **Bilanz** | ab 20 Uhr, oder Schrittziel erreicht | Schritte, was zum Ziel fehlt, was an Wasser fehlt, Koffein |
+| **Heute** | sonst | Schritte gross mit Balken, wie bisher |
+
+Die Reihenfolge ist eine **Vorrangliste**: Training schlägt Nacht schlägt
+Erinnerung. Ein Tipp auf eine kleine Kachel macht sie für eine Stunde zur
+Bühne — der Ausweg, wenn die Automatik daneben liegt. Die Logik steht in
+`Widgetlage` ohne Bildschirm und ist mit sieben Prüfungen abgedeckt.
+
 ## Die Seite zum Training
 
 Die Karte im Trainings-Reiter zeigt die Grundzahlen — Dauer, Puls, Strecke —

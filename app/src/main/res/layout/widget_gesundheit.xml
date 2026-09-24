@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Das Widget: vier Zahlen mit Balken, eine leise Zeile darunter.
+<!-- Das Widget: eine Buehne, die nach Lage wechselt, und drei kleine Kacheln.
 
-     VIER UND NICHT ACHT. Auf dem Startbildschirm liest man im Vorbeigehen;
-     was einen Balken hat, hat auch ein Ziel, und nur dafuer lohnt der Blick.
-     Ruhepuls und HRV stehen ohne Balken in der Fusszeile - sie haben kein
-     Ziel, an dem man sie messen koennte.
+     DAS WIDGET WEISS, WAS GERADE ZAEHLT (siehe Widgetlage.kt). Morgens die
+     Nacht, nach dem Training das Training, sonst die Schritte. Oben links
+     steht das Wort dazu - "Nacht", "Training", "Heute" -, damit man
+     versteht, warum es anders aussieht als vor einer Stunde. Die drei kleinen
+     Kacheln zeigen, was nicht auf der Buehne ist; ein Tipp auf eine macht sie
+     fuer eine Stunde zur Buehne.
 
      Kein Compose, kein Glance: ein Widget ist RemoteViews, und die kennen nur
-     eine Handvoll Klassen. LinearLayout, TextView, ProgressBar - mehr braucht
-     es hier nicht. -->
+     eine Handvoll Klassen. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/w_wurzel"
     android:layout_width="match_parent"
@@ -20,25 +21,27 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
+        android:layout_marginBottom="4dp"
         android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/w_lage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Heute"
+            android:textColor="@color/akzent"
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:layout_marginStart="8dp"
             android:text="@string/app_name"
             android:textColor="@color/schrift_zart"
-            android:textSize="12sp"
-            android:textStyle="bold" />
+            android:textSize="12sp" />
 
-        <!-- WIE ALT, NICHT WANN. "21:12" beantwortet die Frage nicht, die man
-             am Widget hat - die lautet "ist das noch aktuell". Hier stehen
-             ganze Minuten; die Sekunden eines Chronometers waren genauer, als
-             die Frage es verlangt, und unruhiger als noetig.
-
-             Weitergezaehlt wird im Minutentakt des Systems, den der laufende
-             Dienst ohnehin bekommt - siehe EmpfangsDienst. -->
         <TextView
             android:id="@+id/w_stand"
             android:layout_width="wrap_content"
@@ -58,79 +61,67 @@
             android:contentDescription="@string/widget_auffrischen" />
     </LinearLayout>
 
+    <!-- Die Buehne -->
     <LinearLayout
+        android:id="@+id/w_buehne"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/w_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Schritte"
+            android:textColor="@color/schrift_zart"
+            android:textSize="11sp" />
 
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginEnd="10dp"
-            android:orientation="vertical">
+            android:gravity="bottom"
+            android:orientation="horizontal">
 
             <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Schritte"
-                android:textColor="@color/schrift_zart"
-                android:textSize="11sp" />
-
-            <TextView
-                android:id="@+id/w_schritte_wert"
+                android:id="@+id/w_gross"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="—"
                 android:textColor="@color/schrift"
-                android:textSize="21sp"
+                android:textSize="30sp"
                 android:textStyle="bold" />
 
-            <ProgressBar
-                android:id="@+id/w_schritte_balken"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="match_parent"
-                android:layout_height="5dp"
-                android:layout_marginTop="3dp"
-                android:max="100"
-                android:progress="0"
-                android:progressDrawable="@drawable/widget_balken" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
             <TextView
+                android:id="@+id/w_einheit"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Aktiv"
+                android:layout_marginStart="4dp"
+                android:layout_marginBottom="5dp"
                 android:textColor="@color/schrift_zart"
-                android:textSize="11sp" />
-
-            <TextView
-                android:id="@+id/w_aktiv_wert"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="—"
-                android:textColor="@color/schrift"
-                android:textSize="21sp"
-                android:textStyle="bold" />
-
-            <ProgressBar
-                android:id="@+id/w_aktiv_balken"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="match_parent"
-                android:layout_height="5dp"
-                android:layout_marginTop="3dp"
-                android:max="100"
-                android:progress="0"
-                android:progressDrawable="@drawable/widget_balken" />
+                android:textSize="13sp" />
         </LinearLayout>
+
+        <ProgressBar
+            android:id="@+id/w_balken"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="5dp"
+            android:layout_marginTop="2dp"
+            android:max="100"
+            android:progress="0"
+            android:progressDrawable="@drawable/widget_balken" />
+
+        <TextView
+            android:id="@+id/w_satz"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:maxLines="2"
+            android:textColor="@color/schrift"
+            android:textSize="12sp" />
     </LinearLayout>
 
+    <!-- Die drei Kacheln -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -138,70 +129,50 @@
         android:orientation="horizontal">
 
         <LinearLayout
+            android:id="@+id/w_k1"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginEnd="10dp"
+            android:layout_marginEnd="8dp"
             android:orientation="vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Schlaf"
-                android:textColor="@color/schrift_zart"
-                android:textSize="11sp" />
-
-            <TextView
-                android:id="@+id/w_schlaf_wert"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="—"
-                android:textColor="@color/schrift"
-                android:textSize="21sp"
-                android:textStyle="bold" />
-
-            <ProgressBar
-                android:id="@+id/w_schlaf_balken"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="match_parent"
-                android:layout_height="5dp"
-                android:layout_marginTop="3dp"
-                android:max="100"
-                android:progress="0"
-                android:progressDrawable="@drawable/widget_balken" />
+            <TextView android:id="@+id/w_k1_name" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textColor="@color/schrift_zart" android:textSize="10sp" />
+            <TextView android:id="@+id/w_k1_wert" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="—" android:textColor="@color/schrift" android:textSize="16sp" android:textStyle="bold" />
+            <ProgressBar android:id="@+id/w_k1_balken" style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent" android:layout_height="4dp" android:layout_marginTop="2dp"
+                android:max="100" android:progress="0" android:progressDrawable="@drawable/widget_balken" />
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/w_k2"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:orientation="vertical">
+            <TextView android:id="@+id/w_k2_name" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textColor="@color/schrift_zart" android:textSize="10sp" />
+            <TextView android:id="@+id/w_k2_wert" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="—" android:textColor="@color/schrift" android:textSize="16sp" android:textStyle="bold" />
+            <ProgressBar android:id="@+id/w_k2_balken" style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent" android:layout_height="4dp" android:layout_marginTop="2dp"
+                android:max="100" android:progress="0" android:progressDrawable="@drawable/widget_balken" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/w_k3"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:orientation="vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Wasser"
-                android:textColor="@color/schrift_zart"
-                android:textSize="11sp" />
-
-            <TextView
-                android:id="@+id/w_wasser_wert"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="—"
-                android:textColor="@color/schrift"
-                android:textSize="21sp"
-                android:textStyle="bold" />
-
-            <ProgressBar
-                android:id="@+id/w_wasser_balken"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="match_parent"
-                android:layout_height="5dp"
-                android:layout_marginTop="3dp"
-                android:max="100"
-                android:progress="0"
-                android:progressDrawable="@drawable/widget_balken" />
+            <TextView android:id="@+id/w_k3_name" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textColor="@color/schrift_zart" android:textSize="10sp" />
+            <TextView android:id="@+id/w_k3_wert" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="—" android:textColor="@color/schrift" android:textSize="16sp" android:textStyle="bold" />
+            <ProgressBar android:id="@+id/w_k3_balken" style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent" android:layout_height="4dp" android:layout_marginTop="2dp"
+                android:max="100" android:progress="0" android:progressDrawable="@drawable/widget_balken" />
         </LinearLayout>
     </LinearLayout>
 
@@ -209,8 +180,8 @@
         android:id="@+id/w_fuss"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="8dp"
         android:maxLines="1"
         android:textColor="@color/schrift_zart"
-        android:textSize="12sp" />
+        android:textSize="11sp" />
 </LinearLayout>
