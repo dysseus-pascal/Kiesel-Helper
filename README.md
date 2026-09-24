@@ -364,21 +364,21 @@ woher er kam.
 
 ## Einstellungen mit Seitenmenü
 
-Seit 0.44.0 haben die Einstellungen ein **Seitenmenü** (die drei Striche oben
-links, oder vom linken Rand wischen): eine Seite je Dienst auf der Uhr —
-Drinktervall, Herzintervall, SupCycle, Kieselsport, Kieselstrasse — und eine
-für Kiesel-Helper selbst. Wer etwas an Drinktervall ändern will, sucht bei
-Drinktervall, nicht unter »Ziele« oder »Erlaubnisse«. Die zuletzt offene Seite
-bleibt gemerkt.
+Die Einstellungen haben ein **Seitenmenü** (die drei Striche oben links, oder
+vom linken Rand wischen). Seit 0.46.0 ist es **nach Themen** geordnet wie die
+Reiter: Gesundheit, Training, Ernährung — und eine Seite für Kiesel-Helper
+selbst. Wer sein Wasserziel ändern will, denkt an Ernährung, nicht an den
+Namen der Uhr-App. Auf jeder Seite stehen die Dienste des Themas
+untereinander, jeder mit seinem Namen und seiner Farbe darüber; die Seite
+trägt den Ton ihres Reiters. Die zuletzt offene Seite bleibt gemerkt (eine
+gemerkte Seite aus 0.44/0.45 wird auf ihr Thema umgelegt).
 
-| Seite | Was darauf steht |
-|---|---|
-| Drinktervall | was eingetragen wird, das heutige Ziel; **Soll, Glasgrösse, Animation** |
-| Herzintervall | HRV, Nacht und Ruhepuls; das Schlaf-Ideal |
-| SupCycle | was eingetragen wird; **der Plan** (sechs Plätze) und die Animation |
-| Kieselsport | Strecke (Standort); **Maximalpuls, Pause, Empfindlichkeit, Becken, Timeline-Pin** |
-| Kieselstrasse | OsmAnd-Verbindung, Kartenlinks ausprobieren |
-| Kiesel-Helper | Erscheinungsbild, Tagesgrenze, Sicherung, frühere Daten, Zustand, Verlauf |
+| Seite | Dienste | Was darauf steht |
+|---|---|---|
+| Gesundheit | Herzintervall | HRV, Nacht und Ruhepuls; das Schlaf-Ideal |
+| Training | Kieselsport, Kieselstrasse | Strecke (Standort); **Maximalpuls, Pause, Empfindlichkeit, Becken, Timeline-Pin**; OsmAnd-Verbindung, Kartenlinks |
+| Ernährung | Drinktervall, SupCycle, Koffein | heutiges Ziel; **Soll, Glasgrösse, Animation**; **der Plan** (sechs Plätze); was mit Koffein eingetragen wird |
+| Kiesel-Helper | — | Erscheinungsbild, Tagesgrenze, Sicherung, frühere Daten, Zustand, Verlauf |
 
 ## Einstellungen der Uhr-Apps — hier oder auf der Konfigseite
 

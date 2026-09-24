@@ -60,24 +60,33 @@ class EinstellungenActivity : KieselActivity() {
     }
 
     /**
-     * Die Seiten der Einstellungen: eine je Dienst auf der Uhr, und eine fuer
-     * Kiesel-Helper selbst.
+     * Die Seiten der Einstellungen: eine je Thema der App - Gesundheit,
+     * Training, Ernaehrung - und eine fuer Kiesel-Helper selbst.
      *
-     * NACH DIENST, NICHT NACH ART DER EINSTELLUNG. Wer etwas an Drinktervall
-     * aendern will, sucht bei Drinktervall - nicht unter "Ziele" oder
-     * "Erlaubnisse". Was nur die App angeht (Erscheinungsbild, Sicherung,
+     * NACH THEMA, WIE DIE REITER. Wer sein Wasserziel aendern will, denkt an
+     * Ernaehrung, nicht an den Namen der Uhr-App, die es zaehlt. Auf jeder
+     * Seite stehen die Dienste dieses Themas untereinander, jeder mit seinem
+     * Namen darueber. Was nur die App angeht (Erscheinungsbild, Sicherung,
      * Zustand), steht auf ihrer eigenen Seite.
      */
-    private data class Seite(val schluessel: String, val name: String, val unter: String, val farbe: Int)
-
-    private val UHR_SEITEN = listOf(
-        Seite("drinktervall", "Drinktervall", "Wasser", R.color.wasser),
-        Seite("herzintervall", "Herzintervall", "HRV, Schlaf, Ruhepuls", R.color.phase_rem),
-        Seite("supcycle", "SupCycle", "Präparate", R.color.akzent_ernaehrung),
-        Seite("kieselsport", "Kieselsport", "Training, Strecke, Puls", R.color.akzent_training),
-        Seite("kieselstrasse", "Kieselstrasse", "Navigation, Kartenlinks", R.color.sport_wandern),
+    private data class Seite(
+        val schluessel: String, val name: String, val unter: String, val farbe: Int, val ton: Int,
     )
-    private val APP_SEITE = Seite("app", "Kiesel-Helper", "Darstellung, Sicherung, Zustand", R.color.akzent)
+
+    private val THEMEN = listOf(
+        Seite("gesundheit", "Gesundheit", "Herzintervall · HRV, Schlaf, Ruhepuls", R.color.akzent, Ton.GESUNDHEIT),
+        Seite("training", "Training", "Kieselsport, Kieselstrasse", R.color.akzent_training, Ton.TRAINING),
+        Seite("ernaehrung", "Ernährung", "Drinktervall, SupCycle, Koffein", R.color.akzent_ernaehrung, Ton.ERNAEHRUNG),
+    )
+    private val APP_SEITE = Seite("app", "Kiesel-Helper", "Darstellung, Sicherung, Zustand", R.color.akzent, Ton.GESUNDHEIT)
+
+    /** Die Seiten bis 0.45.0 hiessen nach den Uhr-Apps; gemerkt ist womoeglich noch eine davon. */
+    private fun thema(alt: String): String = when (alt) {
+        "herzintervall" -> "gesundheit"
+        "kieselsport", "kieselstrasse" -> "training"
+        "drinktervall", "supcycle" -> "ernaehrung"
+        else -> alt
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -112,7 +121,7 @@ class EinstellungenActivity : KieselActivity() {
                 setContentView(baueAnsicht())
             }
         }
-        seite = Einstellungen.einstellungenSeite(this)
+        seite = thema(Einstellungen.einstellungenSeite(this))
         onBackPressedDispatcher.addCallback(this, menueZu)
         setContentView(baueAnsicht())
     }
@@ -139,7 +148,7 @@ class EinstellungenActivity : KieselActivity() {
         Uhreinstellungen.beobachter = null
     }
 
-    private fun alleSeiten() = UHR_SEITEN + APP_SEITE
+    private fun alleSeiten() = THEMEN + APP_SEITE
     private fun aktuelleSeite() = alleSeiten().firstOrNull { it.schluessel == seite } ?: APP_SEITE
 
     /**
@@ -152,6 +161,9 @@ class EinstellungenActivity : KieselActivity() {
      */
     private fun baueAnsicht(): View {
         zustand = spalte()
+        // DIE SEITE TRAEGT DEN TON IHRES REITERS - Knoepfe und Auswahl in
+        // derselben Farbe wie dort.
+        Ton.setze(aktuelleSeite().ton)
         val drawer = androidx.drawerlayout.widget.DrawerLayout(this)
         drawer.setScrimColor(0x66000000)
         drawer.addDrawerListener(object : androidx.drawerlayout.widget.DrawerLayout.SimpleDrawerListener() {
@@ -178,11 +190,9 @@ class EinstellungenActivity : KieselActivity() {
         })
         wurzel.luft(6f)
         when (seite) {
-            "drinktervall" -> seiteDrinktervall(wurzel)
-            "herzintervall" -> seiteHerzintervall(wurzel)
-            "supcycle" -> seiteSupCycle(wurzel)
-            "kieselsport" -> seiteKieselsport(wurzel)
-            "kieselstrasse" -> seiteKieselstrasse(wurzel)
+            "gesundheit" -> seiteGesundheit(wurzel)
+            "training" -> seiteTraining(wurzel)
+            "ernaehrung" -> seiteErnaehrung(wurzel)
             else -> seiteApp(wurzel)
         }
         val roller = ScrollView(this).apply {
@@ -202,8 +212,7 @@ class EinstellungenActivity : KieselActivity() {
     private fun menue(drawer: androidx.drawerlayout.widget.DrawerLayout): View {
         val liste = spalte().apply { setPadding(dp(12f), dp(20f), dp(12f), dp(20f)) }
         liste.addView(kopf("Einstellungen").apply { setPadding(dp(12f), 0, 0, dp(12f)) })
-        liste.addView(abschnitt("AUF DER UHR").apply { setPadding(dp(12f), dp(8f), 0, dp(6f)) })
-        UHR_SEITEN.forEach { liste.addView(menuepunkt(it, drawer)) }
+        THEMEN.forEach { liste.addView(menuepunkt(it, drawer)) }
         liste.addView(strich().apply {
             (layoutParams as? LinearLayout.LayoutParams)?.setMargins(dp(12f), dp(10f), dp(12f), dp(10f))
         })
@@ -285,17 +294,54 @@ class EinstellungenActivity : KieselActivity() {
         w.luft(8f)
         w.addView(abschnitt("ZUSTAND"))
         w.addView(zustand)
-        w.luft(8f)
-        w.addView(abschnitt("EIGENE EINTRÄGE"))
+        w.luft(12f)
+        w.addView(knopfHaupt("Verlauf ansehen", breit = true) {
+            startActivity(Intent(this, VerlaufActivity::class.java))
+        })
+    }
+
+    private fun seiteGesundheit(w: LinearLayout) {
+        w.addView(dienstkopf("Herzintervall", R.color.phase_rem, erster = true))
+        seiteHerzintervall(w)
+    }
+
+    private fun seiteTraining(w: LinearLayout) {
+        w.addView(dienstkopf("Kieselsport", R.color.akzent_training, erster = true))
+        seiteKieselsport(w)
+        w.addView(dienstkopf("Kieselstrasse", R.color.sport_wandern))
+        seiteKieselstrasse(w)
+    }
+
+    private fun seiteErnaehrung(w: LinearLayout) {
+        w.addView(dienstkopf("Drinktervall", R.color.wasser, erster = true))
+        seiteDrinktervall(w)
+        w.addView(dienstkopf("SupCycle", R.color.akzent_ernaehrung))
+        seiteSupCycle(w)
+        w.addView(dienstkopf("Koffein", R.color.koffein))
         w.addView(aufgabenKarte(
             "Koffein → Gesundheitsakte",
             "Was du in der App antippst, wird als Ernährungssatz mit " +
                 "Koffeinmenge eingetragen. Die Akte ist damit auch hier die " +
                 "Quelle: gelesen wird, was dort steht, nicht die eigene Zählung."
         ))
-        w.luft(12f)
-        w.addView(knopfHaupt("Verlauf ansehen", breit = true) {
-            startActivity(Intent(this, VerlaufActivity::class.java))
+    }
+
+    /** Der Name eines Dienstes ueber seinen Karten, mit seiner Farbe davor. */
+    private fun dienstkopf(name: String, ton: Int, erster: Boolean = false): View = reihe().apply {
+        gravity = android.view.Gravity.CENTER_VERTICAL
+        setPadding(dp(4f), dp(if (erster) 8f else 28f), 0, dp(4f))
+        addView(View(this@EinstellungenActivity).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(12f), dp(12f)).apply { marginEnd = dp(10f) }
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(farbe(ton))
+            }
+        })
+        addView(TextView(this@EinstellungenActivity).apply {
+            text = name
+            setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 21f)
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(farbe(R.color.schrift))
         })
     }
 
