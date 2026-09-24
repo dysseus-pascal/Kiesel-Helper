@@ -409,6 +409,10 @@ Mitternacht der Ortszeit als Unix-Sekunden durch 86400 — nicht
 »Zyklus läuft seit« verschiebt ihn um ganze Wochen, damit der Wochentag des
 Phasenwechsels bleibt.
 
+Der Plan steht **eingeklappt** da (seit 0.48.0): je Präparat eine Zeile mit
+Uhrzeit, Rhythmus und Zyklus; Antippen öffnet die Regler. Leere Plätze sind
+ausgeblendet, »+ Präparat hinzufügen« öffnet den nächsten freien.
+
 ## Hell, dunkel, Material You
 
 Auf der Seite von Kiesel-Helper: **System**, **Hell** oder **Dunkel**, und

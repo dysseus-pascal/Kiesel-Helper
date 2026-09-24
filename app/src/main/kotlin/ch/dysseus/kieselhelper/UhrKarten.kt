@@ -43,6 +43,9 @@ class UhrKarten(private val a: Activity) {
     private val sp = Zustand("sp", "Kieselsport", Uhreinstellungen.SP_VORGABE)
     private val sc = Zustand("sc", "SupCycle", Uhreinstellungen.SC_VORGABE)
 
+    /** Welche SupCycle-Plaetze aufgeklappt sind - bleibt beim Neufuellen. */
+    private val scOffen = mutableSetOf<Int>()
+
     private fun standDt() = Uhreinstellungen.drinktervall(a)
     private fun standSp() = Uhreinstellungen.kieselsport(a)
     private fun standSc() = Uhreinstellungen.supCycle(a)
@@ -225,12 +228,59 @@ class UhrKarten(private val a: Activity) {
         }
         kopf(k)
         val heute = Uhreinstellungen.heute()
+        val leer = Uhreinstellungen.Praeparat("", 8, 0, 1, 0, 0, heute)
+        // EINGEKLAPPT, BIS MAN HINEINWILL. Sechs Plaetze mit je fuenf Reglern
+        // waeren eine Rolle von dreissig Zeilen; so steht je Praeparat eine
+        // Zeile mit dem Wichtigsten, und leere Plaetze stehen gar nicht da -
+        // dafuer gibt es "Präparat hinzufügen".
+        val oeffner = mutableListOf<() -> Unit>()
+        lateinit var hinzu: Button
+        fun zeigeHinzu() {
+            val frei = (0 until Uhreinstellungen.SC_PLAETZE).firstOrNull { plaetze[it]?.name.isNullOrBlank() && it !in scOffen }
+            hinzu.visibility = if (frei == null) View.GONE else View.VISIBLE
+        }
         for (i in 0 until Uhreinstellungen.SC_PLAETZE) {
             val p0 = plaetze[i]
-            k.addView(unter("PLATZ ${i + 1}"))
+            val p = p0 ?: leer
+            val block = a.spalte()
+            val inhalt = a.spalte().apply { visibility = if (i in scOffen) View.VISIBLE else View.GONE }
             val details = a.spalte().apply { visibility = if (p0 == null) View.GONE else View.VISIBLE }
-            val leer = Uhreinstellungen.Praeparat("", 8, 0, 1, 0, 0, heute)
-            val feld = a.eingabefeld("leer — kein Präparat").apply {
+            val titel = beschriftung("").apply { setTypeface(typeface, Typeface.BOLD) }
+            val zusammen = a.zart("")
+            val pfeil = TextView(a).apply {
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+                setTextColor(a.farbe(R.color.schrift_zart))
+            }
+            fun beschrifte() {
+                val q = plaetze[i]
+                val name = q?.name.orEmpty()
+                titel.text = name.ifBlank { "Platz ${i + 1} — leer" }
+                zusammen.text = if (q == null || name.isBlank()) "" else zusammenfassung(q)
+                zusammen.visibility = if (zusammen.text.isEmpty()) View.GONE else View.VISIBLE
+                pfeil.text = if (inhalt.visibility == View.VISIBLE) "▾" else "▸"
+            }
+            val kopfzeile = a.reihe().apply {
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, a.dp(12f), 0, a.dp(8f))
+                isClickable = true
+                addView(a.spalte().apply {
+                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                    addView(titel.apply { layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT) })
+                    addView(zusammen)
+                })
+                addView(pfeil)
+                setOnClickListener {
+                    val auf = inhalt.visibility != View.VISIBLE
+                    inhalt.visibility = if (auf) View.VISIBLE else View.GONE
+                    if (auf) scOffen += i else scOffen -= i
+                    // Ein leerer Platz, der zugeklappt wird, verschwindet wieder.
+                    if (!auf && plaetze[i]?.name.isNullOrBlank()) block.visibility = View.GONE
+                    beschrifte()
+                    zeigeHinzu()
+                }
+            }
+            val nachAenderung = { aendere(); beschrifte() }
+            val feld = a.eingabefeld("Name — leer heisst kein Präparat").apply {
                 setText(p0?.name.orEmpty())
                 inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
                 addTextChangedListener(object : TextWatcher {
@@ -240,15 +290,14 @@ class UhrKarten(private val a: Activity) {
                         val name = t?.toString().orEmpty()
                         plaetze[i] = (plaetze[i] ?: leer).copy(name = name)
                         details.visibility = if (name.isBlank()) View.GONE else View.VISIBLE
-                        aendere()
+                        nachAenderung()
                     }
                 })
             }
-            k.addView(feld)
-            val p = p0 ?: leer
+            inhalt.addView(feld)
             val pauseZeile = stufer("Wochen Pause", (0..52).toList(), p.wochenAus,
                 { if (it == 0) "keine" else "$it" }) {
-                plaetze[i] = (plaetze[i] ?: leer).copy(wochenAus = it); aendere()
+                plaetze[i] = (plaetze[i] ?: leer).copy(wochenAus = it); nachAenderung()
             }.apply { visibility = if (p.wochenAn > 0) View.VISIBLE else View.GONE }
             val seitZeile = stufer("Zyklus läuft seit", (0..25).toList(),
                 Math.floorDiv(heute - p.anker, 7).coerceIn(0, 25), { "$it Wo." }) { neu ->
@@ -256,27 +305,51 @@ class UhrKarten(private val a: Activity) {
                 // an dem der Zyklus wechselt, derselbe wie auf der Uhr.
                 val alt = plaetze[i] ?: leer
                 val bisher = Math.floorDiv(heute - alt.anker, 7).coerceIn(0, 25)
-                plaetze[i] = alt.copy(anker = alt.anker - (neu - bisher) * 7); aendere()
+                plaetze[i] = alt.copy(anker = alt.anker - (neu - bisher) * 7); nachAenderung()
             }.apply { visibility = if (p.wochenAn > 0) View.VISIBLE else View.GONE }
             details.addView(zeitknopf("Uhrzeit", "%d:%02d".format(p.stunde, p.minute)) { hhmm ->
                 val (h, m) = hhmm.split(":").map { it.toInt() }
-                plaetze[i] = (plaetze[i] ?: leer).copy(stunde = h, minute = m); aendere()
+                plaetze[i] = (plaetze[i] ?: leer).copy(stunde = h, minute = m); nachAenderung()
             })
             details.addView(stufer("Alle … Tage", (1..30).toList(), p.alleTage,
                 { if (it == 1) "täglich" else "$it" }) {
-                plaetze[i] = (plaetze[i] ?: leer).copy(alleTage = it); aendere()
+                plaetze[i] = (plaetze[i] ?: leer).copy(alleTage = it); nachAenderung()
             })
             details.addView(stufer("Wochen Einnahme", (0..52).toList(), p.wochenAn,
                 { if (it == 0) "immer" else "$it" }) {
-                plaetze[i] = (plaetze[i] ?: leer).copy(wochenAn = it); aendere()
+                plaetze[i] = (plaetze[i] ?: leer).copy(wochenAn = it); nachAenderung()
                 val zyklus = if (it > 0) View.VISIBLE else View.GONE
                 pauseZeile.visibility = zyklus
                 seitZeile.visibility = zyklus
             })
             details.addView(pauseZeile)
             details.addView(seitZeile)
-            k.addView(details)
+            inhalt.addView(details)
+            inhalt.luft(8f)
+            if (i > 0) block.addView(a.strich().apply {
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, a.dp(1f))
+            })
+            block.addView(kopfzeile)
+            block.addView(inhalt)
+            block.visibility = if (p0 == null && i !in scOffen) View.GONE else View.VISIBLE
+            k.addView(block)
+            beschrifte()
+            oeffner += {
+                scOffen += i
+                block.visibility = View.VISIBLE
+                inhalt.visibility = View.VISIBLE
+                beschrifte()
+                feld.requestFocus()
+            }
         }
+        hinzu = a.knopfLeise("+ Präparat hinzufügen") {
+            val frei = (0 until Uhreinstellungen.SC_PLAETZE)
+                .firstOrNull { plaetze[it]?.name.isNullOrBlank() && it !in scOffen } ?: return@knopfLeise
+            oeffner[frei]()
+            zeigeHinzu()
+        }.apply { (layoutParams as? LinearLayout.LayoutParams)?.topMargin = a.dp(8f) }
+        k.addView(hinzu)
+        zeigeHinzu()
         k.addView(unter("UHR"))
         k.addView(schalter("Animation beim Abhaken", animation) { animation = it; aendere() })
         k.addView(a.zart(
@@ -289,6 +362,17 @@ class UhrKarten(private val a: Activity) {
             sc.gesendet = normal(soll)
             // Neu fuellen: gekuerzte Namen stehen dann so da, wie die Uhr sie bekommt.
             fuelleSc()
+        }
+    }
+
+    /** "8:00 · täglich · 8 Wo. an, 4 Pause" - was ein eingeklappter Platz zeigt. */
+    private fun zusammenfassung(p: Uhreinstellungen.Praeparat): String = buildString {
+        append("%d:%02d".format(p.stunde, p.minute))
+        append(" · ")
+        append(if (p.alleTage <= 1) "täglich" else "alle ${p.alleTage} Tage")
+        if (p.wochenAn > 0) {
+            append(" · ${p.wochenAn} Wo. an")
+            if (p.wochenAus > 0) append(", ${p.wochenAus} Pause")
         }
     }
 
