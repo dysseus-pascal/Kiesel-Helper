@@ -117,7 +117,15 @@ class HauptActivity : KieselActivity(), Eingaben {
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
         )
         aussen.addView(kopfleiste(getString(R.string.app_name)) {
-            startActivity(Intent(this, EinstellungenActivity::class.java))
+            // DAS ZAHNRAD OEFFNET DIE SEITE DES REITERS, in dem man steht:
+            // wer im Training auf das Zahnrad tippt, will Trainingseinstellungen.
+            val seite = when (sichtbarerReiter()) {
+                Ton.TRAINING -> "training"
+                Ton.ERNAEHRUNG -> "ernaehrung"
+                else -> "gesundheit"
+            }
+            startActivity(Intent(this, EinstellungenActivity::class.java)
+                .putExtra(EinstellungenActivity.SEITE, seite))
         })
 
         wurzel.addView(gesundheit)

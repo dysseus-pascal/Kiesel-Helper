@@ -370,8 +370,8 @@ Reiter: Gesundheit, Training, Ernährung — und eine Seite für Kiesel-Helper
 selbst. Wer sein Wasserziel ändern will, denkt an Ernährung, nicht an den
 Namen der Uhr-App. Auf jeder Seite stehen die Dienste des Themas
 untereinander, jeder mit seinem Namen und seiner Farbe darüber; die Seite
-trägt den Ton ihres Reiters. Die zuletzt offene Seite bleibt gemerkt (eine
-gemerkte Seite aus 0.44/0.45 wird auf ihr Thema umgelegt).
+trägt den Ton ihres Reiters. **Das Zahnrad öffnet die Seite des Reiters, in
+dem man steht** (seit 0.47.0); die Seite Kiesel-Helper liegt im Seitenmenü.
 
 | Seite | Dienste | Was darauf steht |
 |---|---|---|

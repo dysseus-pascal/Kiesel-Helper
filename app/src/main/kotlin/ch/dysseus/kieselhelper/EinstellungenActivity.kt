@@ -121,7 +121,12 @@ class EinstellungenActivity : KieselActivity() {
                 setContentView(baueAnsicht())
             }
         }
-        seite = thema(Einstellungen.einstellungenSeite(this))
+        // Vom Zahnrad kommt die Seite des Reiters mit; sonst die zuletzt offene.
+        // Nicht nach einem recreate() (Hell/Dunkel umgestellt): da bleibt man,
+        // wo man war.
+        seite = intent.getStringExtra(SEITE)?.takeIf { savedInstanceState == null }?.takeIf { s -> alleSeiten().any { it.schluessel == s } }
+            ?.also { Einstellungen.setzeEinstellungenSeite(this, it) }
+            ?: thema(Einstellungen.einstellungenSeite(this))
         onBackPressedDispatcher.addCallback(this, menueZu)
         setContentView(baueAnsicht())
     }
@@ -1102,4 +1107,9 @@ class EinstellungenActivity : KieselActivity() {
     private fun stempel(epochSekunden: Long): String =
         DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
             .format(Date(epochSekunden * 1000))
+
+    companion object {
+        /** Welche Seite oeffnen: "gesundheit", "training", "ernaehrung" oder "app". */
+        const val SEITE = "seite"
+    }
 }
