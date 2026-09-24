@@ -1,24 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- ERZEUGT. Englisch ist der Rueckfall fuer jede Sprache ohne eigene Datei;
+     values-de, -fr, -it und -es tragen dieselben Schluessel. -->
 <resources>
     <string name="app_name">Kiesel-Helper</string>
-
-    <string name="zurueck">‹ Zurück</string>
-    <string name="verlauf">Verlauf</string>
-    <string name="verlauf_hinweis">Was Kiesel-Helper getan hat, als niemand hinsah. Die letzten hundert Meldungen — sie überstehen einen Neustart und brauchen kein Kabel.</string>
-    <string name="verlauf_anzahl">%1$d MELDUNGEN</string>
-    <string name="leeren">Verlauf leeren</string>
-
-    <string name="hc_fehlt">Die Gesundheitsakte (Health Connect) ist auf diesem Gerät nicht verfügbar. Ab Android 14 steckt sie im System, davor braucht es die App aus dem Play Store.</string>
-    <string name="hc_update">Health Connect muss aktualisiert werden.</string>
-
-    <string name="nichts_bisher">Noch nichts empfangen.</string>
-    <string name="zuletzt">Zuletzt %1$s</string>
-
-    <string name="kanal_name">Empfang</string>
-    <string name="dienst_laeuft">Wartet auf Meldungen der Uhr</string>
-    <string name="dienst_hinweis">Der Empfang läuft im Hintergrund weiter; die Meldung in der Leiste gehört dazu. Die App muss dafür nicht offen sein.</string>
-
+    <string name="zurueck">‹ Back</string>
+    <string name="verlauf">Log</string>
+    <string name="verlauf_hinweis">What Kiesel-Helper did while nobody was looking. The last hundred messages — they survive a restart and need no cable.</string>
+    <plurals name="verlauf_anzahl">
+        <item quantity="one">%1$d MESSAGE</item>
+        <item quantity="other">%1$d MESSAGES</item>
+    </plurals>
+    <string name="leeren">Clear log</string>
+    <string name="hc_fehlt">The health record (Health Connect) is not available on this device. From Android 14 it is part of the system; before that it needs the app from the Play Store.</string>
+    <string name="hc_update">Health Connect needs to be updated.</string>
+    <string name="nichts_bisher">Nothing received yet.</string>
+    <string name="zuletzt">Last %1$s</string>
+    <string name="kanal_name">Reception</string>
+    <string name="dienst_laeuft">Waiting for messages from the watch</string>
+    <string name="dienst_hinweis">Reception keeps running in the background; the notification in the bar belongs to it. The app does not need to be open.</string>
     <!-- Steht im Auswahlblatt der Widgets, unter dem Namen. -->
-    <string name="widget_beschreibung">Was gerade zählt: morgens die Nacht, nach dem Training das Training, sonst die Schritte</string>
-    <string name="widget_auffrischen">Jetzt auffrischen</string>
+    <string name="widget_beschreibung">What matters right now: the night in the morning, the workout after training, the steps otherwise</string>
+    <string name="widget_auffrischen">Refresh now</string>
+    <string name="schritte">Steps</string>
+    <string name="aktiv">Active</string>
+    <string name="schlaf">Sleep</string>
+    <string name="wasser">Water</string>
+    <string name="training">Workout</string>
+    <string name="heute">Today</string>
+    <string name="praeparate">Supplements</string>
+    <string name="ruhepuls_wert">Resting HR %1$s</string>
+    <string name="gerade_eben">just now</string>
+    <string name="vor_min">%1$d min ago</string>
+    <string name="vor_h">%1$d h ago</string>
+    <string name="wl_erholsam">%1$s %% restful</string>
+    <string name="wl_laenger">longer than usual</string>
+    <string name="wl_kuerzer">shorter than usual</string>
+    <string name="wl_wie_sonst">as usual</string>
+    <string name="wl_nacht_eingetragen">The night is logged.</string>
+    <string name="wl_nacht">Night</string>
+    <string name="wl_geschlafen">Slept</string>
+    <string name="wl_puls_schnitt">Avg HR %1$s</string>
+    <string name="wl_beendet_min">finished %1$d min ago</string>
+    <string name="wl_beendet_h">finished %1$d h ago</string>
+    <string name="wl_noch_offen">%1$s still open</string>
+    <plurals name="wl_glaeser_hinterher">
+        <item quantity="one">%1$d glass behind</item>
+        <item quantity="other">%1$d glasses behind</item>
+    </plurals>
+    <string name="wl_erinnerung">Reminder</string>
+    <string name="wl_offen">open</string>
+    <string name="wl_schrittziel_erreicht">Step goal reached</string>
+    <string name="wl_schritte_zum_ziel">%1$s steps to go</string>
+    <plurals name="wl_glaeser_fehlen">
+        <item quantity="one">%1$d glass missing</item>
+        <item quantity="other">%1$d glasses missing</item>
+    </plurals>
+    <string name="wl_koffein_mg">Caffeine %1$s mg</string>
+    <string name="wl_bilanz">Summary</string>
+    <string name="wl_tag_eingetragen">The day is logged.</string>
+    <string name="wl_keine_schritte">No steps counted yet.</string>
+    <string name="wl_schritte_bis_jetzt">%1$s steps so far.</string>
+    <string name="wl_ziel_erreicht">Goal reached.</string>
+    <string name="wl_bis_zum_ziel">%1$s to go</string>
+    <string name="w_keine_akte">No health record</string>
+    <string name="w_nichts_eingetragen">Nothing logged yet</string>
 </resources>

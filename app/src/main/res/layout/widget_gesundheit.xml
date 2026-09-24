@@ -28,7 +28,7 @@
             android:id="@+id/w_lage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Heute"
+            android:text="@string/heute"
             android:textColor="@color/akzent"
             android:textSize="12sp"
             android:textStyle="bold" />
@@ -73,7 +73,7 @@
             android:id="@+id/w_name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Schritte"
+            android:text="@string/schritte"
             android:textColor="@color/schrift_zart"
             android:textSize="11sp" />
 

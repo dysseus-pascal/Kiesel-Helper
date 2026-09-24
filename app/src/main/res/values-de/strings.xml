@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kiesel-Helper</string>
+    <string name="zurueck">‹ Zurück</string>
+    <string name="verlauf">Verlauf</string>
+    <string name="verlauf_hinweis">Was Kiesel-Helper getan hat, als niemand hinsah. Die letzten hundert Meldungen — sie überstehen einen Neustart und brauchen kein Kabel.</string>
+    <plurals name="verlauf_anzahl">
+        <item quantity="one">%1$d MELDUNG</item>
+        <item quantity="other">%1$d MELDUNGEN</item>
+    </plurals>
+    <string name="leeren">Verlauf leeren</string>
+    <string name="hc_fehlt">Die Gesundheitsakte (Health Connect) ist auf diesem Gerät nicht verfügbar. Ab Android 14 steckt sie im System, davor braucht es die App aus dem Play Store.</string>
+    <string name="hc_update">Health Connect muss aktualisiert werden.</string>
+    <string name="nichts_bisher">Noch nichts empfangen.</string>
+    <string name="zuletzt">Zuletzt %1$s</string>
+    <string name="kanal_name">Empfang</string>
+    <string name="dienst_laeuft">Wartet auf Meldungen der Uhr</string>
+    <string name="dienst_hinweis">Der Empfang läuft im Hintergrund weiter; die Meldung in der Leiste gehört dazu. Die App muss dafür nicht offen sein.</string>
+    <string name="widget_beschreibung">Was gerade zählt: morgens die Nacht, nach dem Training das Training, sonst die Schritte</string>
+    <string name="widget_auffrischen">Jetzt auffrischen</string>
+    <string name="schritte">Schritte</string>
+    <string name="aktiv">Aktiv</string>
+    <string name="schlaf">Schlaf</string>
+    <string name="wasser">Wasser</string>
+    <string name="training">Training</string>
+    <string name="heute">Heute</string>
+    <string name="praeparate">Präparate</string>
+    <string name="ruhepuls_wert">Ruhepuls %1$s</string>
+    <string name="gerade_eben">gerade eben</string>
+    <string name="vor_min">vor %1$d min</string>
+    <string name="vor_h">vor %1$d h</string>
+    <string name="wl_erholsam">%1$s %% erholsam</string>
+    <string name="wl_laenger">länger als sonst</string>
+    <string name="wl_kuerzer">kürzer als sonst</string>
+    <string name="wl_wie_sonst">wie sonst</string>
+    <string name="wl_nacht_eingetragen">Die Nacht ist eingetragen.</string>
+    <string name="wl_nacht">Nacht</string>
+    <string name="wl_geschlafen">Geschlafen</string>
+    <string name="wl_puls_schnitt">Puls Ø %1$s</string>
+    <string name="wl_beendet_min">vor %1$d min beendet</string>
+    <string name="wl_beendet_h">vor %1$d h beendet</string>
+    <string name="wl_noch_offen">%1$s noch offen</string>
+    <plurals name="wl_glaeser_hinterher">
+        <item quantity="one">%1$d Glas hinterher</item>
+        <item quantity="other">%1$d Gläser hinterher</item>
+    </plurals>
+    <string name="wl_erinnerung">Erinnerung</string>
+    <string name="wl_offen">offen</string>
+    <string name="wl_schrittziel_erreicht">Schrittziel erreicht</string>
+    <string name="wl_schritte_zum_ziel">noch %1$s Schritte zum Ziel</string>
+    <plurals name="wl_glaeser_fehlen">
+        <item quantity="one">%1$d Glas fehlt</item>
+        <item quantity="other">%1$d Gläser fehlen</item>
+    </plurals>
+    <string name="wl_koffein_mg">Koffein %1$s mg</string>
+    <string name="wl_bilanz">Bilanz</string>
+    <string name="wl_tag_eingetragen">Der Tag ist eingetragen.</string>
+    <string name="wl_keine_schritte">Noch keine Schritte gezählt.</string>
+    <string name="wl_schritte_bis_jetzt">%1$s Schritte bis jetzt.</string>
+    <string name="wl_ziel_erreicht">Ziel erreicht.</string>
+    <string name="wl_bis_zum_ziel">noch %1$s bis zum Ziel</string>
+    <string name="w_keine_akte">Keine Gesundheitsakte</string>
+    <string name="w_nichts_eingetragen">Noch nichts eingetragen</string>
+</resources>

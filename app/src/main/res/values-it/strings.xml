@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kiesel-Helper</string>
+    <string name="zurueck">‹ Indietro</string>
+    <string name="verlauf">Registro</string>
+    <string name="verlauf_hinweis">Cosa ha fatto Kiesel-Helper mentre nessuno guardava. Gli ultimi cento messaggi — sopravvivono a un riavvio e non richiedono cavi.</string>
+    <plurals name="verlauf_anzahl">
+        <item quantity="one">%1$d MESSAGGIO</item>
+        <item quantity="many">%1$d MESSAGGI</item>
+        <item quantity="other">%1$d MESSAGGI</item>
+    </plurals>
+    <string name="leeren">Svuota registro</string>
+    <string name="hc_fehlt">La cartella salute (Health Connect) non è disponibile su questo dispositivo. Da Android 14 fa parte del sistema; prima serve l\'app dal Play Store.</string>
+    <string name="hc_update">Health Connect deve essere aggiornato.</string>
+    <string name="nichts_bisher">Ancora nulla ricevuto.</string>
+    <string name="zuletzt">Ultimo: %1$s</string>
+    <string name="kanal_name">Ricezione</string>
+    <string name="dienst_laeuft">In attesa dei messaggi dall\'orologio</string>
+    <string name="dienst_hinweis">La ricezione continua in background; la notifica nella barra ne fa parte. L\'app non deve essere aperta.</string>
+    <string name="widget_beschreibung">Ciò che conta ora: al mattino la notte, dopo l\'allenamento l\'allenamento, altrimenti i passi</string>
+    <string name="widget_auffrischen">Aggiorna ora</string>
+    <string name="schritte">Passi</string>
+    <string name="aktiv">Attivo</string>
+    <string name="schlaf">Sonno</string>
+    <string name="wasser">Acqua</string>
+    <string name="training">Allenamento</string>
+    <string name="heute">Oggi</string>
+    <string name="praeparate">Integratori</string>
+    <string name="ruhepuls_wert">FC a riposo %1$s</string>
+    <string name="gerade_eben">proprio ora</string>
+    <string name="vor_min">%1$d min fa</string>
+    <string name="vor_h">%1$d h fa</string>
+    <string name="wl_erholsam">%1$s %% ristoratore</string>
+    <string name="wl_laenger">più lungo del solito</string>
+    <string name="wl_kuerzer">più breve del solito</string>
+    <string name="wl_wie_sonst">come al solito</string>
+    <string name="wl_nacht_eingetragen">La notte è registrata.</string>
+    <string name="wl_nacht">Notte</string>
+    <string name="wl_geschlafen">Dormito</string>
+    <string name="wl_puls_schnitt">FC media %1$s</string>
+    <string name="wl_beendet_min">finito %1$d min fa</string>
+    <string name="wl_beendet_h">finito %1$d h fa</string>
+    <string name="wl_noch_offen">%1$s ancora da prendere</string>
+    <plurals name="wl_glaeser_hinterher">
+        <item quantity="one">%1$d bicchiere indietro</item>
+        <item quantity="many">%1$d bicchieri indietro</item>
+        <item quantity="other">%1$d bicchieri indietro</item>
+    </plurals>
+    <string name="wl_erinnerung">Promemoria</string>
+    <string name="wl_offen">da prendere</string>
+    <string name="wl_schrittziel_erreicht">Obiettivo passi raggiunto</string>
+    <string name="wl_schritte_zum_ziel">ancora %1$s passi all\'obiettivo</string>
+    <plurals name="wl_glaeser_fehlen">
+        <item quantity="one">manca %1$d bicchiere</item>
+        <item quantity="many">mancano %1$d bicchieri</item>
+        <item quantity="other">mancano %1$d bicchieri</item>
+    </plurals>
+    <string name="wl_koffein_mg">Caffeina %1$s mg</string>
+    <string name="wl_bilanz">Bilancio</string>
+    <string name="wl_tag_eingetragen">La giornata è registrata.</string>
+    <string name="wl_keine_schritte">Ancora nessun passo contato.</string>
+    <string name="wl_schritte_bis_jetzt">%1$s passi finora.</string>
+    <string name="wl_ziel_erreicht">Obiettivo raggiunto.</string>
+    <string name="wl_bis_zum_ziel">ancora %1$s all\'obiettivo</string>
+    <string name="w_keine_akte">Nessuna cartella salute</string>
+    <string name="w_nichts_eingetragen">Ancora nulla registrato</string>
+</resources>

@@ -46,7 +46,7 @@ class VerlaufActivity : KieselActivity() {
         wurzel.addView(zart(getString(R.string.verlauf_hinweis)))
 
         val zeilen = Verlauf(this).verlauf()
-        wurzel.addView(abschnitt(getString(R.string.verlauf_anzahl, zeilen.size)))
+        wurzel.addView(abschnitt(resources.getQuantityString(R.plurals.verlauf_anzahl, zeilen.size, zeilen.size)))
 
         if (zeilen.isEmpty()) {
             val leer = karte()

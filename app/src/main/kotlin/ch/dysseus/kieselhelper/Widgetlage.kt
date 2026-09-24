@@ -16,7 +16,8 @@ import java.time.LocalDateTime
  * Abend vor Tag. Wer im Morgen trainiert, sieht danach das Training.
  *
  * REINE LOGIK OHNE SCHIRM, damit sie sich pruefen laesst: hinein geht ein
- * Blick auf den Stand, heraus kommt, was zu zeigen ist.
+ * Blick auf den Stand, heraus kommt, was zu zeigen ist. Die Woerter kommen
+ * ueber [Texte] - in der App aus den Ressourcen, im Test aus derselben Datei.
  */
 object Widgetlage {
 
@@ -72,22 +73,22 @@ object Widgetlage {
     private val MORGEN_FRIST: Duration = Duration.ofHours(3)
     private const val ABEND_AB = 20
 
-    fun ermittle(b: Blick): Lage {
+    fun ermittle(b: Blick, t: Texte): Lage {
         val art = b.wunsch ?: when {
             b.trainingEnde != null && Duration.between(b.trainingEnde, b.jetzt) < TRAINING_FRIST &&
                 !b.trainingEnde.isAfter(b.jetzt) -> Art.TRAINING
             b.schlafEnde != null && b.schlafMin != null && Duration.between(b.schlafEnde, b.jetzt) < MORGEN_FRIST &&
                 !b.schlafEnde.isAfter(b.jetzt) -> Art.MORGEN
-            erinnerung(b) != null -> Art.ERINNERUNG
+            erinnerung(b, t) != null -> Art.ERINNERUNG
             b.jetzt.hour >= ABEND_AB || zielErreicht(b) -> Art.ABEND
             else -> Art.TAG
         }
         return when (art) {
-            Art.TRAINING -> training(b)
-            Art.MORGEN -> morgen(b)
-            Art.ERINNERUNG -> erinnerungLage(b)
-            Art.ABEND -> abend(b)
-            Art.TAG -> tag(b)
+            Art.TRAINING -> training(b, t)
+            Art.MORGEN -> morgen(b, t)
+            Art.ERINNERUNG -> erinnerungLage(b, t)
+            Art.ABEND -> abend(b, t)
+            Art.TAG -> tag(b, t)
         }
     }
 
@@ -99,10 +100,10 @@ object Widgetlage {
 
     // --- Die Kacheln, aus denen die Buehne waehlt ---
 
-    private fun kSchritte(b: Blick) = Kachel("schritte", "Schritte", Zahlen.ganz(b.schritte), anteil(b.schritte, b.schritteZiel))
-    private fun kAktiv(b: Blick) = Kachel("aktiv", "Aktiv", Zahlen.ganz(b.aktivMin)?.plus(" min"), anteil(b.aktivMin, b.aktivZiel))
-    private fun kSchlaf(b: Blick) = Kachel("schlaf", "Schlaf", Zahlen.dauer(b.schlafMin), anteil(b.schlafMin, b.schlafZielMin))
-    private fun kWasser(b: Blick) = Kachel("wasser", "Wasser", Zahlen.ganz(b.wasserMl)?.plus(" ml"), anteil(b.wasserMl, b.wasserZiel))
+    private fun kSchritte(b: Blick, t: Texte) = Kachel("schritte", t.text(R.string.schritte), Zahlen.ganz(b.schritte), anteil(b.schritte, b.schritteZiel))
+    private fun kAktiv(b: Blick, t: Texte) = Kachel("aktiv", t.text(R.string.aktiv), Zahlen.ganz(b.aktivMin)?.plus(" min"), anteil(b.aktivMin, b.aktivZiel))
+    private fun kSchlaf(b: Blick, t: Texte) = Kachel("schlaf", t.text(R.string.schlaf), Zahlen.dauer(b.schlafMin), anteil(b.schlafMin, b.schlafZielMin))
+    private fun kWasser(b: Blick, t: Texte) = Kachel("wasser", t.text(R.string.wasser), Zahlen.ganz(b.wasserMl)?.plus(" ml"), anteil(b.wasserMl, b.wasserZiel))
 
     private fun anteil(zahl: Double?, ziel: Double?): Float {
         if (zahl == null || ziel == null || ziel <= 0) return 0f
@@ -111,52 +112,59 @@ object Widgetlage {
 
     // --- Die Lagen ---
 
-    private fun morgen(b: Blick): Lage {
+    private fun morgen(b: Blick, t: Texte): Lage {
         val min = b.schlafMin ?: 0.0
         val teile = mutableListOf<String>()
-        b.erholsamAnteil?.let { teile += Zahlen.ganz(it * 100) + " % erholsam" }
-        b.ruhepuls?.let { teile += "Ruhepuls " + Zahlen.ganz(it) }
+        b.erholsamAnteil?.let { teile += t.text(R.string.wl_erholsam, Zahlen.ganz(it * 100) ?: "") }
+        b.ruhepuls?.let { teile += t.text(R.string.ruhepuls_wert, Zahlen.ganz(it) ?: "") }
         b.hrv?.let { teile += "HRV " + Zahlen.ganz(it) + " ms" }
         val vergleich = b.schlafWocheMin?.let { woche ->
             when {
-                min >= woche + 30 -> "länger als sonst"
-                min <= woche - 30 -> "kürzer als sonst"
-                else -> "wie sonst"
+                min >= woche + 30 -> t.text(R.string.wl_laenger)
+                min <= woche - 30 -> t.text(R.string.wl_kuerzer)
+                else -> t.text(R.string.wl_wie_sonst)
             }
         }
         val satz = buildString {
             if (teile.isNotEmpty()) append(teile.joinToString(" · "))
             if (vergleich != null) { if (isNotEmpty()) append(" — "); append(vergleich) }
-            if (isEmpty()) append("Die Nacht ist eingetragen.")
+            if (isEmpty()) append(t.text(R.string.wl_nacht_eingetragen))
         }
         return Lage(
-            Art.MORGEN, "Nacht", "Geschlafen",
+            Art.MORGEN, t.text(R.string.wl_nacht), t.text(R.string.wl_geschlafen),
             Zahlen.dauer(min) ?: "—", "", satz, anteil(b.schlafMin, b.schlafZielMin),
-            listOf(kSchritte(b), kAktiv(b), kWasser(b)), null,
+            listOf(kSchritte(b, t), kAktiv(b, t), kWasser(b, t)), null,
         )
     }
 
-    private fun training(b: Blick): Lage {
+    private fun training(b: Blick, t: Texte): Lage {
         val teile = mutableListOf<String>()
-        b.trainingPuls?.let { teile += "Puls Ø " + Zahlen.ganz(it) }
+        b.trainingPuls?.let { teile += t.text(R.string.wl_puls_schnitt, Zahlen.ganz(it) ?: "") }
         b.trainingKm?.takeIf { it >= 0.1 }?.let { teile += Zahlen.eine(it) + " km" }
         val vor = b.trainingEnde?.let { Duration.between(it, b.jetzt).toMinutes() } ?: 0
-        val wann = if (vor < 60) "vor $vor min beendet" else "vor " + (vor / 60) + " h beendet"
+        val wann = if (vor < 60) t.text(R.string.wl_beendet_min, vor)
+                   else t.text(R.string.wl_beendet_h, vor / 60)
         val satz = (teile + wann).joinToString(" · ")
         return Lage(
-            Art.TRAINING, "Training", b.trainingName ?: "Training",
+            Art.TRAINING, t.text(R.string.training), b.trainingName ?: t.text(R.string.training),
             Zahlen.dauer(b.trainingMin?.toDouble()) ?: "—", "", satz, null,
-            listOf(kSchritte(b), kWasser(b), kSchlaf(b)), b.trainingBeginn,
+            listOf(kSchritte(b, t), kWasser(b, t), kSchlaf(b, t)), b.trainingBeginn,
         )
     }
 
-    /** Gibt es etwas, woran zu erinnern ist? Den Satz dazu, sonst null. */
-    private fun erinnerung(b: Blick): Pair<String, String>? {
+    /**
+     * Gibt es etwas, woran zu erinnern ist? Den Satz dazu, sonst null.
+     *
+     * Vorne steht ein Schluessel ("praeparate", "wasser"), kein Wort: die
+     * Lage darunter entscheidet danach, und ein uebersetztes Wort taugt
+     * dafuer nicht.
+     */
+    private fun erinnerung(b: Blick, t: Texte): Pair<String, String>? {
         // Praeparate: ab elf Uhr, wenn noch welche offen sind.
         if (b.offenePraeparate.isNotEmpty() && b.jetzt.hour >= 11) {
             val namen = b.offenePraeparate.take(2).joinToString(", ") +
                 (if (b.offenePraeparate.size > 2) " …" else "")
-            return "Präparate" to "$namen noch offen"
+            return "praeparate" to t.text(R.string.wl_noch_offen, namen)
         }
         // Wasser: was bis jetzt haette getrunken sein sollen - zwei Glaeser
         // dahinter ist eine Erinnerung wert. Das Soll folgt [wasserSoll].
@@ -165,7 +173,7 @@ object Widgetlage {
         if (ziel != null && ml != null && b.jetzt.hour in 9..21) {
             val soll = ziel * wasserSoll(b.jetzt.hour + b.jetzt.minute / 60.0)
             val fehltGlaeser = ((soll - ml) / b.glasMl).toInt()
-            if (fehltGlaeser >= 2) return "Wasser" to "$fehltGlaeser Gläser hinterher"
+            if (fehltGlaeser >= 2) return "wasser" to t.mehrzahl(R.plurals.wl_glaeser_hinterher, fehltGlaeser, fehltGlaeser)
         }
         return null
     }
@@ -194,58 +202,60 @@ object Widgetlage {
         return 1.0
     }
 
-    private fun erinnerungLage(b: Blick): Lage {
-        val (name, satz) = erinnerung(b) ?: ("Heute" to "")
-        return if (name == "Wasser") {
+    private fun erinnerungLage(b: Blick, t: Texte): Lage {
+        val (was, satz) = erinnerung(b, t) ?: ("" to "")
+        return if (was == "wasser") {
             Lage(
-                Art.ERINNERUNG, "Erinnerung", "Wasser",
+                Art.ERINNERUNG, t.text(R.string.wl_erinnerung), t.text(R.string.wasser),
                 Zahlen.ganz(b.wasserMl) ?: "0", "ml", satz, anteil(b.wasserMl, b.wasserZiel),
-                listOf(kSchritte(b), kAktiv(b), kSchlaf(b)), null,
+                listOf(kSchritte(b, t), kAktiv(b, t), kSchlaf(b, t)), null,
             )
         } else {
             Lage(
-                Art.ERINNERUNG, "Erinnerung", "Präparate",
-                b.offenePraeparate.size.toString(), "offen", satz, null,
-                listOf(kSchritte(b), kWasser(b), kSchlaf(b)), null,
+                Art.ERINNERUNG, t.text(R.string.wl_erinnerung), t.text(R.string.praeparate),
+                b.offenePraeparate.size.toString(), t.text(R.string.wl_offen), satz, null,
+                listOf(kSchritte(b, t), kWasser(b, t), kSchlaf(b, t)), null,
             )
         }
     }
 
-    private fun abend(b: Blick): Lage {
+    private fun abend(b: Blick, t: Texte): Lage {
         val teile = mutableListOf<String>()
         val s = b.schritte
         val z = b.schritteZiel
         if (s != null && z != null) {
-            teile += if (s >= z) "Schrittziel erreicht" else "noch " + Zahlen.ganz(z - s) + " Schritte zum Ziel"
+            teile += if (s >= z) t.text(R.string.wl_schrittziel_erreicht)
+                     else t.text(R.string.wl_schritte_zum_ziel, Zahlen.ganz(z - s) ?: "")
         }
         val ml = b.wasserMl
         val wz = b.wasserZiel
         if (ml != null && wz != null && ml < wz) {
             val fehlt = Math.ceil((wz - ml) / b.glasMl).toInt()
-            teile += "$fehlt ${if (fehlt == 1) "Glas" else "Gläser"} fehlen"
+            teile += t.mehrzahl(R.plurals.wl_glaeser_fehlen, fehlt, fehlt)
         }
-        b.koffeinMg?.takeIf { it > 0 }?.let { teile += "Koffein " + Zahlen.ganz(it) + " mg" }
+        b.koffeinMg?.takeIf { it > 0 }?.let { teile += t.text(R.string.wl_koffein_mg, Zahlen.ganz(it) ?: "") }
         return Lage(
-            Art.ABEND, "Bilanz", "Schritte",
-            Zahlen.ganz(b.schritte) ?: "—", "", teile.ifEmpty { listOf("Der Tag ist eingetragen.") }.joinToString(" · "),
+            Art.ABEND, t.text(R.string.wl_bilanz), t.text(R.string.schritte),
+            Zahlen.ganz(b.schritte) ?: "—", "",
+            teile.ifEmpty { listOf(t.text(R.string.wl_tag_eingetragen)) }.joinToString(" · "),
             anteil(b.schritte, b.schritteZiel),
-            listOf(kAktiv(b), kWasser(b), kSchlaf(b)), null,
+            listOf(kAktiv(b, t), kWasser(b, t), kSchlaf(b, t)), null,
         )
     }
 
-    private fun tag(b: Blick): Lage {
+    private fun tag(b: Blick, t: Texte): Lage {
         val s = b.schritte
         val z = b.schritteZiel
         val satz = when {
-            s == null -> "Noch keine Schritte gezählt."
-            z == null -> Zahlen.ganz(s) + " Schritte bis jetzt."
-            s >= z -> "Ziel erreicht."
-            else -> "noch " + Zahlen.ganz(z - s) + " bis zum Ziel"
+            s == null -> t.text(R.string.wl_keine_schritte)
+            z == null -> t.text(R.string.wl_schritte_bis_jetzt, Zahlen.ganz(s) ?: "")
+            s >= z -> t.text(R.string.wl_ziel_erreicht)
+            else -> t.text(R.string.wl_bis_zum_ziel, Zahlen.ganz(z - s) ?: "")
         }
         return Lage(
-            Art.TAG, "Heute", "Schritte",
+            Art.TAG, t.text(R.string.heute), t.text(R.string.schritte),
             Zahlen.ganz(b.schritte) ?: "—", "", satz, anteil(b.schritte, b.schritteZiel),
-            listOf(kAktiv(b), kWasser(b), kSchlaf(b)), null,
+            listOf(kAktiv(b, t), kWasser(b, t), kSchlaf(b, t)), null,
         )
     }
 }

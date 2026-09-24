@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kiesel-Helper</string>
+    <string name="zurueck">‹ Retour</string>
+    <string name="verlauf">Journal</string>
+    <string name="verlauf_hinweis">Ce que Kiesel-Helper a fait pendant que personne ne regardait. Les cent derniers messages — ils survivent à un redémarrage et ne demandent aucun câble.</string>
+    <plurals name="verlauf_anzahl">
+        <item quantity="one">%1$d MESSAGE</item>
+        <item quantity="many">%1$d MESSAGES</item>
+        <item quantity="other">%1$d MESSAGES</item>
+    </plurals>
+    <string name="leeren">Vider le journal</string>
+    <string name="hc_fehlt">Le dossier santé (Health Connect) n\'est pas disponible sur cet appareil. À partir d\'Android 14, il fait partie du système ; avant, il faut l\'app du Play Store.</string>
+    <string name="hc_update">Health Connect doit être mis à jour.</string>
+    <string name="nichts_bisher">Rien reçu pour l\'instant.</string>
+    <string name="zuletzt">Dernier : %1$s</string>
+    <string name="kanal_name">Réception</string>
+    <string name="dienst_laeuft">En attente des messages de la montre</string>
+    <string name="dienst_hinweis">La réception continue en arrière-plan ; la notification dans la barre en fait partie. L\'app n\'a pas besoin d\'être ouverte.</string>
+    <string name="widget_beschreibung">Ce qui compte maintenant : la nuit le matin, la séance après l\'entraînement, sinon les pas</string>
+    <string name="widget_auffrischen">Actualiser</string>
+    <string name="schritte">Pas</string>
+    <string name="aktiv">Actif</string>
+    <string name="schlaf">Sommeil</string>
+    <string name="wasser">Eau</string>
+    <string name="training">Entraînement</string>
+    <string name="heute">Aujourd\'hui</string>
+    <string name="praeparate">Compléments</string>
+    <string name="ruhepuls_wert">FC repos %1$s</string>
+    <string name="gerade_eben">à l\'instant</string>
+    <string name="vor_min">il y a %1$d min</string>
+    <string name="vor_h">il y a %1$d h</string>
+    <string name="wl_erholsam">%1$s %% réparateur</string>
+    <string name="wl_laenger">plus long que d\'habitude</string>
+    <string name="wl_kuerzer">plus court que d\'habitude</string>
+    <string name="wl_wie_sonst">comme d\'habitude</string>
+    <string name="wl_nacht_eingetragen">La nuit est enregistrée.</string>
+    <string name="wl_nacht">Nuit</string>
+    <string name="wl_geschlafen">Dormi</string>
+    <string name="wl_puls_schnitt">FC moy. %1$s</string>
+    <string name="wl_beendet_min">terminé il y a %1$d min</string>
+    <string name="wl_beendet_h">terminé il y a %1$d h</string>
+    <string name="wl_noch_offen">%1$s encore à prendre</string>
+    <plurals name="wl_glaeser_hinterher">
+        <item quantity="one">%1$d verre de retard</item>
+        <item quantity="many">%1$d verres de retard</item>
+        <item quantity="other">%1$d verres de retard</item>
+    </plurals>
+    <string name="wl_erinnerung">Rappel</string>
+    <string name="wl_offen">à prendre</string>
+    <string name="wl_schrittziel_erreicht">Objectif de pas atteint</string>
+    <string name="wl_schritte_zum_ziel">encore %1$s pas jusqu\'à l\'objectif</string>
+    <plurals name="wl_glaeser_fehlen">
+        <item quantity="one">%1$d verre manquant</item>
+        <item quantity="many">%1$d verres manquants</item>
+        <item quantity="other">%1$d verres manquants</item>
+    </plurals>
+    <string name="wl_koffein_mg">Caféine %1$s mg</string>
+    <string name="wl_bilanz">Bilan</string>
+    <string name="wl_tag_eingetragen">La journée est enregistrée.</string>
+    <string name="wl_keine_schritte">Aucun pas compté pour l\'instant.</string>
+    <string name="wl_schritte_bis_jetzt">%1$s pas jusqu\'ici.</string>
+    <string name="wl_ziel_erreicht">Objectif atteint.</string>
+    <string name="wl_bis_zum_ziel">encore %1$s avant l\'objectif</string>
+    <string name="w_keine_akte">Pas de dossier santé</string>
+    <string name="w_nichts_eingetragen">Rien d\'enregistré pour l\'instant</string>
+</resources>

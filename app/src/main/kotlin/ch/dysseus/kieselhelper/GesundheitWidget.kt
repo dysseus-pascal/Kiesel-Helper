@@ -113,9 +113,9 @@ class GesundheitWidget : AppWidgetProvider() {
             val min = alterMinuten(context)
             return when {
                 min < 0 -> ""
-                min < 1 -> "gerade eben"
-                min < 60 -> "vor $min min"
-                else -> "vor " + (min / 60) + " h"
+                min < 1 -> context.getString(R.string.gerade_eben)
+                min < 60 -> context.getString(R.string.vor_min, min)
+                else -> context.getString(R.string.vor_h, min / 60)
             }
         }
 
@@ -289,14 +289,14 @@ class GesundheitWidget : AppWidgetProvider() {
             faerbe(context, v)
 
             if (stand == null || blick == null) {
-                v.setTextViewText(R.id.w_lage, "Heute")
+                v.setTextViewText(R.id.w_lage, context.getString(R.string.heute))
                 v.setTextViewText(R.id.w_gross, "—")
                 v.setTextViewText(R.id.w_satz, "")
-                v.setTextViewText(R.id.w_fuss, "Keine Gesundheitsakte")
+                v.setTextViewText(R.id.w_fuss, context.getString(R.string.w_keine_akte))
                 return v
             }
 
-            val lage = Widgetlage.ermittle(blick)
+            val lage = Widgetlage.ermittle(blick, context.texte())
             v.setTextViewText(R.id.w_lage, lage.wort)
             v.setTextViewText(R.id.w_name, lage.name)
             v.setTextViewText(R.id.w_gross, lage.gross)
@@ -350,7 +350,7 @@ class GesundheitWidget : AppWidgetProvider() {
                 )
             }
 
-            v.setTextViewText(R.id.w_fuss, fusszeile(stand))
+            v.setTextViewText(R.id.w_fuss, fusszeile(context, stand))
             return v
         }
 
@@ -404,12 +404,12 @@ class GesundheitWidget : AppWidgetProvider() {
          * Fehlt ein Wert, faellt er samt Trenner weg. Ein "Ruhepuls —" waere
          * eine Zeile Platz fuer die Auskunft, dass es keine Auskunft gibt.
          */
-        private fun fusszeile(stand: Gesundheit.Stand): String {
+        private fun fusszeile(context: Context, stand: Gesundheit.Stand): String {
             val teile = mutableListOf<String>()
-            Zahlen.ganz(stand.ruhepuls.zahl)?.let { teile += "Ruhepuls $it" }
+            Zahlen.ganz(stand.ruhepuls.zahl)?.let { teile += context.getString(R.string.ruhepuls_wert, it) }
             Zahlen.ganz(stand.hrv.zahl)?.let { teile += "HRV $it ms" }
             Zahlen.eine(stand.distanz.zahl)?.let { teile += "$it km" }
-            return if (teile.isEmpty()) "Noch nichts eingetragen"
+            return if (teile.isEmpty()) context.getString(R.string.w_nichts_eingetragen)
                    else teile.joinToString(" · ")
         }
     }
