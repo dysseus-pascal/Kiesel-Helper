@@ -97,7 +97,9 @@ object Pulskurve {
         return try {
             klient.insertRecords(saetze)
             datei(context, beginn).delete()
-            Verlauf(context).merkeMeldung("Pulskurve mit ${punkte.size} Punkten eingetragen")
+            Verlauf(context).merkeMeldung(
+                context.resources.getQuantityString(R.plurals.v_pulskurve, punkte.size, punkte.size)
+            )
             true
         } catch (e: Exception) {
             Log.w(PebbleEmpfaenger.TAG, "Pulskurve nicht eingetragen: " + e.message)

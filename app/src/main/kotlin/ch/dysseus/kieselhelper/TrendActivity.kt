@@ -62,7 +62,7 @@ class TrendActivity : KieselActivity() {
         val oben = spalte().apply { setPadding(dp(16f), dp(16f), dp(16f), 0) }
         oben.addView(knopfLeise(getString(R.string.zurueck)) { finish() })
         oben.luft(10f)
-        oben.addView(kopf(TrendTab.GRUPPEN[wahl].name + " im Trend"))
+        oben.addView(kopf(getString(R.string.trend_titel, TrendTab.GRUPPEN[wahl].name(this))))
         oben.luft(6f)
         aussen.addView(oben)
 
@@ -99,7 +99,7 @@ class TrendActivity : KieselActivity() {
         // Die Wolke NUR fuer Herz. Sie liest vierzehn Tage Einzelmessungen aus
         // der Akte - das ist die teuerste Abfrage der App, und fuer die
         // Schritte-Gruppe braucht sie niemand.
-        val wolke = if (gruppe.name == "Herz") {
+        val wolke = if (gruppe.schluessel == "herz") {
             Gesundheit(this@TrendActivity).pulswolke()
         } else {
             emptyList()

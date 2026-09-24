@@ -36,12 +36,12 @@ object Supplemente {
          * fehlt nicht, es ist nicht dran - und ein "offen" daneben waere ein
          * Vorwurf.
          */
-        val heute: List<Eintrag>
-            get() = namen.indices
+        fun heute(context: Context): List<Eintrag> =
+            namen.indices
                 .filter { ((faellig shr it) and 1L) == 1L }
                 .map { i ->
                     Eintrag(
-                        namen[i].ifBlank { "Platz ${i + 1}" },
+                        namen[i].ifBlank { context.getString(R.string.platz_n, i + 1) },
                         ((genommen shr i) and 1L) == 1L,
                     )
                 }

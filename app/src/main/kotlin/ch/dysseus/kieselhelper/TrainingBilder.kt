@@ -36,15 +36,22 @@ import java.util.Locale
  */
 object Sportart {
 
-    data class Art(val name: String, val zeichen: String, val farbe: Int)
+    /**
+     * Eine Art. Der Name ist eine Ressource, damit er in der Sprache des
+     * Telefons erscheint; nur eine unbekannte Art traegt den Titel aus der
+     * Akte als eigenen Namen - den hat jemand so geschrieben.
+     */
+    data class Art(val nameId: Int, val zeichen: String, val farbe: Int, val eigenerName: String? = null) {
+        fun name(context: Context): String = eigenerName ?: context.getString(nameId)
+    }
 
-    private val LAUF = Art("Laufen", "🏃", R.color.sport_lauf)
-    private val BIKE = Art("Bike", "🚴", R.color.sport_bike)
-    private val MTB = Art("Bike MTB", "🚵", R.color.sport_bike)
-    private val WANDERN = Art("Wandern", "🥾", R.color.sport_wandern)
-    private val KRAFT = Art("Kraft", "🏋️", R.color.sport_kraft)
-    private val YOGA = Art("Yoga", "🧘", R.color.sport_yoga)
-    private val SCHWIMMEN = Art("Schwimmen", "🏊", R.color.sport_schwimmen)
+    private val LAUF = Art(R.string.sport_laufen, "🏃", R.color.sport_lauf)
+    private val BIKE = Art(R.string.sport_bike, "🚴", R.color.sport_bike)
+    private val MTB = Art(R.string.sport_mtb, "🚵", R.color.sport_bike)
+    private val WANDERN = Art(R.string.sport_wandern, "🥾", R.color.sport_wandern)
+    private val KRAFT = Art(R.string.sport_kraft, "🏋️", R.color.sport_kraft)
+    private val YOGA = Art(R.string.sport_yoga, "🧘", R.color.sport_yoga)
+    private val SCHWIMMEN = Art(R.string.sport_schwimmen, "🏊", R.color.sport_schwimmen)
 
     /** Die Reihenfolge in Legenden - immer dieselbe, damit man sie lernt. */
     val ALLE = listOf(LAUF, BIKE, MTB, WANDERN, KRAFT, YOGA, SCHWIMMEN)
@@ -69,7 +76,7 @@ object Sportart {
         ExerciseSessionRecord.EXERCISE_TYPE_PILATES -> YOGA
         ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL,
         ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER -> SCHWIMMEN
-        else -> Art(s.title ?: "Training", "⏱", R.color.sport_anderes)
+        else -> Art(R.string.training, "⏱", R.color.sport_anderes, s.title)
     }
 
     /** Arten, bei denen eine Strecke etwas aussagt - und das GPS mitlaeuft. */
@@ -185,7 +192,7 @@ class KalenderView(
         fett.textAlign = Paint.Align.CENTER
         DayOfWeek.values().forEachIndexed { i, tag ->
             val x = randLinks + fach * i + fach / 2
-            val name = tag.getDisplayName(TextStyle.SHORT, Locale.GERMAN).take(2)
+            val name = tag.getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(2)
             leinwand.drawText(name, x, kopfHoehe - context.dp(7f), if (tag == heute.dayOfWeek) fett else schrift)
         }
 
@@ -196,7 +203,7 @@ class KalenderView(
             // Die Kalenderwoche links, klein: wer plant, plant in Wochen.
             schrift.textAlign = Paint.Align.LEFT
             leinwand.drawText(
-                "KW " + montag.get(WeekFields.ISO.weekOfWeekBasedYear()),
+                context.getString(R.string.kw_n, montag.get(WeekFields.ISO.weekOfWeekBasedYear()).toString()),
                 0f, my + schrift.textSize / 3, schrift,
             )
 
@@ -394,7 +401,7 @@ fun Context.verteilung(sitzungen: List<ExerciseSessionRecord>): LinearLayout {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, dp(4f), 0, dp(4f))
             addView(sportzeichen(art, 30f))
-            addView(fliesstext(art.name).apply {
+            addView(fliesstext(art.name(this@verteilung)).apply {
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             })
             addView(zart(
@@ -493,7 +500,7 @@ class TrainingspulsView(
             sx > width * 0.85f -> Paint.Align.RIGHT
             else -> Paint.Align.CENTER
         }
-        leinwand.drawText("max " + spitze.bpm, sx, sy - context.dp(7f), fett)
+        leinwand.drawText(context.getString(R.string.max_n, spitze.bpm.toString()), sx, sy - context.dp(7f), fett)
 
         // Die Zeitachse: Anfang, Mitte, Ende - mehr liest beim Training
         // niemand ab.

@@ -76,7 +76,7 @@ class SpurDienst : android.app.Service(), LocationListener {
 
         beginn = intent?.getLongExtra(EXTRA_BEGINN, 0L) ?: 0L
         if (beginn <= 0L) beginn = System.currentTimeMillis() / 1000
-        if (!starteVordergrund(intent?.getStringExtra(EXTRA_ART) ?: "Training")) {
+        if (!starteVordergrund(intent?.getStringExtra(EXTRA_ART) ?: getString(R.string.training))) {
             stopSelf()
             return START_NOT_STICKY
         }
@@ -94,8 +94,8 @@ class SpurDienst : android.app.Service(), LocationListener {
             PendingIntent.FLAG_IMMUTABLE,
         )
         val meldung: Notification = Notification.Builder(this, KANAL)
-            .setContentTitle(art + " wird aufgezeichnet")
-            .setContentText("Die Strecke kommt vom Telefon — die Uhr hat kein GPS.")
+            .setContentTitle(getString(R.string.sp_titel, art))
+            .setContentText(getString(R.string.sp_text))
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setContentIntent(tippen)
             .setOngoing(true)
@@ -118,8 +118,7 @@ class SpurDienst : android.app.Service(), LocationListener {
             // Lauf eine leere Karte sieht, soll nachlesen können, warum.
             Log.w(PebbleEmpfaenger.TAG, "Vordergrunddienst: " + e.message)
             Verlauf(this).merkeMeldung(
-                "Strecke nicht aufgezeichnet — Android liess den Dienst nicht zu: " +
-                    (e.message ?: e.javaClass.simpleName)
+                getString(R.string.sp_nicht_zugelassen, e.message ?: e.javaClass.simpleName)
             )
             false
         }
@@ -165,9 +164,9 @@ class SpurDienst : android.app.Service(), LocationListener {
 
     private fun meldungskanal() {
         val kanal = NotificationChannel(
-            KANAL, "Streckenaufzeichnung", NotificationManager.IMPORTANCE_LOW
+            KANAL, getString(R.string.sp_kanal), NotificationManager.IMPORTANCE_LOW
         )
-        kanal.description = "Läuft nur während eines Trainings."
+        kanal.description = getString(R.string.sp_kanal_text)
         getSystemService(NotificationManager::class.java)?.createNotificationChannel(kanal)
     }
 
@@ -206,9 +205,7 @@ class SpurDienst : android.app.Service(), LocationListener {
             // Vordergrunddienst, der beim Start scheitert, reisst die App mit.
             if (!darfOrten(context)) {
                 Log.w(PebbleEmpfaenger.TAG, "Keine Standortberechtigung - Spur entfällt")
-                Verlauf(context).merkeMeldung(
-                    "Training ohne Strecke — Standort nicht erlaubt (Einstellungen, Training)"
-                )
+                Verlauf(context).merkeMeldung(context.getString(R.string.sp_ohne_standort))
                 return
             }
             val i = Intent(context, SpurDienst::class.java)
@@ -222,7 +219,7 @@ class SpurDienst : android.app.Service(), LocationListener {
                 // trotzdem eingetragen - nur ohne Strecke.
                 Log.w(PebbleEmpfaenger.TAG, "Spurdienst nicht gestartet: " + e.message)
                 Verlauf(context).merkeMeldung(
-                    "Training ohne Strecke — " + (e.message ?: e.javaClass.simpleName)
+                    context.getString(R.string.sp_ohne_strecke_x, e.message ?: e.javaClass.simpleName)
                 )
             }
         }

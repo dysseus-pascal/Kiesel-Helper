@@ -151,20 +151,23 @@ object Auswertung {
         val belastbar: Boolean get() = n >= PAARE_MINDESTENS && r != null
 
         /**
-         * Die Staerke in Worten.
+         * Die Staerke als Stufe: 0 kein erkennbarer, 1 schwach, 2 mittel,
+         * 3 deutlich. Die Worte dazu stehen in den Ressourcen - als ganze
+         * Saetze, weil sich "ein schwacher Zusammenhang" nicht in jeder
+         * Sprache aus Adjektiv und Nomen zusammensetzen laesst.
          *
          * Die Grenzen sind Konvention, keine Naturkonstante - aber eine Zahl
          * wie 0,37 allein sagt den meisten Menschen nichts, und "schwach" ist
          * ehrlicher als das Schweigen dazu.
          */
-        val staerke: String
+        val stufe: Int
             get() {
                 val betrag = kotlin.math.abs(r ?: 0.0)
                 return when {
-                    betrag < 0.2 -> "kein erkennbarer"
-                    betrag < 0.4 -> "ein schwacher"
-                    betrag < 0.6 -> "ein mittlerer"
-                    else -> "ein deutlicher"
+                    betrag < 0.2 -> 0
+                    betrag < 0.4 -> 1
+                    betrag < 0.6 -> 2
+                    else -> 3
                 }
             }
     }

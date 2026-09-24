@@ -99,10 +99,39 @@ object OsmandNavigation {
      * Manifest nicht unter <queries> stand und damit unsichtbar war. Nichts
      * stuerzte ab, nichts warnte; die einzige Spur stand im Logcat, das man
      * ohne Kabel nicht liest. Also sagt die App es jetzt selbst.
+     *
+     * ALS ZUSTAND, NICHT ALS SATZ: der Schirm fragt ab, ob verbunden ist, und
+     * das ginge an einem Satz in fuenf Sprachen nicht mehr. Den Satz baut
+     * [lageText] erst beim Zeigen.
      */
+    enum class Lage { NIE, VERBINDE, VERBUNDEN, ABONNIERT, BEENDET, UNERREICHBAR, FREISCHALTEN, ABO_FEHLER }
+
     @Volatile
-    var lage: String = "noch nicht versucht"
+    var lage: Lage = Lage.NIE
         private set
+
+    /** Was zur Lage gehoert: der Paketname oder die Fehlermeldung. */
+    @Volatile
+    private var lageZusatz: String = ""
+
+    private fun setzeLage(neu: Lage, zusatz: String = "") {
+        lageZusatz = zusatz
+        lage = neu
+    }
+
+    /** Die Lage als Satz, in der Sprache des Telefons. */
+    fun lageText(context: Context): String = when (lage) {
+        Lage.NIE -> context.getString(R.string.o_nie)
+        Lage.VERBINDE -> context.getString(R.string.o_verbinde, lageZusatz)
+        Lage.VERBUNDEN -> context.getString(R.string.o_verbunden, lageZusatz)
+        Lage.ABONNIERT -> context.getString(R.string.o_abonniert)
+        Lage.BEENDET -> context.getString(R.string.o_beendet)
+        Lage.UNERREICHBAR -> context.getString(R.string.o_unerreichbar)
+        Lage.FREISCHALTEN -> context.getString(R.string.o_freischalten)
+        Lage.ABO_FEHLER -> context.getString(
+            R.string.o_abo_fehler, lageZusatz.ifBlank { context.getString(R.string.o_unbekannt) }
+        )
+    }
 
     // --- Anbinden ---
 
@@ -125,8 +154,8 @@ object OsmandNavigation {
                 override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
                     api = IOsmAndAidlInterface.Stub.asInterface(binder)
                     Log.i(TAG, "OsmAnd angebunden: $paket")
-                    lage = "verbunden mit $paket"
-                    Verlauf(ctx).merkeMeldung("OsmAnd verbunden ($paket)")
+                    setzeLage(Lage.VERBUNDEN, paket)
+                    Verlauf(ctx).merkeMeldung(ctx.getString(R.string.o_verbunden_v, paket))
                     abonniere(ctx)
                     starteTakt(ctx)
                 }
@@ -137,14 +166,14 @@ object OsmandNavigation {
                     // Dienst zurueck ist. Ein eigener Wiederholversuch liefe
                     // daneben und haelt nur das Telefon wach.
                     Log.i(TAG, "OsmAnd weg")
-                    lage = "OsmAnd beendet — wartet auf Rückkehr"
+                    setzeLage(Lage.BEENDET)
                     api = null
                     navigiert = false
                 }
             }
             if (ctx.bindService(absicht, verb, Context.BIND_AUTO_CREATE)) {
                 verbindung = verb
-                lage = "$paket gefunden — verbinde"
+                setzeLage(Lage.VERBINDE, paket)
                 return true
             }
         }
@@ -153,8 +182,8 @@ object OsmandNavigation {
         // unter <queries> im Manifest und ist damit unsichtbar - auch wenn es
         // laeuft. Beides sieht von hier aus gleich aus, also beides nennen.
         Log.i(TAG, "Kein OsmAnd erreichbar")
-        lage = "OsmAnd nicht erreichbar — installiert? (sonst Sichtbarkeit im Manifest)"
-        Verlauf(ctx).merkeMeldung("OsmAnd nicht erreichbar")
+        setzeLage(Lage.UNERREICHBAR)
+        Verlauf(ctx).merkeMeldung(ctx.getString(R.string.o_unerreichbar_v))
         return false
     }
 
@@ -221,7 +250,7 @@ object OsmandNavigation {
         val paket = osmandPaket(context) ?: return null
 
         if (lat != null && lon != null) {
-            val titelRoh = name ?: "Ziel"
+            val titelRoh = name ?: context.getString(R.string.o_ziel)
             val titel = URLEncoder.encode(titelRoh, "UTF-8")
 
             // NUR AUF WUNSCH LOSFAHREN. Eine Fuehrung, die von selbst
@@ -232,14 +261,14 @@ object OsmandNavigation {
                     "?dest_lat=" + lat + "&dest_lon=" + lon +
                     "&dest_title=" + titel +
                     "&profile=" + profil + "&force=true"
-                if (starte(context, paket, fuehrung)) return "Führung gestartet"
+                if (starte(context, paket, fuehrung)) return context.getString(R.string.o_fuehrung)
             }
 
             // Den Ort zeigen: die Vorgabe, und zugleich der zweite Anlauf,
             // wenn OsmAnd die Fuehrungsform nicht kennt.
             val zeigen = "geo:" + lat + "," + lon +
                 "?q=" + lat + "," + lon + "(" + titel + ")"
-            if (starte(context, paket, zeigen)) return "Ort gezeigt"
+            if (starte(context, paket, zeigen)) return context.getString(R.string.o_ort_gezeigt)
             return null
         }
 
@@ -247,7 +276,7 @@ object OsmandNavigation {
         // die uebliche Form dafuer und braucht keine eigene Schnittstelle.
         if (name.isNullOrBlank()) return null
         val suche = "geo:0,0?q=" + URLEncoder.encode(name, "UTF-8")
-        return if (starte(context, paket, suche)) "Suche an OsmAnd gegeben" else null
+        return if (starte(context, paket, suche)) context.getString(R.string.o_suche) else null
     }
 
     private fun starte(context: Context, paket: String, uri: String): Boolean = try {
@@ -293,21 +322,19 @@ object OsmandNavigation {
                 // "verbundene App" ein - aber AUSGESCHALTET. Erst ein Schalter
                 // in OsmAnd macht sie gueltig. Nachgelesen in OsmandAidlApi:
                 // isAppEnabled legt den Eintrag mit enabled=false an.
-                lage = "in OsmAnd freischalten: Menü › Plugins › Kiesel-Helper"
-                Verlauf(ctx).merkeMeldung(
-                    "OsmAnd: noch nicht freigeschaltet (Menü › Plugins)"
-                )
+                setzeLage(Lage.FREISCHALTEN)
+                Verlauf(ctx).merkeMeldung(ctx.getString(R.string.o_freischalten_v))
                 Log.w(TAG, "registerForNavigationUpdates gab $nummer")
             } else {
-                lage = "verbunden, Abbiegedaten abonniert"
+                setzeLage(Lage.ABONNIERT)
                 Log.i(TAG, "Abbiegedaten abonniert (Nr. $nummer)")
             }
         } catch (e: Exception) {
             // Auch ein RemoteException faellt hierher. Es waere nichts
             // gewonnen, die App deswegen zu beenden.
             Log.w(TAG, "Abonnieren fehlgeschlagen: " + e.message)
-            lage = "Abonnieren fehlgeschlagen: " + (e.message ?: "unbekannt")
-            Verlauf(ctx).merkeMeldung("OsmAnd: Abonnieren fehlgeschlagen")
+            setzeLage(Lage.ABO_FEHLER, e.message.orEmpty())
+            Verlauf(ctx).merkeMeldung(ctx.getString(R.string.o_abo_fehler_v))
         }
     }
 
@@ -376,7 +403,7 @@ object OsmandNavigation {
         // Hand oeffnet.
         UhrSender.sende(ctx, an, neuerSchritt, felder)
         Verlauf(ctx).merkeMeldung(
-            "OsmAnd: Art $art, $meter m" + if (strasse.isNullOrBlank()) "" else " — $strasse"
+            ctx.getString(R.string.o_art, art, meter) + if (strasse.isNullOrBlank()) "" else " — $strasse"
         )
     }
 
@@ -437,7 +464,7 @@ object OsmandNavigation {
                 // gemessen - und ein Name, der danebenliegt, liefert still
                 // null statt einer Warnung.
                 Log.i(TAG, "turnInfo: " + kurve.keySet().joinToString(", "))
-                Verlauf(ctx).merkeMeldung("OsmAnd-Felder: " + kurve.keySet().joinToString(", "))
+                Verlauf(ctx).merkeMeldung(ctx.getString(R.string.o_felder, kurve.keySet().joinToString(", ")))
             }
 
             val meter = kurve?.getInt(SCHL_ENTFERNUNG, -1) ?: -1
@@ -450,7 +477,7 @@ object OsmandNavigation {
             val name = kurve.getString(SCHL_NAME).orEmpty()
             // Die Ausfahrtnummer gehoert VOR den Strassennamen: im Kreisel ist
             // sie die eigentliche Anweisung, der Name bloss die Bestaetigung.
-            val strasse = if (nr > 0) "$nr. Ausfahrt" + (if (name.isBlank()) "" else " · $name")
+            val strasse = if (nr > 0) ctx.getString(R.string.o_ausfahrt, nr) + (if (name.isBlank()) "" else " · $name")
                           else name
             melde(meter, artAusText(kuerzel), strasse, info.arrivalTime, info.leftDistance)
         } catch (e: Exception) {
@@ -512,7 +539,7 @@ object OsmandNavigation {
                 Kieselstrasse.REST to Wert.Zahl(-1L),
             ),
         )
-        Verlauf(ctx).merkeMeldung("OsmAnd: Navigation beendet")
+        Verlauf(ctx).merkeMeldung(ctx.getString(R.string.o_ende))
     }
 }
 

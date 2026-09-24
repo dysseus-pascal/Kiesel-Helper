@@ -36,11 +36,11 @@ class KartenlinkActivity : KieselActivity() {
         // AUSDRUECKLICH ZURUECK: sonst traegt dieser Schirm den Ton des
         // Reiters, aus dem er geoeffnet wurde.
         Ton.setze(Ton.GESUNDHEIT)
-        setContentView(baueAnsicht("Link wird gelesen …"))
+        setContentView(baueAnsicht(getString(R.string.kl_lese)))
 
         val roh = intent?.dataString
         if (roh.isNullOrBlank()) {
-            fertig("Kein Link dabei.")
+            fertig(getString(R.string.kl_kein_link))
             return
         }
 
@@ -52,7 +52,7 @@ class KartenlinkActivity : KieselActivity() {
             }
             val ziel = Kartenlink.zerlege(voll)
             if (ziel == null || !ziel.brauchbar) {
-                fertig("Aus diesem Link liess sich kein Ziel lesen.")
+                fertig(getString(R.string.kl_kein_ziel))
                 return@launch
             }
             // KEIN WARTEN AUF DIE AIDL-VERBINDUNG MEHR. Uebergeben wird per
@@ -62,14 +62,11 @@ class KartenlinkActivity : KieselActivity() {
 
             if (aus.geschafft) {
                 Verlauf(this@KartenlinkActivity).merkeMeldung(
-                    "Kartenlink an OsmAnd (" + aus.beschreibung + ")"
+                    getString(R.string.kl_an_osmand, aus.beschreibung)
                 )
                 finish()
             } else {
-                fertig(
-                    "OsmAnd hat abgelehnt. Meist fehlt die Freigabe dort: " +
-                        "Menü → Plugins → Kiesel-Helper einschalten."
-                )
+                fertig(getString(R.string.kl_abgelehnt))
             }
         }
     }
@@ -82,11 +79,11 @@ class KartenlinkActivity : KieselActivity() {
         val wurzel = spalte().apply {
             setPadding(dp(24f), dp(40f), dp(24f), dp(24f))
         }
-        wurzel.addView(kopf("Nach OsmAnd"))
+        wurzel.addView(kopf(getString(R.string.nach_osmand)))
         wurzel.luft(10f)
         wurzel.addView(fliesstext(meldung))
         wurzel.luft(16f)
-        wurzel.addView(knopfLeise("Schliessen") { finish() })
+        wurzel.addView(knopfLeise(getString(R.string.schliessen)) { finish() })
         wurzel.randUmSystemleisten()
         return wurzel
     }

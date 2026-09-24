@@ -70,7 +70,7 @@ class VergangeneActivity : KieselActivity() {
         val wurzel = spalte().apply { setPadding(dp(16f), dp(16f), dp(16f), dp(28f)) }
         wurzel.addView(knopfLeise(getString(R.string.zurueck)) { finish() })
         wurzel.luft(10f)
-        wurzel.addView(kopf(if (beginn < 0) "Vergangene Trainings" else "Training"))
+        wurzel.addView(kopf(getString(if (beginn < 0) R.string.v_titel_liste else R.string.training)))
         wurzel.luft(6f)
         inhalt = spalte()
         wurzel.addView(inhalt)
@@ -95,7 +95,7 @@ class VergangeneActivity : KieselActivity() {
         val eintrag = alle.firstOrNull { it.sitzung.startTime.epochSecond == beginn }
         if (eintrag == null) {
             inhalt.addView(karte().apply {
-                addView(zart("Dieses Training steht nicht mehr in der Gesundheitsakte."))
+                addView(zart(getString(R.string.v_nicht_mehr)))
             })
             return
         }
@@ -140,18 +140,18 @@ class VergangeneActivity : KieselActivity() {
         val zonen = Trainingsanalyse.zonenSekunden(e.puls, maxpuls)
         val schwer = zonen[4] + zonen[5]
         val summe = zonen.sum().coerceAtLeast(1)
-        inhalt.addView(abschnitt("PULSZONEN"))
+        inhalt.addView(abschnitt(getString(R.string.v_pulszonen)))
         inhalt.addView(karte().apply {
-            addView(zart("Zeit je Zone, Maximalpuls $maxpuls (Einstellungen)"))
+            addView(zart(getString(R.string.v_zeit_je_zone, maxpuls)))
             addView(zonenbalken(zonen))
             addView(zonenliste(zonen, maxpuls))
             addView(zart(
-                when {
-                    schwer * 100 / summe >= 50 -> "Mehr als die Hälfte an oder über der Schwelle — ein hartes Training."
-                    zonen[2] + zonen[3] >= summe * 6 / 10 -> "Vor allem Grundlage und Ausdauer — so baut man Form auf."
-                    zonen[0] + zonen[1] >= summe / 2 -> "Überwiegend locker — Erholung, oder der Puls blieb unten."
-                    else -> "Gemischt über die Zonen."
-                }
+                getString(when {
+                    schwer * 100 / summe >= 50 -> R.string.v_hart
+                    zonen[2] + zonen[3] >= summe * 6 / 10 -> R.string.v_grundlage
+                    zonen[0] + zonen[1] >= summe / 2 -> R.string.v_locker
+                    else -> R.string.v_gemischt
+                })
             ).apply { setPadding(0, dp(8f), 0, 0) })
         })
     }
@@ -160,7 +160,7 @@ class VergangeneActivity : KieselActivity() {
     private fun pulsUeberZeit(e: TrainingTab.Eintrag, ton: Int, baender: List<Triple<Double, Double, Int>>, text: String) {
         if (e.puls.size < 2) return
         val punkte = e.puls.map { Trainingsanalyse.Verlaufspunkt(it.sekunde.toDouble(), it.bpm.toDouble()) }
-        inhalt.addView(abschnitt("PULS ÜBER DIE ZEIT"))
+        inhalt.addView(abschnitt(getString(R.string.v_puls_zeit)))
         inhalt.addView(karte().apply {
             addView(zart(text))
             addView(streckenverlauf(punkte, ton, "bpm", zeitachse = true, xBaender = baender))
@@ -175,9 +175,9 @@ class VergangeneActivity : KieselActivity() {
             e.sitzung.exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_WALKING
         val strecke = Trainingsanalyse.strecke(e.punkte)
         if (strecke.size < 2) {
-            pulsUeberZeit(e, ton, emptyList(), "Ohne Strecke bleibt die Zeit die Achse")
+            pulsUeberZeit(e, ton, emptyList(), getString(R.string.v_ohne_strecke_zeit))
             if (e.puls.size < 2) inhalt.addView(karte().apply {
-                addView(zart("Ohne Strecke und ohne Pulskurve gibt es hier nichts weiter zu zeigen."))
+                addView(zart(getString(R.string.v_nichts_weiter)))
             })
             return
         }
@@ -199,9 +199,9 @@ class VergangeneActivity : KieselActivity() {
                 val bis = if (z == 5) 250.0 else maxpuls * Trainingsanalyse.ZONEN_PROZENT[z] / 100.0
                 Triple(von, bis, Zonenfarben.FARBEN[z])
             }
-            inhalt.addView(abschnitt("PULS ÜBER DIE STRECKE"))
+            inhalt.addView(abschnitt(getString(R.string.v_puls_strecke)))
             inhalt.addView(karte().apply {
-                addView(zart("Wo der Puls stieg — die Bänder sind die Zonen"))
+                addView(zart(getString(R.string.v_puls_stieg)))
                 addView(streckenverlauf(pulsStrecke, ton, "bpm", baender = baender))
             })
         }
@@ -209,21 +209,21 @@ class VergangeneActivity : KieselActivity() {
         // --- Tempo ---
         val tempo = Trainingsanalyse.tempoUeberStrecke(strecke)
         val (langsam, schnell) = Trainingsanalyse.tempoSpanne(strecke)
-        inhalt.addView(abschnitt("TEMPO"))
+        inhalt.addView(abschnitt(getString(R.string.v_tempo)))
         inhalt.addView(karte().apply {
             val mittel = strecke.last().meter / strecke.last().sekunde.coerceAtLeast(1)
             val spitze = strecke.maxOf { it.tempo }
             addView(reihe().apply {
-                addView(messwert("Schnitt", tempoText(mittel).substringBefore(" "), tempoText(mittel).substringAfter(" ", ""), 0f, false))
-                addView(messwert("Spitze", tempoText(spitze).substringBefore(" "), tempoText(spitze).substringAfter(" ", ""), 0f, false))
+                addView(messwert(getString(R.string.v_schnitt), tempoText(mittel).substringBefore(" "), tempoText(mittel).substringAfter(" ", ""), 0f, false))
+                addView(messwert(getString(R.string.v_spitze), tempoText(spitze).substringBefore(" "), tempoText(spitze).substringAfter(" ", ""), 0f, false))
                 if (wandern && mitHoehe) {
                     val hm = Spur.hoehenmeter(e.punkte) / (strecke.last().sekunde / 3600.0)
-                    addView(messwert("Aufstieg", Zahlen.ganz(hm), "m/h", 0f, false))
+                    addView(messwert(getString(R.string.t_aufstieg), Zahlen.ganz(hm), "m/h", 0f, false))
                 } else {
-                    addView(messwert("Bewegt", Zahlen.dauer(strecke.last().sekunde / 60.0), "", 0f, false))
+                    addView(messwert(getString(R.string.v_bewegt), Zahlen.dauer(strecke.last().sekunde / 60.0), "", 0f, false))
                 }
             })
-            addView(zart(if (wandern) "Über die Strecke" else "Über die Strecke, gefärbt wie auf der Karte").apply { setPadding(0, dp(10f), 0, 0) })
+            addView(zart(getString(if (wandern) R.string.v_ueber_strecke else R.string.v_ueber_strecke_farbe)).apply { setPadding(0, dp(10f), 0, 0) })
             addView(streckenverlauf(
                 tempo, ton, "km/h",
                 farbeJeWert = if (wandern) null else { kmh -> Zonenfarben.tempofarbe((((kmh / 3.6) - langsam) / (schnell - langsam)).toFloat()) },
@@ -235,16 +235,16 @@ class VergangeneActivity : KieselActivity() {
         if (wandern && mitHoehe) {
             val steigung = Trainingsanalyse.steigung(strecke)
             val mitSteigung = strecke.mapIndexed { i, p -> p.copy(tempo = steigung[i]) }
-            inhalt.addView(abschnitt("STEIGUNG AUF DER KARTE"))
+            inhalt.addView(abschnitt(getString(R.string.v_steigung_karte)))
             inhalt.addView(karte().apply {
-                addView(zart("Blau bergab, grün flach, rot bergauf"))
+                addView(zart(getString(R.string.v_steigung_legende)))
                 addView(farbkarte(mitSteigung, karten, { it.tempo }, -15.0, 15.0))
-                addView(tempolegende("−15 % bergab", "+15 % bergauf"))
+                addView(tempolegende(getString(R.string.v_bergab, "−15"), getString(R.string.v_bergauf, "+15")))
             })
         } else {
-            inhalt.addView(abschnitt("TEMPO AUF DER KARTE"))
+            inhalt.addView(abschnitt(getString(R.string.v_tempo_karte)))
             inhalt.addView(karte().apply {
-                addView(zart("Blau, wo es zäh war — rot, wo es lief"))
+                addView(zart(getString(R.string.v_tempo_legende)))
                 addView(tempokarte(strecke, karten))
                 addView(tempolegende(tempoText(langsam), tempoText(schnell)))
             })
@@ -258,29 +258,29 @@ class VergangeneActivity : KieselActivity() {
     }
 
     private fun hoehenkarte(e: TrainingTab.Eintrag, hoehe: List<Trainingsanalyse.Verlaufspunkt>, strecke: List<Trainingsanalyse.Streckenpunkt>) {
-        inhalt.addView(abschnitt("HÖHENPROFIL"))
+        inhalt.addView(abschnitt(getString(R.string.v_hoehenprofil)))
         inhalt.addView(karte().apply {
             addView(reihe().apply {
-                addView(messwert("Aufstieg", Zahlen.ganz(Spur.hoehenmeter(e.punkte)), "m", 0f, false))
-                addView(messwert("Tiefster", Zahlen.ganz(hoehe.minOf { it.wert }), "m ü. M.", 0f, false))
-                addView(messwert("Höchster", Zahlen.ganz(hoehe.maxOf { it.wert }), "m ü. M.", 0f, false))
+                addView(messwert(getString(R.string.t_aufstieg), Zahlen.ganz(Spur.hoehenmeter(e.punkte)), "m", 0f, false))
+                addView(messwert(getString(R.string.v_tiefster), Zahlen.ganz(hoehe.minOf { it.wert }), getString(R.string.v_m_ue_m), 0f, false))
+                addView(messwert(getString(R.string.v_hoechster), Zahlen.ganz(hoehe.maxOf { it.wert }), getString(R.string.v_m_ue_m), 0f, false))
             })
             val steil = Trainingsanalyse.steigung(strecke).maxOrNull() ?: 0.0
-            if (steil >= 5) addView(zart("Steilste Stelle " + Zahlen.ganz(steil) + " %").apply { setPadding(0, dp(6f), 0, 0) })
+            if (steil >= 5) addView(zart(getString(R.string.v_steilste, Zahlen.ganz(steil) ?: "")).apply { setPadding(0, dp(6f), 0, 0) })
             addView(streckenverlauf(hoehe, farbe(R.color.sport_wandern), "m", nachkomma = 0, hoehe = 130f))
         })
     }
 
     private fun kilometerkarte(km: List<Trainingsanalyse.Kilometer>, rad: Boolean, ton: Int, tempoText: (Double) -> String) {
-        inhalt.addView(abschnitt("KILOMETER FÜR KILOMETER"))
+        inhalt.addView(abschnitt(getString(R.string.v_km_fuer_km)))
         inhalt.addView(karte().apply {
             val schnellste = km.filter { it.meter >= 900 }.minByOrNull { it.sekunden / it.meter }
             addView(reihe().apply {
                 addView(zart("km").apply { minWidth = dp(34f) })
-                addView(zart("Zeit").apply { layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f) })
+                addView(zart(getString(R.string.t_zeit)).apply { layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f) })
                 addView(zart(if (rad) "km/h" else "/km").apply { minWidth = dp(64f) })
-                addView(zart("Puls").apply { minWidth = dp(48f) })
-                addView(zart("Auf").apply { minWidth = dp(48f); gravity = android.view.Gravity.END })
+                addView(zart(getString(R.string.v_puls_kurz)).apply { minWidth = dp(48f) })
+                addView(zart(getString(R.string.v_auf)).apply { minWidth = dp(48f); gravity = android.view.Gravity.END })
             })
             km.forEach { k ->
                 addView(strich())
@@ -302,7 +302,7 @@ class VergangeneActivity : KieselActivity() {
                     })
                 })
             }
-            if (km.any { it.meter < 900 }) addView(zart("* angefangener Kilometer").apply { setPadding(0, dp(6f), 0, 0) })
+            if (km.any { it.meter < 900 }) addView(zart(getString(R.string.v_angefangen)).apply { setPadding(0, dp(6f), 0, 0) })
         })
     }
 
@@ -321,41 +321,43 @@ class VergangeneActivity : KieselActivity() {
             .map { Duration.between(start, it.startTime).seconds to Duration.between(start, it.endTime).seconds }
 
         pulsUeberZeit(e, ton, saetze.map { Triple(it.first.toDouble(), it.second.toDouble(), ton) },
-            "Die Bänder sind die Sätze — dazwischen fällt der Puls")
+            getString(R.string.v_baender_saetze))
 
         if (saetze.isEmpty()) {
             if (e.puls.size < 2) inhalt.addView(karte().apply {
-                addView(zart("Die Uhr hat keine Sätze gezählt — vielleicht bewegte sich das Handgelenk zu wenig."))
+                addView(zart(getString(R.string.v_keine_saetze)))
             })
             return
         }
 
-        inhalt.addView(abschnitt("SÄTZE"))
+        inhalt.addView(abschnitt(getString(R.string.v_saetze_titel)))
         inhalt.addView(karte().apply {
             val erholung = Trainingsanalyse.erholung(e.puls, pausen)
             val pausenSek = pausen.map { (a, b) -> (b - a).toDouble() }
             addView(reihe().apply {
-                addView(messwert("Sätze", saetze.size.toString(), "", 0f, false))
-                addView(messwert("Wdh.", saetze.sumOf { it.third }.toString(), "gesamt", 0f, false))
-                addView(messwert("Pause Ø", pausenSek.takeIf { it.isNotEmpty() }?.let { Zahlen.ganz(it.average()) }, "s", 0f, false))
+                addView(messwert(getString(R.string.v_saetze), saetze.size.toString(), "", 0f, false))
+                addView(messwert(getString(R.string.v_wdh), saetze.sumOf { it.third }.toString(), getString(R.string.v_gesamt), 0f, false))
+                addView(messwert(getString(R.string.v_pause_schnitt), pausenSek.takeIf { it.isNotEmpty() }?.let { Zahlen.ganz(it.average()) }, "s", 0f, false))
             })
             if (erholung != null) {
                 addView(zart(
-                    "In den Pausen fällt der Puls um " + Zahlen.ganz(erholung) + " Schläge je Minute" +
+                    getString(
                         when {
-                            erholung >= 20 -> " — schnelle Erholung."
-                            erholung >= 10 -> " — solide Erholung."
-                            else -> " — der Puls bleibt oben; längere Pausen helfen."
-                        }
+                            erholung >= 20 -> R.string.v_erholung_schnell
+                            erholung >= 10 -> R.string.v_erholung_solide
+                            else -> R.string.v_erholung_oben
+                        },
+                        Zahlen.ganz(erholung) ?: "",
+                    )
                 ).apply { setPadding(0, dp(8f), 0, dp(4f)) })
             }
             addView(reihe().apply {
                 setPadding(0, dp(6f), 0, 0)
-                addView(zart("Satz").apply { minWidth = dp(40f) })
-                addView(zart("Wdh.").apply { minWidth = dp(48f) })
-                addView(zart("Dauer").apply { layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f) })
-                addView(zart("Puls Ø").apply { minWidth = dp(56f) })
-                addView(zart("Pause").apply { minWidth = dp(56f); gravity = android.view.Gravity.END })
+                addView(zart(getString(R.string.v_satz)).apply { minWidth = dp(40f) })
+                addView(zart(getString(R.string.v_wdh)).apply { minWidth = dp(48f) })
+                addView(zart(getString(R.string.t_dauer)).apply { layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f) })
+                addView(zart(getString(R.string.t_puls_schnitt)).apply { minWidth = dp(56f) })
+                addView(zart(getString(R.string.v_pause)).apply { minWidth = dp(56f); gravity = android.view.Gravity.END })
             })
             val meiste = saetze.maxOf { it.third }
             saetze.forEachIndexed { i, (von, bis, wdh) ->
@@ -386,7 +388,7 @@ class VergangeneActivity : KieselActivity() {
      * hat.
      */
     private suspend fun yoga(e: TrainingTab.Eintrag, ton: Int) {
-        pulsUeberZeit(e, ton, emptyList(), "Ruhig ist gut — die Kurve soll fallen, nicht steigen")
+        pulsUeberZeit(e, ton, emptyList(), getString(R.string.v_ruhig))
 
         val hrv = try {
             Akte(this).bereit()?.readRecords(
@@ -399,7 +401,7 @@ class VergangeneActivity : KieselActivity() {
             null
         }
 
-        inhalt.addView(abschnitt("RUHE"))
+        inhalt.addView(abschnitt(getString(R.string.v_ruhe)))
         inhalt.addView(karte().apply {
             if (e.puls.size >= 2) {
                 val ende = e.puls.last().sekunde
@@ -407,18 +409,18 @@ class VergangeneActivity : KieselActivity() {
                 val schluss = Trainingsanalyse.pulsMittel(e.puls, ende - 120, ende)
                 val tiefster = e.puls.minOf { it.bpm }
                 addView(reihe().apply {
-                    addView(messwert("Anfang", anfang?.let { Zahlen.ganz(it) }, "bpm", 0f, false))
-                    addView(messwert("Ende", schluss?.let { Zahlen.ganz(it) }, "bpm", 0f, false))
-                    addView(messwert("Tiefster", tiefster.toString(), "bpm", 0f, false))
+                    addView(messwert(getString(R.string.v_anfang), anfang?.let { Zahlen.ganz(it) }, "bpm", 0f, false))
+                    addView(messwert(getString(R.string.v_ende), schluss?.let { Zahlen.ganz(it) }, "bpm", 0f, false))
+                    addView(messwert(getString(R.string.v_tiefster), tiefster.toString(), "bpm", 0f, false))
                 })
                 if (anfang != null && schluss != null) {
                     val d = anfang - schluss
                     addView(zart(
                         when {
-                            d >= 8 -> "Der Puls ist um " + Zahlen.ganz(d) + " Schläge gefallen — die Stunde hat beruhigt."
-                            d >= 3 -> "Der Puls ist leicht gefallen, um " + Zahlen.ganz(d) + " Schläge."
-                            d > -3 -> "Der Puls blieb, wo er war."
-                            else -> "Der Puls ist gestiegen — eine fordernde Stunde."
+                            d >= 8 -> getString(R.string.v_gefallen, Zahlen.ganz(d) ?: "")
+                            d >= 3 -> getString(R.string.v_leicht_gefallen, Zahlen.ganz(d) ?: "")
+                            d > -3 -> getString(R.string.v_geblieben)
+                            else -> getString(R.string.v_gestiegen)
                         }
                     ).apply { setPadding(0, dp(8f), 0, 0) })
                 }
@@ -426,16 +428,13 @@ class VergangeneActivity : KieselActivity() {
             if (hrv != null) {
                 addView(reihe().apply {
                     setPadding(0, dp(10f), 0, 0)
-                    addView(messwert("HRV", Zahlen.ganz(hrv.heartRateVariabilityMillis), "ms RMSSD", 0f, false))
+                    addView(messwert(getString(R.string.hrv), Zahlen.ganz(hrv.heartRateVariabilityMillis), "ms RMSSD", 0f, false))
                 })
-                addView(zart(
-                    "Die Herzratenvariabilität aus dieser Stunde, von der Uhr gemessen. Höher heisst " +
-                        "entspannter; vergleichbar ist sie mit den Nachtwerten von Herzintervall."
-                ).apply { setPadding(0, dp(6f), 0, 0) })
+                addView(zart(getString(R.string.v_hrv_text)).apply { setPadding(0, dp(6f), 0, 0) })
             } else if (e.puls.size < 2) {
-                addView(zart("Kein Puls und keine HRV zu dieser Stunde."))
+                addView(zart(getString(R.string.v_kein_puls_hrv)))
             } else {
-                addView(zart("Keine HRV zu dieser Stunde — die Uhr misst sie erst seit Kieselsport 0.9.0.").apply { setPadding(0, dp(8f), 0, 0) })
+                addView(zart(getString(R.string.v_keine_hrv)).apply { setPadding(0, dp(8f), 0, 0) })
             }
         })
     }
@@ -453,11 +452,11 @@ class VergangeneActivity : KieselActivity() {
         }
         pulsUeberZeit(e, ton, bahnen.filterIndexed { i, _ -> i % 2 == 0 }
             .map { Triple(it.first.toDouble(), it.second.toDouble(), ton) },
-            "Jede zweite Bahn als Band")
+            getString(R.string.v_jede_zweite_bahn))
 
         if (bahnen.isEmpty()) {
             if (e.puls.size < 2) inhalt.addView(karte().apply {
-                addView(zart("Die Uhr hat keine Bahnen gezählt — war der Kompass bereit?"))
+                addView(zart(getString(R.string.v_keine_bahnen)))
             })
             return
         }
@@ -467,31 +466,33 @@ class VergangeneActivity : KieselActivity() {
         val schwankung = Trainingsanalyse.schwankung(zeiten)
         val je100 = if (meter > 0) zeiten.sum() / meter * 100 else 0.0
 
-        inhalt.addView(abschnitt("BAHNEN"))
+        inhalt.addView(abschnitt(getString(R.string.v_bahnen_titel)))
         inhalt.addView(karte().apply {
             addView(reihe().apply {
-                addView(messwert("Bahnen", bahnen.size.toString(), if (laenge > 0) "à " + Zahlen.ganz(laenge) + " m" else "", 0f, false))
-                addView(messwert("Strecke", if (meter > 0) Zahlen.ganz(meter) else null, "m", 0f, false))
-                addView(messwert("je 100 m", if (je100 > 0) String.format("%d:%02d", (je100 / 60).toInt(), (je100 % 60).toInt()) else null, "min", 0f, false))
+                addView(messwert(getString(R.string.v_bahnen), bahnen.size.toString(), if (laenge > 0) getString(R.string.v_a_m, Zahlen.ganz(laenge) ?: "") else "", 0f, false))
+                addView(messwert(getString(R.string.t_strecke), if (meter > 0) Zahlen.ganz(meter) else null, "m", 0f, false))
+                addView(messwert(getString(R.string.v_je_100), if (je100 > 0) String.format("%d:%02d", (je100 / 60).toInt(), (je100 % 60).toInt()) else null, "min", 0f, false))
             })
             addView(zart(
-                "Bahnzeiten schwanken um ±" + Zahlen.ganz(schwankung) + " s" +
+                getString(
                     when {
-                        schwankung <= 3 -> " — sehr gleichmässig."
-                        schwankung <= 8 -> " — gleichmässig."
-                        else -> " — ungleich; hinten wurde es langsamer oder vorne war es zu schnell."
-                    }
+                        schwankung <= 3 -> R.string.v_sehr_gleich
+                        schwankung <= 8 -> R.string.v_gleich
+                        else -> R.string.v_ungleich
+                    },
+                    Zahlen.ganz(schwankung) ?: "",
+                )
             ).apply { setPadding(0, dp(8f), 0, dp(4f)) })
             // Jede Bahn ein Balken, gefaerbt vom Schnellsten (rot) zum Langsamsten (blau).
             val schnellste = zeiten.minOrNull() ?: 0.0
             val langsamste = zeiten.maxOrNull() ?: 1.0
             addView(streckenverlauf(
                 zeiten.mapIndexed { i, z -> Trainingsanalyse.Verlaufspunkt(i + 1.0, z) },
-                ton, "s je Bahn",
+                ton, getString(R.string.v_s_je_bahn),
                 farbeJeWert = { z -> Zonenfarben.tempofarbe(((langsamste - z) / (langsamste - schnellste).coerceAtLeast(1.0)).toFloat()) },
                 flaeche = false, nachkomma = 0, hoehe = 140f, zeitachse = true,
             ))
-            addView(zart("Bahn für Bahn — rot die schnellen, blau die langsamen. Die Achse zählt Bahnen, nicht Minuten.").apply { setPadding(0, dp(4f), 0, 0) })
+            addView(zart(getString(R.string.v_bahn_legende)).apply { setPadding(0, dp(4f), 0, 0) })
         })
     }
 
@@ -505,17 +506,18 @@ class VergangeneActivity : KieselActivity() {
     private fun zeigeListe(aeltere: List<TrainingTab.Eintrag>) {
         if (aeltere.isEmpty()) {
             inhalt.addView(karte().apply {
-                addView(zart("Noch keine älteren Trainings in den letzten drei Monaten."))
+                addView(zart(getString(R.string.v_keine_aelteren)))
             })
             return
         }
         val zone = ZoneId.systemDefault()
-        val monat = DateTimeFormatter.ofPattern("LLLL yyyy", Locale.GERMAN)
+        val sprache = Locale.getDefault()
+        val monat = DateTimeFormatter.ofPattern("LLLL yyyy", sprache)
         aeltere.groupBy { YearMonth.from(it.sitzung.startTime.atZone(zone)) }
             .forEach { (ym, liste) ->
                 val minuten = liste.sumOf { Sportart.minuten(it.sitzung) }
                 inhalt.addView(abschnitt(
-                    monat.format(ym).uppercase(Locale.GERMAN) + "  ·  " + liste.size + "×  ·  " +
+                    monat.format(ym).uppercase(sprache) + "  ·  " + liste.size + "×  ·  " +
                         (Zahlen.dauer(minuten.toDouble()) ?: "")
                 ))
                 val k = karte().apply { setPadding(dp(14f), dp(6f), dp(14f), dp(6f)) }
@@ -527,10 +529,7 @@ class VergangeneActivity : KieselActivity() {
                 }
                 inhalt.addView(k)
             }
-        inhalt.addView(zart(
-            "Die letzten drei Monate. Ältere Trainings stehen weiter in der " +
-                "Gesundheitsakte, hier aber nicht."
-        ).apply {
+        inhalt.addView(zart(getString(R.string.v_drei_monate)).apply {
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { topMargin = dp(4f) }

@@ -46,17 +46,14 @@ object GesundheitTab {
 
         if (stand == null) {
             val k = ctx.karte()
-            k.addView(ctx.schild(false, "Gesundheitsakte nicht verfügbar"))
-            k.addView(ctx.zart(
-                "Ohne Health Connect gibt es nichts zu lesen. Die App trägt " +
-                    "dann auch nichts ein; die Navigation zur Uhr läuft trotzdem."
-            ))
+            k.addView(ctx.schild(false, ctx.getString(R.string.g_akte_fehlt)))
+            k.addView(ctx.zart(ctx.getString(R.string.g_akte_fehlt_text)))
             s.addView(k)
             return s
         }
 
         // --- Bewegung ---
-        s.addView(ctx.abschnittTipp("BEWEGUNG") {
+        s.addView(ctx.abschnittTipp(ctx.getString(R.string.g_bewegung)) {
             TrendActivity.zeige(ctx, TrendActivity.BEWEGUNG)
         })
         val bewegung = ctx.karte()
@@ -72,17 +69,15 @@ object GesundheitTab {
         // OHNE HEUTE. Ein halber Tag neben ganzen liest sich wie ein
         // schwacher Tag; oben steht der laufende Stand ohnehin, und zwar
         // als das, was er ist.
-        bewegung.addView(ctx.zart("Schritte, die sieben Tage davor"))
+        bewegung.addView(ctx.zart(ctx.getString(R.string.g_schritte_7)))
         bewegung.addView(ctx.wochenbild(
             stand.wocheSchritte.dropLast(1), Gesundheit.ZIEL_SCHRITTE
         ))
 
         if (profilHeute.isNotEmpty() || profilTypisch.isNotEmpty()) {
             bewegung.addView(ctx.zartMitHinweis(
-                "Schritte über den Tag, halbstündlich",
-                "Blass dahinter liegt der Schnitt der letzten zwei Wochen. " +
-                    "So sieht man, ob die Bewegung fehlt oder nur noch nicht " +
-                    "da war: am Vormittag ist jede Kurve niedrig."
+                ctx.getString(R.string.g_schritte_tag),
+                ctx.getString(R.string.g_schritte_tag_lang)
             ))
             bewegung.addView(ctx.tagesprofil(
                 profilHeute, profilTypisch, Gesundheit.STUFE_MIN,
@@ -92,23 +87,25 @@ object GesundheitTab {
         s.addView(bewegung)
 
         // --- Schlaf ---
-        s.addView(ctx.abschnittTipp("SCHLAF") {
+        s.addView(ctx.abschnittTipp(ctx.getString(R.string.g_schlaf)) {
             TrendActivity.zeige(ctx, TrendActivity.SCHLAF)
         })
         val schlaf = ctx.karte()
         schlaf.setOnClickListener { TrendActivity.zeige(ctx, TrendActivity.SCHLAF) }
         schlaf.addView(ctx.messreihe(
             ctx.wert(stand.schlaf, Zahlen.dauer(stand.schlaf.zahl), ""),
-            ctx.messwert("Tiefschlaf", Zahlen.dauer(stand.phasen?.tief), "", 0f, false),
+            ctx.messwert(ctx.getString(R.string.tiefschlaf), Zahlen.dauer(stand.phasen?.tief), "", 0f, false),
         ))
         // WANN, nicht nur wie lange. Die Schlafmitte ist der stabilere Wert:
         // wer jede Nacht gleich lang, aber zu anderen Zeiten schlaeft, hat
         // einen unauffaelligen Mittelwert und trotzdem etwas zu sehen.
         stand.nachtzeiten?.let { z ->
             schlaf.addView(ctx.fliesstext(
-                "Von " + (Zahlen.uhrzeitAb18(z.von) ?: "") + " bis " +
-                    (Zahlen.uhrzeitAb18(z.bis) ?: "") + ", Mitte " +
-                    (Zahlen.uhrzeitAb18(z.mitte) ?: "") + "."
+                ctx.getString(
+                    R.string.g_von_bis_mitte,
+                    Zahlen.uhrzeitAb18(z.von) ?: "", Zahlen.uhrzeitAb18(z.bis) ?: "",
+                    Zahlen.uhrzeitAb18(z.mitte) ?: "",
+                )
             ))
         }
         if (stand.phasen != null) {
@@ -117,20 +114,14 @@ object GesundheitTab {
             // KEIN GEVIERTELTER BALKEN, wenn niemand Phasen eingetragen hat.
             // Ein Bild, das die Nacht gleichmaessig aufteilt, waere huebsch
             // und erfunden.
-            schlaf.addView(ctx.zart(
-                "Keine Phasen eingetragen — die Akte kennt für diese Nacht nur " +
-                    "die Dauer."
-            ))
+            schlaf.addView(ctx.zart(ctx.getString(R.string.g_keine_phasen)))
         }
         val ideal = Einstellungen.schlafziel(ctx).toDouble()
         // OHNE DIE LETZTE NACHT, wie bei den Schritten: oben steht sie
         // ohnehin, und im Bild stuende sie neben sieben abgeschlossenen.
         schlaf.addView(ctx.zartMitHinweis(
-            "Die sieben Nächte davor",
-            "Die Linie ist dein Ideal von " + (Zahlen.dauer(ideal) ?: "") + ", " +
-                "einstellbar hinter dem Zahnrad. Was darüber liegt, steht in " +
-                "eigener Farbe. Die letzte Nacht fehlt hier: sie steht oben " +
-                "schon, und im Bild stünde sie neben sieben abgeschlossenen."
+            ctx.getString(R.string.g_sieben_naechte),
+            ctx.getString(R.string.g_sieben_naechte_lang, Zahlen.dauer(ideal) ?: "")
         ))
         schlaf.addView(ctx.wochenbild(
             stand.wocheSchlaf.dropLast(1), ziel = ideal, marke = ideal
@@ -138,7 +129,7 @@ object GesundheitTab {
         s.addView(schlaf)
 
         // --- Herz ---
-        s.addView(ctx.abschnittTipp("HERZ") {
+        s.addView(ctx.abschnittTipp(ctx.getString(R.string.g_herz)) {
             TrendActivity.zeige(ctx, TrendActivity.HERZ)
         })
         val herz = ctx.karte()
@@ -152,11 +143,8 @@ object GesundheitTab {
             ctx.wert(stand.pulsHoch, Zahlen.ganz(stand.pulsHoch.zahl), "bpm"),
         ))
         herz.addView(ctx.zartMitHinweis(
-            "Die letzten 24 Stunden",
-            "Jeder Punkt ist eine Messung, die Linie der gleitende Median, " +
-                "gestrichelt der Ruhepuls. Die Tagesgrenze ist eine " +
-                "Zählgrenze und kein Sichtschutz — sonst sähe man den " +
-                "Verlauf der vergangenen Nacht nicht."
+            ctx.getString(R.string.g_24h),
+            ctx.getString(R.string.g_24h_lang)
         ))
         herz.addView(ctx.pulsbild(
             stand.pulsverlauf, stand.ruhepuls.zahl, beginnMinute = stand.pulsBeginn
@@ -165,41 +153,32 @@ object GesundheitTab {
         // nicht als Kachel neben ihr - und der Satz sagt, was sie misst.
         stand.nachtStreuung.zahl?.let { sd ->
             herz.addView(ctx.textMitHinweis(
-                "In der Nacht " + (Zahlen.ganz(stand.ruhepuls.zahl) ?: "") +
-                    " ± " + (Zahlen.ganz(sd) ?: "") + " bpm, über " +
-                    stand.nachtProben + " Messungen.",
-                "Das ± ist die Streuung der Pulswerte über die Nacht — wie " +
-                    "ruhig sie verlief. Es ist NICHT die HRV: die misst die " +
-                    "Schwankung zwischen aufeinanderfolgenden Schlägen, und " +
-                    "dafür braucht es deren Zeitpunkte, nicht ganze bpm."
+                ctx.getString(
+                    R.string.g_nacht_streuung,
+                    Zahlen.ganz(stand.ruhepuls.zahl) ?: "", Zahlen.ganz(sd) ?: "", stand.nachtProben,
+                ),
+                ctx.getString(R.string.g_nacht_streuung_lang)
             ))
         }
 
         if (stand.ruhepuls.geschaetzt) {
             herz.addView(ctx.zartMitHinweis(
-                "Der Ruhepuls ist geschätzt (≈)",
-                "Niemand hat einen eingetragen. Gezeigt wird der Durchschnitt " +
-                    "der zehn tiefsten Messungen der Nacht — nah dran, aber " +
-                    "nicht dasselbe. Trägt die Uhr selbst einen ein, " +
-                    "verschwindet das Zeichen."
+                ctx.getString(R.string.g_ruhepuls_geschaetzt),
+                ctx.getString(R.string.g_ruhepuls_geschaetzt_lang)
             ))
         }
         s.addView(herz)
 
         if (eingaben != null) {
-            s.addView(ctx.abschnitt("WIE WAR DER TAG?"))
+            s.addView(ctx.abschnitt(ctx.getString(R.string.g_wie_war_tag)))
             s.addView(energiekarte(ctx, stand, eingaben))
         }
 
         // Woher die Zahlen kommen - und warum manche fehlen. Ohne diese Zeile
         // haelt man ein leeres Feld fuer einen Fehler der App.
         s.addView(ctx.zartMitHinweis(
-            "Alles aus Health Connect",
-            "Ein Strich heisst: dort steht nichts — nicht, dass der Wert null " +
-                "ist. Schritte, Puls und Schlaf müssen Uhr oder andere Apps " +
-                "liefern. Die Einschätzung von 1 bis 5 bleibt hier: für »wie " +
-                "ich mich fühle« hat die Akte keinen Satz. Was dort wirklich " +
-                "steht, sagen die Einstellungen."
+            ctx.getString(R.string.g_alles_hc),
+            ctx.getString(R.string.g_alles_hc_lang)
         ))
         return s
     }
@@ -248,10 +227,7 @@ object GesundheitTab {
         }
         k.addView(reihe)
         k.addView(ctx.zart(
-            if (stand.energie == null)
-                "1 heisst erschöpft, 5 heisst frisch. Eine Zahl am Tag, und in " +
-                    "drei Wochen sieht man, woran sie hängt."
-            else "Eingetragen. Ein Tippen ändert sie."
+            ctx.getString(if (stand.energie == null) R.string.g_energie_leer else R.string.g_energie_da)
         ))
         return k
     }

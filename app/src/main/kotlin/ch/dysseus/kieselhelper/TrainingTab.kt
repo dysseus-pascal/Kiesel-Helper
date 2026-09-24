@@ -163,13 +163,8 @@ object TrainingTab {
 
         if (eintraege.isEmpty()) {
             val k = ctx.karte()
-            k.addView(ctx.kartentitel("Noch kein Training"))
-            k.addView(ctx.zart(
-                "Sobald du auf der Uhr eines beendest, steht es hier — mit " +
-                    "Strecke, wenn das Telefon dabei war. Ohne Kieselsport auf " +
-                    "der Uhr bleibt dieser Schirm leer; Trainings anderer Apps " +
-                    "erscheinen, sobald sie in der Gesundheitsakte stehen."
-            ))
+            k.addView(ctx.kartentitel(ctx.getString(R.string.t_noch_keins)))
+            k.addView(ctx.zart(ctx.getString(R.string.t_noch_keins_text)))
             s.addView(k)
             return s
         }
@@ -177,28 +172,28 @@ object TrainingTab {
         val alle = eintraege.map { it.sitzung }
         val heute = java.time.LocalDate.now()
 
-        s.addView(ctx.abschnitt("DIE LETZTEN SIEBEN TAGE"))
+        s.addView(ctx.abschnitt(ctx.getString(R.string.t_sieben_tage)))
         s.addView(wochenkarte(ctx, eintraege))
 
         // DAS JUENGSTE GROSS, gleich unter der Woche. Was man sucht, wenn man
         // diesen Schirm oeffnet, ist fast immer das letzte Training.
-        s.addView(ctx.abschnitt("ZULETZT"))
+        s.addView(ctx.abschnitt(ctx.getString(R.string.t_zuletzt)))
         s.addView(sitzungskarte(ctx, eintraege.first(), gross = true))
 
-        s.addView(ctx.abschnitt("ACHT WOCHEN"))
+        s.addView(ctx.abschnitt(ctx.getString(R.string.t_acht_wochen)))
         s.addView(ctx.karte().apply {
-            addView(ctx.zart("Minuten je Woche, gestapelt nach Art"))
+            addView(ctx.zart(ctx.getString(R.string.t_minuten_woche)))
             addView(ctx.wochenstapel(alle, heute))
         })
 
-        s.addView(ctx.abschnitt("WORAUS ES BESTEHT"))
+        s.addView(ctx.abschnitt(ctx.getString(R.string.t_woraus)))
         s.addView(ctx.karte().apply {
-            addView(ctx.zart("Die letzten drei Monate, nach Zeit"))
+            addView(ctx.zart(ctx.getString(R.string.t_drei_monate)))
             addView(ctx.verteilung(alle))
         })
 
         if (eintraege.size > 1) {
-            s.addView(ctx.abschnitt("DAVOR"))
+            s.addView(ctx.abschnitt(ctx.getString(R.string.t_davor)))
             s.addView(vergangeneKarte(ctx, eintraege.drop(1)))
         }
         return s
@@ -237,30 +232,24 @@ object TrainingTab {
         val k = ctx.karte()
         val reihe = ctx.reihe()
         reihe.addView(ctx.messwert(
-            "Trainings", if (woche.isEmpty()) null else woche.size.toString(), "", 0f, false
+            ctx.getString(R.string.t_trainings), if (woche.isEmpty()) null else woche.size.toString(), "", 0f, false
         ))
         reihe.addView(ctx.messwert(
-            "Zeit", if (minuten > 0) Zahlen.dauer(minuten.toDouble()) else null, "", 0f, false
+            ctx.getString(R.string.t_zeit), if (minuten > 0) Zahlen.dauer(minuten.toDouble()) else null, "", 0f, false
         ))
         reihe.addView(ctx.messwert(
-            "Strecke", if (meter > 100) Zahlen.eine(meter / 1000) else null, "km", 0f, false
+            ctx.getString(R.string.t_strecke), if (meter > 100) Zahlen.eine(meter / 1000) else null, "km", 0f, false
         ))
         k.addView(reihe)
         k.addView(ctx.kalenderbild(alle.map { it.sitzung }, java.time.LocalDate.now()))
-        k.addView(ctx.zart(
-            "Vier Wochen. Die Farbe ist die Art, die Grösse die Dauer; ein " +
-                "Ring aussen heisst, es kam eine zweite Art dazu."
-        ))
+        k.addView(ctx.zart(ctx.getString(R.string.t_kalender_text)))
         if (woche.isEmpty()) {
-            k.addView(ctx.zart("In den letzten sieben Tagen keines."))
+            k.addView(ctx.zart(ctx.getString(R.string.t_sieben_keins)))
         } else if (meter <= 100) {
             // KEINE NULL KILOMETER. Ohne aufgezeichnete Strecke ist die
             // Zahl nicht null, sondern nicht vorhanden - und ein Strich
             // sagt das, eine Null luegt.
-            k.addView(ctx.zart(
-                "Keine Strecke aufgezeichnet — Kraft und Yoga haben keine, " +
-                    "sonst war das Telefon nicht dabei."
-            ))
+            k.addView(ctx.zart(ctx.getString(R.string.t_keine_strecke_woche)))
         }
         return k
     }
@@ -280,18 +269,18 @@ object TrainingTab {
 
         k.addView(ctx.reihe().apply {
             gravity = android.view.Gravity.CENTER_VERTICAL
-            addView(ctx.kartentitel("Vergangene Trainings").apply {
+            addView(ctx.kartentitel(ctx.getString(R.string.t_vergangene)).apply {
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             })
-            addView(ctx.fliesstext("Alle ›").apply {
+            addView(ctx.fliesstext(ctx.getString(R.string.t_alle)).apply {
                 setTextColor(ctx.akzentfarbe())
                 setTypeface(typeface, android.graphics.Typeface.BOLD)
             })
         })
         val minuten = aeltere.sumOf { Sportart.minuten(it.sitzung) }
         k.addView(ctx.zart(
-            aeltere.size.toString() + (if (aeltere.size == 1) " Training" else " Trainings") +
-                " in drei Monaten  ·  " + (Zahlen.dauer(minuten.toDouble()) ?: "")
+            ctx.resources.getQuantityString(R.plurals.t_n_trainings, aeltere.size, aeltere.size) +
+                "  ·  " + (Zahlen.dauer(minuten.toDouble()) ?: "")
         ))
         k.addView(ctx.reihe().apply {
             setPadding(0, ctx.dp(10f), 0, 0)
@@ -313,7 +302,12 @@ object TrainingTab {
     fun zeile(ctx: Context, eintrag: Eintrag, tue: () -> Unit): LinearLayout {
         val sitzung = eintrag.sitzung
         val art = Sportart.von(sitzung)
-        val wann = java.time.format.DateTimeFormatter.ofPattern("EEE d. MMM, HH:mm", java.util.Locale.GERMAN)
+        // Das Muster aus der Sprache des Telefons: "Do. 24. Sept., 16:05"
+        // auf Deutsch, "Thu, Sep 24, 16:05" auf Englisch.
+        val sprache = java.util.Locale.getDefault()
+        val wann = java.time.format.DateTimeFormatter.ofPattern(
+            android.text.format.DateFormat.getBestDateTimePattern(sprache, "EEEdMMMHHmm"), sprache
+        )
             .format(sitzung.startTime.atZone(java.time.ZoneId.systemDefault()))
         return ctx.reihe().apply {
             gravity = android.view.Gravity.CENTER_VERTICAL
@@ -323,7 +317,7 @@ object TrainingTab {
             addView(ctx.sportzeichen(art, 36f))
             addView(ctx.spalte().apply {
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                addView(ctx.fliesstext(sitzung.title ?: art.name).apply {
+                addView(ctx.fliesstext(sitzung.title ?: art.name(ctx)).apply {
                     setTypeface(typeface, android.graphics.Typeface.BOLD)
                 })
                 addView(ctx.zart(wann + "  ·  " + (Zahlen.dauer(Sportart.minuten(sitzung).toDouble()) ?: "")))
@@ -357,7 +351,7 @@ object TrainingTab {
         val dauer = Duration.between(sitzung.startTime, sitzung.endTime).toMinutes()
         k.addView(ctx.sportkopf(
             art,
-            (sitzung.title ?: art.name) + (if (gross) "" else ", " + (Zahlen.dauer(dauer.toDouble()) ?: "")),
+            (sitzung.title ?: art.name(ctx)) + (if (gross) "" else ", " + (Zahlen.dauer(dauer.toDouble()) ?: "")),
             DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
                 .format(Date(sitzung.startTime.toEpochMilli())),
             gross,
@@ -369,9 +363,9 @@ object TrainingTab {
                 setPadding(0, ctx.dp(12f), 0, 0)
                 val mittel = eintrag.puls.takeIf { it.isNotEmpty() }?.map { it.bpm }?.average()
                 val spitze = eintrag.puls.maxOfOrNull { it.bpm }
-                addView(ctx.messwert("Dauer", Zahlen.dauer(dauer.toDouble()), "", 0f, false))
-                addView(ctx.messwert("Puls Ø", mittel?.let { Zahlen.ganz(it) }, "bpm", 0f, false))
-                addView(ctx.messwert("Puls max", spitze?.toString(), "bpm", 0f, false))
+                addView(ctx.messwert(ctx.getString(R.string.t_dauer), Zahlen.dauer(dauer.toDouble()), "", 0f, false))
+                addView(ctx.messwert(ctx.getString(R.string.t_puls_schnitt), mittel?.let { Zahlen.ganz(it) }, "bpm", 0f, false))
+                addView(ctx.messwert(ctx.getString(R.string.t_puls_max), spitze?.toString(), "bpm", 0f, false))
             })
             if (eintrag.puls.size >= 2) {
                 k.addView(ctx.trainingspuls(eintrag.puls, ton))
@@ -385,13 +379,10 @@ object TrainingTab {
             if (mitKarte) k.addView(kartenbild(ctx, punkte, karten))
         } else if (!gross && eintrag.meter > 100) {
             k.addView(ctx.zart(
-                (Zahlen.eine(eintrag.meter / 1000) ?: "") + " km aufgezeichnet"
+                ctx.getString(R.string.t_km_aufgezeichnet, Zahlen.eine(eintrag.meter / 1000) ?: "")
             ))
         } else if (gross && mitKarte && Sportart.mitStrecke(sitzung)) {
-            k.addView(ctx.zart(
-                "Keine Strecke — entweder war das Telefon nicht dabei, oder die " +
-                    "Standortberechtigung fehlte."
-            ))
+            k.addView(ctx.zart(ctx.getString(R.string.t_keine_strecke)))
         }
         // DIE KARTE FUEHRT WEITER: Zonen, Puls ueber die Strecke, Tempo als
         // Farbe, Kilometer - alles, was mehr ist als der erste Blick, steht
@@ -399,7 +390,7 @@ object TrainingTab {
         if (antippbar) {
             val beginn = sitzung.startTime.epochSecond
             k.addView(android.widget.TextView(ctx).apply {
-                text = "Alles zum Training  ›"
+                text = ctx.getString(R.string.t_alles_zum_training)
                 setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14f)
                 setTypeface(typeface, android.graphics.Typeface.BOLD)
                 setTextColor(ctx.akzentfarbe())
@@ -448,9 +439,11 @@ object TrainingTab {
             ))
             val pausenSek = pausen.map { Duration.between(it.startTime, it.endTime).seconds }
             s.addView(ctx.zart(
-                saetze.size.toString() + " Sätze  ·  " + saetze.sumOf { it.repetitions } + " Wdh." +
-                    (if (pausenSek.isNotEmpty()) "  ·  Pause Ø " + pausenSek.average().toLong() + " s" else "") +
-                    ". Hoch heisst viele Wiederholungen, breit heisst lang."
+                ctx.getString(R.string.t_saetze, saetze.size, saetze.sumOf { it.repetitions }.toInt()) +
+                    (if (pausenSek.isNotEmpty()) {
+                        "  ·  " + ctx.getString(R.string.t_pause_schnitt, pausenSek.average().toInt())
+                    } else "") +
+                    ". " + ctx.getString(R.string.t_saetze_legende)
             ))
         } else {
             // BEI DEN BAHNEN ZAEHLT DIE ZEIT JE BAHN, nicht jede einzeln als
@@ -472,8 +465,10 @@ object TrainingTab {
                 ziel = schnitt.toDouble(),
             ))
             s.addView(ctx.zart(
-                bahnen.size.toString() + " Bahnen, je " + schnitt + " s im Schnitt " +
-                    "(" + (zeiten.minOrNull() ?: 0) + " bis " + (zeiten.maxOrNull() ?: 0) + " s)"
+                ctx.getString(
+                    R.string.t_bahnen, bahnen.size, schnitt.toInt(),
+                    (zeiten.minOrNull() ?: 0L).toInt(), (zeiten.maxOrNull() ?: 0L).toInt(),
+                )
             ))
         }
         return s
@@ -490,18 +485,18 @@ object TrainingTab {
         val kmh = if (meter > 100) (meter / 1000) / (sekunden / 3600.0) else 0.0
 
         val reihe = ctx.reihe()
-        reihe.addView(ctx.messwert("Strecke", Zahlen.eine(meter / 1000), "km", 0f, false))
+        reihe.addView(ctx.messwert(ctx.getString(R.string.t_strecke), Zahlen.eine(meter / 1000), "km", 0f, false))
         if (rad) {
-            reihe.addView(ctx.messwert("Tempo", if (kmh > 0) Zahlen.eine(kmh) else null, "km/h", 0f, false))
+            reihe.addView(ctx.messwert(ctx.getString(R.string.t_tempo_rad), if (kmh > 0) Zahlen.eine(kmh) else null, "km/h", 0f, false))
         } else {
             reihe.addView(ctx.messwert(
-                "Tempo",
+                ctx.getString(R.string.t_tempo),
                 if (tempo > 0) String.format("%d:%02d", (tempo / 60).toInt(), (tempo % 60).toInt())
                 else null,
                 "/km", 0f, false,
             ))
         }
-        reihe.addView(ctx.messwert("Aufstieg", Zahlen.ganz(hoehe), "m", 0f, false))
+        reihe.addView(ctx.messwert(ctx.getString(R.string.t_aufstieg), Zahlen.ganz(hoehe), "m", 0f, false))
         return ctx.spalte().apply { addView(reihe) }
     }
 
@@ -533,8 +528,8 @@ object TrainingTab {
         }
         ansicht.overlays.add(linie)
 
-        marke(ctx, ansicht, punkte.first(), "Start", Color.rgb(0x2E, 0x7D, 0x32))
-        marke(ctx, ansicht, punkte.last(), "Ende", Color.rgb(0xC6, 0x28, 0x28))
+        marke(ctx, ansicht, punkte.first(), ctx.getString(R.string.t_start), Color.rgb(0x2E, 0x7D, 0x32))
+        marke(ctx, ansicht, punkte.last(), ctx.getString(R.string.t_ende), Color.rgb(0xC6, 0x28, 0x28))
 
         // Der Ausschnitt muss NACH dem Zeichnen gesetzt werden: vorher kennt
         // die Karte ihre eigene Groesse nicht und rechnet den Zoom auf null.

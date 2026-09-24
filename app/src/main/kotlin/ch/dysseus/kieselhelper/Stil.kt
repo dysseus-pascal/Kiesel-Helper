@@ -548,7 +548,7 @@ fun Context.abschnittTipp(text: String, tue: () -> Unit): LinearLayout = reihe()
         )
     })
     addView(TextView(this@abschnittTipp).apply {
-        this.text = "Trend ›"
+        this.text = getString(R.string.trend_tipp)
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
         setTypeface(typeface, Typeface.BOLD)
         setTextColor(akzentfarbe())
@@ -644,7 +644,7 @@ fun Context.hinweiszeichen(lang: String): TextView = TextView(this).apply {
         marginStart = dp(8f)
         topMargin = dp(2f)
     }
-    contentDescription = "Erklärung"
+    contentDescription = getString(R.string.erklaerung)
     setOnClickListener { zeigeHinweis(it, lang) }
 }
 
@@ -680,7 +680,7 @@ private fun Context.zeigeHinweis(anker: View, lang: String) {
     val inhalt = karte().apply {
         setPadding(dp(18f), dp(16f), dp(18f), dp(16f))
         addView(fliesstext(lang))
-        addView(zart("Tippen schliesst"))
+        addView(zart(getString(R.string.tippen_schliesst)))
     }
     val breite = resources.displayMetrics.widthPixels - dp(48f)
     val fenster = android.widget.PopupWindow(
@@ -716,12 +716,12 @@ fun Context.bestaetige(frage: String, tue: () -> Unit) {
     fenster.isOutsideTouchable = true
 
     val reihe = reihe()
-    reihe.addView(knopfLeise("Abbrechen") { fenster.dismiss() }.apply {
+    reihe.addView(knopfLeise(getString(R.string.abbrechen)) { fenster.dismiss() }.apply {
         layoutParams = LinearLayout.LayoutParams(
             0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
         ).apply { marginEnd = dp(6f); topMargin = dp(8f) }
     })
-    reihe.addView(knopfHaupt("Weiter") {
+    reihe.addView(knopfHaupt(getString(R.string.weiter)) {
         fenster.dismiss()
         tue()
     }.apply {

@@ -117,7 +117,7 @@ class SaeulenView(
     override fun onDraw(leinwand: Canvas) {
         if (saeulen.isEmpty()) {
             schrift.textAlign = Paint.Align.LEFT
-            leinwand.drawText("Noch keine Tage im Speicher", 0f, height / 2f, schrift)
+            leinwand.drawText(context.getString(R.string.d_keine_tage), 0f, height / 2f, schrift)
             return
         }
 
@@ -266,7 +266,7 @@ fun Context.wochenbild(
     return saeulenbild(
         werte.map { tag ->
             Saeule(
-                tag.tag.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.GERMAN),
+                tag.tag.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
                 tag.zahl,
                 hervor = tag.tag == heute,
                 oben = if (tag.tag == heute && tag.zahl != null) beschriftung(tag.zahl) else null,
@@ -329,7 +329,7 @@ class SpannenView(
         val gueltig = spannen.filter { it.tief != null && it.hoch != null }
         if (gueltig.isEmpty()) {
             schrift.textAlign = Paint.Align.LEFT
-            leinwand.drawText("Noch keine Pulswerte", 0f, height / 2f, schrift)
+            leinwand.drawText(context.getString(R.string.d_keine_pulswerte), 0f, height / 2f, schrift)
             return
         }
 
@@ -452,10 +452,10 @@ fun Context.phasenbild(phasen: Gesundheit.Phasen): LinearLayout {
     val zeile = reihe()
     zeile.setPadding(0, dp(8f), 0, 0)
     listOf(
-        Triple("Tief", phasen.tief, R.color.phase_tief),
-        Triple("REM", phasen.rem, R.color.phase_rem),
-        Triple("Leicht", phasen.leicht, R.color.phase_leicht),
-        Triple("Wach", phasen.wach, R.color.phase_wach),
+        Triple(getString(R.string.phase_tief), phasen.tief, R.color.phase_tief),
+        Triple(getString(R.string.phase_rem), phasen.rem, R.color.phase_rem),
+        Triple(getString(R.string.phase_leicht), phasen.leicht, R.color.phase_leicht),
+        Triple(getString(R.string.phase_wach), phasen.wach, R.color.phase_wach),
     ).forEach { (name, minuten, farbId) ->
         zeile.addView(phasenschild(name, minuten, farbId))
     }
@@ -581,7 +581,7 @@ class PulsView(
         val alle = punkte + frueher
         if (alle.isEmpty()) {
             schrift.textAlign = Paint.Align.LEFT
-            leinwand.drawText("Keine Pulsmessungen", 0f, height / 2f, schrift)
+            leinwand.drawText(context.getString(R.string.d_keine_pulsmessungen), 0f, height / 2f, schrift)
             return
         }
 
@@ -714,7 +714,7 @@ class StreuView(
         val punkte = bild.punkte
         if (punkte.size < 3) {
             schrift.textAlign = Paint.Align.LEFT
-            leinwand.drawText("Noch zu wenige gemeinsame Tage", 0f, height / 2f, schrift)
+            leinwand.drawText(context.getString(R.string.d_zu_wenige_tage), 0f, height / 2f, schrift)
             return
         }
 
@@ -820,7 +820,7 @@ class TagesprofilView(
         val alle = heute + typisch
         if (alle.isEmpty()) {
             schrift.textAlign = Paint.Align.LEFT
-            leinwand.drawText("Noch keine Schritte gemessen", 0f, height / 2f, schrift)
+            leinwand.drawText(context.getString(R.string.d_keine_schritte), 0f, height / 2f, schrift)
             return
         }
 

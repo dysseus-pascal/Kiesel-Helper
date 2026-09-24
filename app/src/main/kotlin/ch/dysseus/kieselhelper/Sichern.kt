@@ -46,9 +46,9 @@ object Sichern {
 
     /** Ist der Ordner noch da und beschreibbar? */
     suspend fun pruefe(context: Context): String = withContext(Dispatchers.IO) {
-        val ziel = ziel(context) ?: return@withContext "Kein Ordner gewählt"
+        val ziel = ziel(context) ?: return@withContext context.getString(R.string.s_kein_ordner)
         when (val e = ziel.pruefe()) {
-            is OrdnerZiel.Ergebnis.Gut -> "Ordner »" + ziel.name + "« bereit"
+            is OrdnerZiel.Ergebnis.Gut -> context.getString(R.string.s_ordner_bereit, ziel.name)
             is OrdnerZiel.Ergebnis.Schlecht -> e.grund
         }
     }
@@ -61,7 +61,7 @@ object Sichern {
      * dasselbe Megabyte. Was schon oben liegt, steht in einer Liste daneben.
      */
     suspend fun jetzt(context: Context): String = withContext(Dispatchers.IO) {
-        val ziel = ziel(context) ?: return@withContext "Nicht eingerichtet"
+        val ziel = ziel(context) ?: return@withContext context.getString(R.string.s_nicht_eingerichtet)
 
         val tage = Speicher(context).alleTage()
         val spuren = Spur.alle(context)
@@ -74,7 +74,7 @@ object Sichern {
 
         when (val e = ziel.lege(Sicherung.DATEINAME, text.toByteArray(Charsets.UTF_8))) {
             is OrdnerZiel.Ergebnis.Schlecht -> {
-                Verlauf(context).merkeMeldung("Sicherung: " + e.grund)
+                Verlauf(context).merkeMeldung(context.getString(R.string.s_sicherung_x, e.grund))
                 return@withContext e.grund
             }
             else -> Unit
@@ -100,8 +100,9 @@ object Sichern {
         }
 
         Einstellungen.setzeSicherungZuletzt(context, Instant.now().toEpochMilli())
-        val meldung = tage.size.toString() + " Tage gesichert" +
-            (if (neue > 0) ", $neue neue Strecken" else "")
+        val r = context.resources
+        val meldung = r.getQuantityString(R.plurals.s_tage_gesichert, tage.size, tage.size) +
+            (if (neue > 0) r.getQuantityString(R.plurals.s_neue_strecken, neue, neue) else "")
         Verlauf(context).merkeMeldung(meldung)
         meldung
     }
@@ -114,11 +115,11 @@ object Sichern {
      * jede Kopie.
      */
     suspend fun zurueck(context: Context): String = withContext(Dispatchers.IO) {
-        val dav = ziel(context) ?: return@withContext "Nicht eingerichtet"
+        val dav = ziel(context) ?: return@withContext context.getString(R.string.s_nicht_eingerichtet)
         val text = dav.hole(Sicherung.DATEINAME)
-            ?: return@withContext "Keine Sicherung gefunden"
+            ?: return@withContext context.getString(R.string.s_keine_sicherung)
         val stand = Sicherung.ausJson(text)
-            ?: return@withContext "Die Datei dort ist keine Sicherung dieser App"
+            ?: return@withContext context.getString(R.string.s_fremde_datei)
 
         val speicher = Speicher(context)
         val vorhanden: Map<LocalDate, Map<String, Double>> = speicher.alleTage().toMap()
@@ -135,9 +136,10 @@ object Sichern {
             if (Spur.schreibeRoh(context, beginn, inhalt)) spuren++
         }
 
-        val meldung = "Zurückgeholt: " + luecken.size + " Tage ergänzt" +
-            (if (spuren > 0) ", $spuren Strecken" else "") +
-            (if (luecken.isEmpty() && spuren == 0) " — es fehlte nichts" else "")
+        val r = context.resources
+        val meldung = r.getQuantityString(R.plurals.s_zurueckgeholt, luecken.size, luecken.size) +
+            (if (spuren > 0) r.getQuantityString(R.plurals.s_strecken, spuren, spuren) else "") +
+            (if (luecken.isEmpty() && spuren == 0) " " + context.getString(R.string.s_nichts_fehlte) else "")
         Verlauf(context).merkeMeldung(meldung)
         meldung
     }

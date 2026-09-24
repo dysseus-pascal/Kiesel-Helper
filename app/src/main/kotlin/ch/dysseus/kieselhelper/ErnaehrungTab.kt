@@ -28,39 +28,32 @@ object ErnaehrungTab {
 
         if (stand == null) {
             val k = ctx.karte()
-            k.addView(ctx.schild(false, "Gesundheitsakte nicht verfügbar"))
-            k.addView(ctx.zart(
-                "Ohne Health Connect gibt es nichts zu lesen und nichts " +
-                    "einzutragen."
-            ))
+            k.addView(ctx.schild(false, ctx.getString(R.string.g_akte_fehlt)))
+            k.addView(ctx.zart(ctx.getString(R.string.e_akte_fehlt_text)))
             s.addView(k)
             return s
         }
 
-        s.addView(ctx.abschnittTipp("WASSER") {
+        s.addView(ctx.abschnittTipp(ctx.getString(R.string.e_wasser)) {
             TrendActivity.zeige(ctx, TrendActivity.ERNAEHRUNG)
         })
         s.addView(wasserkarte(ctx, stand).apply {
             setOnClickListener { TrendActivity.zeige(ctx, TrendActivity.ERNAEHRUNG) }
         })
 
-        s.addView(ctx.abschnittTipp("PRÄPARATE") {
+        s.addView(ctx.abschnittTipp(ctx.getString(R.string.e_praeparate)) {
             TrendActivity.zeige(ctx, TrendActivity.ERNAEHRUNG)
         })
         s.addView(praeparatkarte(ctx, stand))
 
         if (eingaben != null) {
-            s.addView(ctx.abschnitt("KOFFEIN"))
+            s.addView(ctx.abschnitt(ctx.getString(R.string.e_koffein)))
             s.addView(koffeinkarte(ctx, stand, eingaben))
         }
 
         s.addView(ctx.zartMitHinweis(
-            "Alles geht in die Gesundheitsakte",
-            "Wasser, Koffein und Präparate trägt diese App selbst dort ein — " +
-                "sie sind damit auch für andere Apps da und überleben eine " +
-                "Neuinstallation. Das Wasser meldet Drinktervall von der Uhr, " +
-                "die Präparate SupCycle. Auf jedem Eintrag liegt ein Riegel " +
-                "gegen Doppelte."
+            ctx.getString(R.string.e_alles_akte),
+            ctx.getString(R.string.e_alles_akte_lang)
         ))
         return s
     }
@@ -90,26 +83,22 @@ object ErnaehrungTab {
             addView(ctx.spalte().apply {
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                 addView(ctx.kartentitel(
-                    if (stand.koffeinMg == null || stand.koffeinMg <= 0) "Heute noch keines"
+                    if (stand.koffeinMg == null || stand.koffeinMg <= 0) ctx.getString(R.string.e_heute_keines)
                     else (Zahlen.ganz(stand.koffeinMg) ?: "") + " mg"
                 ))
                 addView(ctx.zart(
-                    "wirkt gerade: " + Math.round(kurve.wirkt(jetztMinute())) + " mg" +
-                        (Zahlen.uhrzeit(stand.koffeinLetzt)?.let { "  ·  zuletzt um " + it } ?: "")
+                    ctx.getString(R.string.e_wirkt_gerade, Math.round(kurve.wirkt(jetztMinute())).toInt()) +
+                        (Zahlen.uhrzeit(stand.koffeinLetzt)?.let {
+                            "  ·  " + ctx.getString(R.string.e_zuletzt_um, it)
+                        } ?: "")
                 ))
             })
         })
         if (stand.koffeinDosen.isNotEmpty()) {
             k.addView(kurve)
             k.addView(ctx.zartMitHinweis(
-                "Was im Blut ist, und ☾ zur Schlafenszeit",
-                "Jede Tasse ist ein Sprung und danach ein langsames Abklingen: " +
-                    "der Körper baut Koffein mit einer Halbwertszeit von rund " +
-                    "fünf Stunden ab. Ein Espresso um 17 Uhr ist um 22 Uhr noch " +
-                    "zur Hälfte da. Die fünf Stunden sind ein Mittel — sie " +
-                    "schwanken zwischen etwa drei und sieben —, die Kurve zeigt " +
-                    "die Form, keine Messung. Die Schlafenszeit ist die von " +
-                    "letzter Nacht."
+                ctx.getString(R.string.e_im_blut),
+                ctx.getString(R.string.e_im_blut_lang)
             ))
         }
 
@@ -117,8 +106,8 @@ object ErnaehrungTab {
         // in einer Zeile brach schon "Espresso" um, und ein Knopf, dessen
         // Beschriftung auf zwei Zeilen steht, sieht kaputt aus.
         listOf(
-            listOf("☕ Kaffee" to 80, "☕ Espresso" to 60),
-            listOf("🍵 Tee" to 40, "⚡ Energy" to 80),
+            listOf(ctx.getString(R.string.e_kaffee) to 80, ctx.getString(R.string.e_espresso) to 60),
+            listOf(ctx.getString(R.string.e_tee) to 40, ctx.getString(R.string.e_energy) to 80),
         ).forEach { paar ->
             val zeile = ctx.reihe()
             paar.forEach { (name, mg) ->
@@ -135,12 +124,8 @@ object ErnaehrungTab {
             k.addView(zeile)
         }
         k.addView(ctx.zartMitHinweis(
-            "Kaffee 80 mg, Espresso 60, Tee 40, Energy 80",
-            "Hausnummern für eine übliche Portion — auf zehn Milligramm kommt " +
-                "es nicht an. Für die Frage »Koffein nach 16 Uhr gegen " +
-                "Tiefschlaf« zählt ohnehin vor allem der Zeitpunkt, und den " +
-                "merkt die App sich selbst. Alles geht auch in die " +
-                "Gesundheitsakte."
+            ctx.getString(R.string.e_portionen),
+            ctx.getString(R.string.e_portionen_lang)
         ))
         return k
     }
@@ -170,15 +155,12 @@ object ErnaehrungTab {
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                 addView(ctx.kartentitel(
                     if (stand.wasser.zahl == null) "—"
-                    else String.format("%.1f l", ml / 1000).replace('.', ',')
+                    else (Zahlen.eine(ml / 1000) ?: "") + " l"
                 ))
                 addView(ctx.zart(
-                    "von " + String.format("%.1f l", ziel / 1000).replace('.', ',') + "  ·  " +
-                        when {
-                            fehlt <= 0 -> "geschafft"
-                            fehlt == 1 -> "noch ein Glas"
-                            else -> "noch $fehlt Gläser"
-                        }
+                    ctx.getString(R.string.e_von_ziel, Zahlen.eine(ziel / 1000) ?: "") + "  ·  " +
+                        if (fehlt <= 0) ctx.getString(R.string.e_geschafft)
+                        else ctx.resources.getQuantityString(R.plurals.e_noch_glaeser, fehlt, fehlt)
                 ))
                 addView(ctx.glaeserreihe(ml, glas, ziel, ton))
             })
@@ -186,20 +168,15 @@ object ErnaehrungTab {
 
         if (stand.glaeser.isNotEmpty()) {
             k.addView(ctx.trinkleiste(stand.glaeser, ton))
-            k.addView(ctx.zart("Heute, Glas für Glas — je grösser der Tropfen, desto mehr"))
+            k.addView(ctx.zart(ctx.getString(R.string.e_glas_fuer_glas)))
         }
 
         k.addView(ctx.wochenbild(
             stand.wocheWasser.takeLast(Gesundheit.TAGE), ziel, farbe = ton
         ).apply { (layoutParams as LinearLayout.LayoutParams).topMargin = ctx.dp(16f) })
         k.addView(ctx.zartMitHinweis(
-            "Sieben Tage, gestrichelt das Ziel",
-            "Jedes Glas meldet Drinktervall von der Uhr, mit dem Zeitpunkt. " +
-                "Das Ziel sind acht Gläser à 3 dl, wenn Drinktervall kein " +
-                "anderes schickt — eine Hausnummer, keine Vorschrift. Heute " +
-                "zählt mit, anders als bei Schritten und Schlaf: ein halber " +
-                "Tag Wasser ist kein schwacher Tag, sondern der Stand, nach " +
-                "dem man greift."
+            ctx.getString(R.string.e_sieben_tage_ziel),
+            ctx.getString(R.string.e_sieben_tage_ziel_lang)
         ))
         return k
     }
@@ -220,11 +197,7 @@ object ErnaehrungTab {
         if (faellig == 0 && stand.wocheSuppFaellig.none { it.zahl != null }) {
             // KEIN LEERES BILD, sondern der Grund. Wer nichts sieht, sucht
             // sonst den Fehler bei sich.
-            k.addView(ctx.zart(
-                "Von SupCycle kam noch nichts. Die Uhr meldet ihren Stand, " +
-                    "sobald dort etwas abgehakt wird — rückwirkend gibt es " +
-                    "nichts zu holen, das fängt ab der ersten Einnahme an."
-            ))
+            k.addView(ctx.zart(ctx.getString(R.string.e_supp_leer)))
             return k
         }
 
@@ -234,7 +207,7 @@ object ErnaehrungTab {
             addView(ctx.spalte().apply {
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                 if (stand.suppListe.isEmpty()) {
-                    addView(ctx.zart("Was heute ansteht, weiss SupCycle."))
+                    addView(ctx.zart(ctx.getString(R.string.e_supcycle_weiss)))
                 }
                 stand.suppListe.forEach { eintrag ->
                     addView(ctx.reihe().apply {
@@ -256,7 +229,7 @@ object ErnaehrungTab {
                 stand.wocheSuppFaellig.takeLast(Gesundheit.TAGE).map { t ->
                     Saeule(
                         t.tag.dayOfWeek.getDisplayName(
-                            java.time.format.TextStyle.SHORT, java.util.Locale.GERMAN
+                            java.time.format.TextStyle.SHORT, java.util.Locale.getDefault()
                         ),
                         t.zahl,
                         hervor = t.tag == Einstellungen.heute(ctx),
@@ -265,11 +238,8 @@ object ErnaehrungTab {
                 }
             ).apply { (layoutParams as LinearLayout.LayoutParams).topMargin = ctx.dp(16f) })
             k.addView(ctx.zartMitHinweis(
-                "Sieben Tage: hell geplant, dunkel genommen",
-                "Der genommene Teil sitzt IM geplanten. Zwei Balken " +
-                    "nebeneinander liessen offen, ob »3 genommen« von drei oder " +
-                    "von acht war. Was heute ansteht, weiss SupCycle; hier steht " +
-                    "nur, was davon abgehakt wurde."
+                ctx.getString(R.string.e_sieben_tage_supp),
+                ctx.getString(R.string.e_sieben_tage_supp_lang)
             ))
         }
         return k

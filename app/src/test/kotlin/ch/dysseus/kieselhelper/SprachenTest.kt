@@ -57,6 +57,17 @@ class SprachenTest {
     }
 
     @Test
+    fun mtbStehtInJedemTitel() {
+        // Sportart.von erkennt das Mountainbike nur am "MTB" im Titel, den
+        // Aufgaben in die Akte schreibt - ein "VTT" allein machte daraus
+        // auf einem franzoesischen Telefon ein Strassenvelo.
+        for (s in sprachen + "values") {
+            val titel = Ressourcen.texte(Ressourcen.datei(s)).getValue("a_titel_mtb")
+            assertTrue("$s: $titel", titel.contains("MTB"))
+        }
+    }
+
+    @Test
     fun englischIstDerRueckfall() {
         // Das Widget auf einem Telefon in einer sechsten Sprache.
         val l = Widgetlage.ermittle(

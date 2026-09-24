@@ -78,7 +78,11 @@ object Uhreinstellungen {
     private const val SC_EINTRAG = 26
 
     val GLASGROESSEN = listOf(100, 150, 200, 250, 300, 400, 500, 750, 1000)
-    val SPORTARTEN = listOf("kein Pin", "Laufen", "Strasse/Gravel", "Wandern", "Kraft", "MTB", "Yoga", "Schwimmen")
+    /** Die Arten fuer den Pin, in der Reihenfolge der Uhr - als Ressourcen, die Namen sind Sprache. */
+    val SPORTARTEN = listOf(
+        R.string.sa_kein_pin, R.string.sport_laufen, R.string.sa_strasse_gravel, R.string.sport_wandern,
+        R.string.sport_kraft, R.string.sa_mtb, R.string.sport_yoga, R.string.sport_schwimmen,
+    )
 
     /**
      * Wer zusieht: der Einstellungsschirm, solange er offen ist. Gerufen wird

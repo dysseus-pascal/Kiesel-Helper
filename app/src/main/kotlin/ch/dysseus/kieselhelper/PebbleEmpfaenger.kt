@@ -85,7 +85,9 @@ class PebbleEmpfaenger : BroadcastReceiver() {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Verarbeitung fehlgeschlagen", e)
-                Verlauf(context).merkeMeldung("Fehler: " + (e.message ?: e.javaClass.simpleName))
+                Verlauf(context).merkeMeldung(
+                    context.getString(R.string.fehler_x, e.message ?: e.javaClass.simpleName)
+                )
             } finally {
                 // Ein Empfaenger darf nicht warten - nach onReceive ist der
                 // Prozess frei. goAsync haelt ihn so lange am Leben.

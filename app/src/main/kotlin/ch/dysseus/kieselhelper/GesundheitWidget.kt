@@ -208,7 +208,7 @@ class GesundheitWidget : AppWidgetProvider() {
                 )?.records?.maxByOrNull { it.endTime }
                 if (s != null && klient != null) {
                     tEnde = java.time.LocalDateTime.ofInstant(s.endTime, zone)
-                    tName = s.title ?: Sportart.von(s).name
+                    tName = s.title ?: Sportart.von(s).name(context)
                     tMin = java.time.Duration.between(s.startTime, s.endTime).toMinutes()
                     tBeginn = s.startTime.epochSecond
                     val puls = klient.readRecords(

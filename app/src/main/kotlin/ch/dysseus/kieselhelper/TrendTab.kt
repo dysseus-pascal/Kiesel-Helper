@@ -37,8 +37,18 @@ object TrendTab {
      * [spalten] traegt die Bilder dieser Seite. [bezug] sagt, welche
      * Zusammenhaenge hierher gehoeren: ein Paar erscheint auf jeder Seite,
      * deren Groesse es enthaelt, und sonst nirgends.
+     *
+     * [schluessel] waehlt die Form der Seite, [nameId] ist, was dasteht -
+     * getrennt, weil ein Name in fuenf Sprachen kein Schluessel sein kann.
      */
-    data class Gruppe(val name: String, val spalten: List<String>, val bezug: Set<String>)
+    data class Gruppe(
+        val schluessel: String,
+        val nameId: Int,
+        val spalten: List<String>,
+        val bezug: Set<String>,
+    ) {
+        fun name(ctx: Context): String = ctx.getString(nameId)
+    }
 
     /**
      * EINE SEITE JE KARTE, nicht ein Schirm mit allem und einer Leiste oben.
@@ -47,17 +57,17 @@ object TrendTab {
      * jedes Mal im Bild.
      */
     val GRUPPEN = listOf(
-        Gruppe("Bewegung", listOf("schritte", "aktiv"), setOf("schritte", "aktiv")),
-        Gruppe("Schlaf", listOf("schlaf", "tief", "schlaf_mitte"), setOf("schlaf", "tief")),
-        Gruppe("Herz", listOf("ruhepuls", "puls_min", "puls_hoch", "puls_tief", "hrv"),
+        Gruppe("bewegung", R.string.gruppe_bewegung, listOf("schritte", "aktiv"), setOf("schritte", "aktiv")),
+        Gruppe("schlaf", R.string.gruppe_schlaf, listOf("schlaf", "tief", "schlaf_mitte"), setOf("schlaf", "tief")),
+        Gruppe("herz", R.string.gruppe_herz, listOf("ruhepuls", "puls_min", "puls_hoch", "puls_tief", "hrv"),
                setOf("ruhepuls", "hrv")),
-        Gruppe("Ernährung", listOf("wasser", "supp_faellig", "supp_genommen"),
+        Gruppe("ernaehrung", R.string.gruppe_ernaehrung, listOf("wasser", "supp_faellig", "supp_genommen"),
                setOf("koffein_mg")),
     )
 
     /** Die Zusammenhaenge, die auf die Seite dieser Gruppe gehoeren. */
     private fun paare(gruppe: Gruppe) =
-        PAARE.filter { (_, x, _, y) -> x in gruppe.bezug || y in gruppe.bezug }
+        PAARE.filter { it.spalteX in gruppe.bezug || it.spalteY in gruppe.bezug }
 
     /**
      * Alles, was die Seite aus dem Speicher braucht: ihre eigenen Spalten und
@@ -65,7 +75,7 @@ object TrendTab {
      * weil er aus beiden zusammengesetzt wird.
      */
     fun spaltenFuer(gruppe: Gruppe): Set<String> {
-        val alle = (gruppe.spalten + paare(gruppe).flatMap { listOf(it[1], it[3]) }).toMutableSet()
+        val alle = (gruppe.spalten + paare(gruppe).flatMap { listOf(it.spalteX, it.spalteY) }).toMutableSet()
         if ("ruhepuls" in alle) alle += "puls_min"
         return alle
     }
@@ -87,35 +97,26 @@ object TrendTab {
         val genug = gruppe.spalten.any { (daten[it]?.size ?: 0) >= 2 }
         if (!genug) {
             val k = ctx.karte()
-            k.addView(ctx.kartentitel("Noch zu wenig ${gruppe.name}"))
-            k.addView(ctx.zart(
-                "Die App schreibt jeden gelesenen Tag in ihre eigene Tabelle und " +
-                    "hat beim ersten Start geholt, was Health Connect noch hatte. " +
-                    "Findet sich dort nichts dazu, füllt sie sich ab jetzt — ein " +
-                    "Tag je Tag."
-            ))
-            if (tage > 0) k.addView(ctx.zart("Gespeichert: $tage Tage, seit $seit."))
+            k.addView(ctx.kartentitel(ctx.getString(R.string.tr_zu_wenig, gruppe.name(ctx))))
+            k.addView(ctx.zart(ctx.getString(R.string.tr_zu_wenig_text)))
+            if (tage > 0) k.addView(ctx.zart(ctx.getString(R.string.tr_gespeichert, tage, datum(seit))))
             s.addView(k)
             return s
         }
 
-        when (gruppe.name) {
-            "Bewegung" -> {
-                einfach(ctx, s, "SCHRITTE", "schritte", "Schritte", "", daten, heute)
-                einfach(ctx, s, "AKTIV", "aktiv", "Aktiv", " min", daten, heute)
+        when (gruppe.schluessel) {
+            "bewegung" -> {
+                val titel = { id: Int -> ctx.getString(id).uppercase(Locale.getDefault()) }
+                einfach(ctx, s, titel(R.string.schritte), "schritte", ctx.getString(R.string.schritte), "", daten, heute)
+                einfach(ctx, s, titel(R.string.aktiv), "aktiv", ctx.getString(R.string.aktiv), " min", daten, heute)
             }
-            "Schlaf" -> schlaf(ctx, s, daten, heute)
-            "Herz" -> herz(ctx, s, daten, heute, wolke)
-            "Ernährung" -> ernaehrung(ctx, s, daten, heute)
+            "schlaf" -> schlaf(ctx, s, daten, heute)
+            "herz" -> herz(ctx, s, daten, heute, wolke)
+            "ernaehrung" -> ernaehrung(ctx, s, daten, heute)
         }
         zusammenhaenge(ctx, s, paare(gruppe), daten, heute)
 
-        s.addView(ctx.zart(
-            "$tage Tage im Speicher, seit $seit. Heute zählt nicht mit — ein " +
-                "angefangener Tag hat immer zu wenig, und der heutige Wochentag " +
-                "wäre sonst für immer der schwächste. Ein Wochentag bleibt leer, " +
-                "bis er ${Auswertung.MINDESTENS} Mal aufgezeichnet ist."
-        ))
+        s.addView(ctx.zart(ctx.getString(R.string.tr_fuss, tage, datum(seit), Auswertung.MINDESTENS)))
         return s
     }
 
@@ -143,7 +144,7 @@ object TrendTab {
         val bild = Auswertung.bild(reihe, heute)
         val form: (Double) -> String = { Zahlen.ganz(it) ?: "" }
 
-        s.addView(ctx.abschnitt("$titel, TYPISCHE WOCHE"))
+        s.addView(ctx.abschnitt(ctx.getString(R.string.tr_typische_woche_x, titel)))
         val woche = ctx.karte()
         woche.addView(ctx.saeulenbild(
             bild.profil.map { p ->
@@ -153,18 +154,17 @@ object TrendTab {
             ziel = bild.gesamt,
         ))
         woche.addView(ctx.zart(
-            schnittzeile(bild, form, einheit) +
-                " Der Fühler zeigt die Spanne, aus der gemittelt wurde."
+            schnittzeile(ctx, bild, form, einheit) + " " + ctx.getString(R.string.tr_fuehler)
         ))
         extreme(ctx, woche, bild, form, einheit)
         wochenendzeile(ctx, woche, daten, spalte, name, form, heute)
         s.addView(woche)
 
-        s.addView(ctx.abschnitt("$titel, VERLAUF"))
+        s.addView(ctx.abschnitt(ctx.getString(R.string.tr_verlauf_x, titel)))
         val verlauf = ctx.karte()
         verlauf.addView(ctx.saeulenbild(wochensaeulen(ctx, bild), ziel = bild.gesamt))
-        verlauf.addView(ctx.zart("Kalenderwochen, je der Schnitt eines Tages"))
-        verlauf.addView(ctx.fliesstext(richtung(bild)))
+        verlauf.addView(ctx.zart(ctx.getString(R.string.tr_kw_schnitt_tag)))
+        verlauf.addView(ctx.fliesstext(richtung(ctx, bild)))
         s.addView(verlauf)
     }
 
@@ -181,7 +181,7 @@ object TrendTab {
         val form: (Double) -> String = { Zahlen.dauer(it) ?: "" }
         val ideal = Einstellungen.schlafziel(ctx).toDouble()
 
-        s.addView(ctx.abschnitt("TYPISCHE WOCHE"))
+        s.addView(ctx.abschnitt(ctx.getString(R.string.tr_typische_woche)))
         val woche = ctx.karte()
         woche.addView(ctx.saeulenbild(
             gesamt.profil.map { p ->
@@ -191,21 +191,18 @@ object TrendTab {
             ziel = gesamt.gesamt,
             marke = ideal,
         ))
-        woche.addView(ctx.zart(
-            "Heller Balken: Schlaf gesamt, dunkel der Tiefschlaf. Gestrichelt " +
-                "dein Schnitt, farbig dein Ideal."
-        ))
+        woche.addView(ctx.zart(ctx.getString(R.string.tr_schlaf_legende)))
         erreicht(ctx, woche, daten["schlaf"].orEmpty(), ideal, heute)
         woche.addView(ctx.fliesstext(
             buildString {
-                gesamt.gesamt?.let { append("Im Schnitt " + form(it)) }
-                tief.gesamt?.let { append(", davon " + form(it) + " tief") }
+                gesamt.gesamt?.let { append(ctx.getString(R.string.tr_im_schnitt, form(it))) }
+                tief.gesamt?.let { append(ctx.getString(R.string.tr_davon_tief, form(it))) }
                 if (isNotEmpty()) append(".")
             }
         ))
         extreme(ctx, woche, gesamt, form, "")
-        wochenendzeile(ctx, woche, daten, "schlaf", "Schlaf", form, heute)
-        wochenendzeile(ctx, woche, daten, "tief", "Tiefschlaf", form, heute)
+        wochenendzeile(ctx, woche, daten, "schlaf", ctx.getString(R.string.schlaf), form, heute)
+        wochenendzeile(ctx, woche, daten, "tief", ctx.getString(R.string.tiefschlaf), form, heute)
         s.addView(woche)
 
         // DIE SCHLAFMITTE IST DIE ZWEITE HAELFTE DER GESCHICHTE. Wer jede
@@ -215,30 +212,26 @@ object TrendTab {
             .filter { it.first < heute }.map { it.second }
         val streuung = Auswertung.streuung(mitten)
         if (streuung != null) {
-            s.addView(ctx.abschnitt("SCHLAFMITTE"))
+            s.addView(ctx.abschnitt(ctx.getString(R.string.tr_schlafmitte)))
             val k = ctx.karte()
             k.addView(ctx.kartentitel(
                 (Zahlen.uhrzeitAb18(mitten.average()) ?: "") + " ± " +
                     (Zahlen.dauer(streuung) ?: "")
             ))
             k.addView(ctx.fliesstext(
-                "Die Mitte deiner Nächte über " + mitten.size + " Tage. " +
-                    when {
-                        streuung < 30 -> "Sehr regelmässig."
-                        streuung < 60 -> "Regelmässig."
-                        streuung < 90 -> "Schwankend."
-                        else -> "Stark schwankend."
-                    }
+                ctx.getString(R.string.tr_mitte_naechte, mitten.size) + " " +
+                    ctx.getString(when {
+                        streuung < 30 -> R.string.tr_sehr_regelmaessig
+                        streuung < 60 -> R.string.tr_regelmaessig
+                        streuung < 90 -> R.string.tr_schwankend
+                        else -> R.string.tr_stark_schwankend
+                    })
             ))
-            k.addView(ctx.zart(
-                "Gerechnet wird ab 18 Uhr, damit Mitternacht keine Kante ist: " +
-                    "23:10 und 00:30 liegen achtzig Minuten auseinander, als " +
-                    "Uhrzeiten aber fast einen ganzen Tag."
-            ))
+            k.addView(ctx.zart(ctx.getString(R.string.tr_ab_18)))
             s.addView(k)
         }
 
-        s.addView(ctx.abschnitt("VERLAUF"))
+        s.addView(ctx.abschnitt(ctx.getString(R.string.tr_verlauf)))
         val verlauf = ctx.karte()
         val tiefWochen = tief.wochen.associate { it.montag to it.mittel }
         verlauf.addView(ctx.saeulenbild(
@@ -250,8 +243,8 @@ object TrendTab {
             ziel = gesamt.gesamt,
             marke = ideal,
         ))
-        verlauf.addView(ctx.zart("Kalenderwochen, je der Schnitt einer Nacht"))
-        verlauf.addView(ctx.fliesstext(richtung(gesamt)))
+        verlauf.addView(ctx.zart(ctx.getString(R.string.tr_kw_schnitt_nacht)))
+        verlauf.addView(ctx.fliesstext(richtung(ctx, gesamt)))
         s.addView(verlauf)
     }
 
@@ -281,7 +274,7 @@ object TrendTab {
         val tiefTag = tief.profil.associate { it.tag to it.mittel }
         val ruheTag = ruhe.profil.associate { it.tag to it.mittel }
 
-        s.addView(ctx.abschnitt("TYPISCHE WOCHE"))
+        s.addView(ctx.abschnitt(ctx.getString(R.string.tr_typische_woche)))
         val woche = ctx.karte()
         woche.addView(ctx.spannenbild(
             Auswertung.WOCHENTAGE.map { tag ->
@@ -289,15 +282,14 @@ object TrendTab {
                        hervor = tag == heute.dayOfWeek)
             }
         ))
-        woche.addView(ctx.zart("Vom Tagestief zum Tageshoch; der helle Strich ist der Ruhepuls."))
+        woche.addView(ctx.zart(ctx.getString(R.string.tr_herz_legende)))
         woche.addView(ctx.fliesstext(
             buildString {
-                ruhe.gesamt?.let { append("Ruhepuls im Schnitt " + (Zahlen.ganz(it) ?: "") + " bpm") }
+                ruhe.gesamt?.let { append(ctx.getString(R.string.tr_ruhepuls_schnitt, Zahlen.ganz(it) ?: "")) }
                 val t = tief.gesamt; val h = hoch.gesamt
                 if (t != null && h != null) {
                     if (isNotEmpty()) append(", ")
-                    append("der Tag typischerweise zwischen " + (Zahlen.ganz(t) ?: "") +
-                           " und " + (Zahlen.ganz(h) ?: ""))
+                    append(ctx.getString(R.string.tr_tag_zwischen, Zahlen.ganz(t) ?: "", Zahlen.ganz(h) ?: ""))
                 }
                 if (isNotEmpty()) append(".")
             }
@@ -305,14 +297,10 @@ object TrendTab {
         s.addView(woche)
 
         if (wolke.isNotEmpty()) {
-            s.addView(ctx.abschnitt("DER TYPISCHE TAG"))
+            s.addView(ctx.abschnitt(ctx.getString(R.string.tr_typischer_tag)))
             val wolkenkarte = ctx.karte()
             wolkenkarte.addView(ctx.pulsbild(emptyList(), ruhe.gesamt, wolke))
-            wolkenkarte.addView(ctx.zart(
-                "Alle Pulsmessungen der letzten 14 Tage, nach Tageszeit " +
-                    "übereinandergelegt. Die Linie ist der gleitende Median — " +
-                    "so verläuft ein Tag bei dir normalerweise."
-            ))
+            wolkenkarte.addView(ctx.zart(ctx.getString(R.string.tr_wolke)))
             s.addView(wolkenkarte)
         }
 
@@ -324,10 +312,10 @@ object TrendTab {
             },
             ziel = hrv.gesamt,
         ))
-        hrvKarte.addView(ctx.zart(schnittzeile(hrv, { Zahlen.ganz(it) ?: "" }, " ms")))
+        hrvKarte.addView(ctx.zart(schnittzeile(ctx, hrv, { Zahlen.ganz(it) ?: "" }, " ms")))
         s.addView(hrvKarte)
 
-        s.addView(ctx.abschnitt("VERLAUF"))
+        s.addView(ctx.abschnitt(ctx.getString(R.string.tr_verlauf)))
         val verlauf = ctx.karte()
         val hochW = hoch.wochen.associate { it.montag to it.mittel }
         val tiefW = tief.wochen.associate { it.montag to it.mittel }
@@ -339,8 +327,8 @@ object TrendTab {
                        hervor = m == heute.with(DayOfWeek.MONDAY))
             }
         ))
-        verlauf.addView(ctx.zart("Kalenderwochen"))
-        verlauf.addView(ctx.fliesstext(richtung(ruhe, "Ruhepuls, letzte vier Wochen")))
+        verlauf.addView(ctx.zart(ctx.getString(R.string.tr_kw)))
+        verlauf.addView(ctx.fliesstext(richtung(ctx, ruhe, ctx.getString(R.string.tr_ruhepuls_4w))))
         s.addView(verlauf)
     }
 
@@ -360,7 +348,8 @@ object TrendTab {
         val wasser = Auswertung.bild(daten["wasser"].orEmpty(), heute)
         val form: (Double) -> String = { Zahlen.ganz(it) ?: "" }
 
-        s.addView(ctx.abschnitt("WASSER, TYPISCHE WOCHE"))
+        val wasserTitel = ctx.getString(R.string.wasser).uppercase(Locale.getDefault())
+        s.addView(ctx.abschnitt(ctx.getString(R.string.tr_typische_woche_x, wasserTitel)))
         val karte = ctx.karte()
         karte.addView(ctx.saeulenbild(
             wasser.profil.map { p ->
@@ -368,28 +357,24 @@ object TrendTab {
             },
             ziel = wasser.gesamt,
         ))
-        karte.addView(ctx.zart(schnittzeile(wasser, form, " ml")))
+        karte.addView(ctx.zart(schnittzeile(ctx, wasser, form, " ml")))
         extreme(ctx, karte, wasser, form, " ml")
-        wochenendzeile(ctx, karte, daten, "wasser", "Wasser", form, heute)
+        wochenendzeile(ctx, karte, daten, "wasser", ctx.getString(R.string.wasser), form, heute)
         s.addView(karte)
 
-        s.addView(ctx.abschnitt("WASSER, VERLAUF"))
+        s.addView(ctx.abschnitt(ctx.getString(R.string.tr_verlauf_x, wasserTitel)))
         val verlauf = ctx.karte()
         verlauf.addView(ctx.saeulenbild(wochensaeulen(ctx, wasser), ziel = wasser.gesamt))
-        verlauf.addView(ctx.zart("Kalenderwochen, je der Schnitt eines Tages"))
-        verlauf.addView(ctx.fliesstext(richtung(wasser)))
+        verlauf.addView(ctx.zart(ctx.getString(R.string.tr_kw_schnitt_tag)))
+        verlauf.addView(ctx.fliesstext(richtung(ctx, wasser)))
         s.addView(verlauf)
 
         val faellig = Auswertung.bild(daten["supp_faellig"].orEmpty(), heute)
         val genommen = Auswertung.bild(daten["supp_genommen"].orEmpty(), heute)
-        s.addView(ctx.abschnitt("SUPPLEMENTE"))
+        s.addView(ctx.abschnitt(ctx.getString(R.string.tr_supplemente)))
         val supp = ctx.karte()
         if (faellig.anzahl == 0) {
-            supp.addView(ctx.zart(
-                "Von SupCycle kam noch nichts. Die Uhr meldet ihren Stand, " +
-                    "sobald dort etwas abgehakt wird — rückwirkend gibt es " +
-                    "nichts zu holen."
-            ))
+            supp.addView(ctx.zart(ctx.getString(R.string.tr_supp_leer)))
         } else {
             val genommenTag = genommen.profil.associate { it.tag to it.mittel }
             supp.addView(ctx.saeulenbild(
@@ -398,15 +383,13 @@ object TrendTab {
                            innen = genommenTag[p.tag])
                 }
             ))
-            supp.addView(ctx.zart("Hell geplant, dunkel genommen"))
+            supp.addView(ctx.zart(ctx.getString(R.string.tr_supp_legende)))
             val g = genommen.gesamt
             val f = faellig.gesamt
             supp.addView(ctx.fliesstext(
                 if (g != null && f != null && f > 0)
-                    "Von " + zehntel(f) + " geplanten Einnahmen am Tag kommen im " +
-                        "Schnitt " + zehntel(g) + " an — " +
-                        (Zahlen.ganz(g / f * 100) ?: "") + " %."
-                else "Noch kein Schnitt."
+                    ctx.getString(R.string.tr_supp_schnitt, zehntel(f), zehntel(g), Zahlen.ganz(g / f * 100) ?: "")
+                else ctx.getString(R.string.tr_kein_schnitt)
             ))
         }
         s.addView(supp)
@@ -424,16 +407,22 @@ object TrendTab {
      * Paare bilden, und mindestens die Haelfte davon ist Unsinn - wer lange
      * genug sucht, findet in jedem Datensatz eine Korrelation. Diese fuenf
      * sind die, nach denen man wirklich fragt.
+     *
+     * Die Namen sind die Formen fuer die Satzmitte ("mehr Schlaf", aber
+     * "plus de sommeil") - klein ausser im Deutschen; der Titel bekommt
+     * seinen Grossbuchstaben erst beim Zeigen.
      */
+    private data class Paar(val nameX: Int, val spalteX: String, val nameY: Int, val spalteY: String)
+
     private val PAARE = listOf(
-        listOf("Schlaf", "schlaf", "Ruhepuls", "ruhepuls"),
-        listOf("Schlaf", "schlaf", "HRV", "hrv"),
-        listOf("Tiefschlaf", "tief", "HRV", "hrv"),
-        listOf("Schritte", "schritte", "Schlaf", "schlaf"),
-        listOf("Aktiv", "aktiv", "Ruhepuls", "ruhepuls"),
+        Paar(R.string.n_schlaf, "schlaf", R.string.n_ruhepuls, "ruhepuls"),
+        Paar(R.string.n_schlaf, "schlaf", R.string.n_hrv, "hrv"),
+        Paar(R.string.n_tiefschlaf, "tief", R.string.n_hrv, "hrv"),
+        Paar(R.string.n_schritte, "schritte", R.string.n_schlaf, "schlaf"),
+        Paar(R.string.n_aktiv, "aktiv", R.string.n_ruhepuls, "ruhepuls"),
         // Die beiden, fuer die es das Eintragen von Hand ueberhaupt gibt.
-        listOf("Schlaf", "schlaf", "Energie", "energie"),
-        listOf("Koffein", "koffein_mg", "Tiefschlaf", "tief"),
+        Paar(R.string.n_schlaf, "schlaf", R.string.n_energie, "energie"),
+        Paar(R.string.n_koffein, "koffein_mg", R.string.n_tiefschlaf, "tief"),
     )
 
     /**
@@ -446,15 +435,18 @@ object TrendTab {
     private fun zusammenhaenge(
         ctx: Context,
         s: LinearLayout,
-        paare: List<List<String>>,
+        paare: List<Paar>,
         daten: Trenddaten,
         heute: LocalDate,
     ) {
         if (paare.isEmpty()) return
-        s.addView(ctx.abschnitt("ZUSAMMENHÄNGE"))
+        s.addView(ctx.abschnitt(ctx.getString(R.string.tr_zusammenhaenge)))
 
         var gezeigt = 0
-        paare.forEach { (nameX, spalteX, nameY, spalteY) ->
+        paare.forEach { paar ->
+            val (_, spalteX, _, spalteY) = paar
+            val nameX = ctx.getString(paar.nameX)
+            val nameY = ctx.getString(paar.nameY)
             val bild = Auswertung.zusammenhang(
                 reihe(daten, spalteX), reihe(daten, spalteY), heute
             )
@@ -462,41 +454,40 @@ object TrendTab {
             gezeigt++
 
             val karte = ctx.karte()
-            karte.addView(ctx.kartentitel("$nameX und $nameY"))
+            karte.addView(ctx.kartentitel(gross(ctx.getString(R.string.tr_x_und_y, nameX, nameY))))
             karte.addView(ctx.streubild(bild, formel(spalteX), formel(spalteY)))
-            karte.addView(ctx.zart("waagerecht $nameX, senkrecht $nameY"))
+            karte.addView(ctx.zart(ctx.getString(R.string.tr_achsen, nameX, nameY)))
             val r = bild.r ?: 0.0
+            val staerke = ctx.getString(when (bild.stufe) {
+                0 -> R.string.tr_staerke_0
+                1 -> R.string.tr_staerke_1
+                2 -> R.string.tr_staerke_2
+                else -> R.string.tr_staerke_3
+            })
             karte.addView(ctx.fliesstext(
-                "r = " + Zahlen.zwei(r) + " über ${bild.n} Tage — ${bild.staerke} " +
-                    "Zusammenhang." +
+                ctx.getString(R.string.tr_r_satz, Zahlen.zwei(r), bild.n, staerke) +
                     if (kotlin.math.abs(r) >= 0.2)
-                        " Mehr $nameX ging mit " +
-                            (if (r > 0) "mehr" else "weniger") + " $nameY einher."
+                        " " + ctx.getString(
+                            if (r > 0) R.string.tr_mehr_mehr else R.string.tr_mehr_weniger, nameX, nameY
+                        )
                     else ""
             ))
             s.addView(karte)
         }
 
         if (gezeigt == 0) {
-            val namen = paare.joinToString(", ") { "${it[0]} und ${it[2]}" }
+            val namen = gross(paare.joinToString(", ") {
+                ctx.getString(R.string.tr_x_und_y, ctx.getString(it.nameX), ctx.getString(it.nameY))
+            })
             s.addView(ctx.karte().apply {
-                addView(ctx.zart(
-                    "$namen — erscheinen ab ${Auswertung.PAARE_MINDESTENS} " +
-                        "gemeinsamen Tagen. Aus einer Handvoll Punkte lässt sich " +
-                        "jede Gerade legen, und sie sähe überzeugend aus."
-                ))
+                addView(ctx.zart(ctx.getString(R.string.tr_paare_spaeter, namen, Auswertung.PAARE_MINDESTENS)))
             })
             return
         }
 
         // EINMAL AM ENDE, nicht je Bild daneben: der Satz gilt fuer alle
         // Bilder hier, und wiederholt liest ihn niemand mehr.
-        s.addView(ctx.zart(
-            "Zusammenhang ist keine Ursache. Wer lange schläft, hat vielleicht " +
-                "einen tieferen Ruhepuls — oder wer einen tieferen Ruhepuls hat, " +
-                "schläft besser, oder beides hängt an einem dritten, das hier gar " +
-                "nicht steht."
-        ))
+        s.addView(ctx.zart(ctx.getString(R.string.tr_keine_ursache)))
     }
 
     /**
@@ -532,9 +523,10 @@ object TrendTab {
         val w = Auswertung.wochenende(reihe(daten, spalte), heute) ?: return
         val mehr = w.unterschied >= 0
         karte.addView(ctx.fliesstext(
-            "$name: " + form(w.wochenende) + " am Wochenende gegen " +
-                form(w.werktag) + " unter der Woche — " +
-                form(kotlin.math.abs(w.unterschied)) + (if (mehr) " mehr" else " weniger") + "."
+            ctx.getString(
+                if (mehr) R.string.tr_wochenende else R.string.tr_wochenende_weniger,
+                name, form(w.wochenende), form(w.werktag), form(kotlin.math.abs(w.unterschied)),
+            )
         ))
     }
 
@@ -558,10 +550,11 @@ object TrendTab {
         val schnitt = naechte.map { it.second }.average()
         val unterschied = schnitt - ideal
         karte.addView(ctx.fliesstext(
-            "Dein Ideal " + (Zahlen.dauer(ideal) ?: "") + " — erreicht in " +
-                gut + " von " + naechte.size + " Nächten. Im Schnitt " +
-                (Zahlen.dauer(kotlin.math.abs(unterschied)) ?: "") +
-                (if (unterschied >= 0) " darüber." else " darunter.")
+            ctx.getString(
+                if (unterschied >= 0) R.string.tr_ideal_darueber else R.string.tr_ideal_darunter,
+                Zahlen.dauer(ideal) ?: "", gut, naechte.size,
+                Zahlen.dauer(kotlin.math.abs(unterschied)) ?: "",
+            )
         ))
     }
 
@@ -588,11 +581,12 @@ object TrendTab {
     }
 
     private fun schnittzeile(
+        ctx: Context,
         bild: Auswertung.Bild,
         form: (Double) -> String,
         einheit: String,
-    ) = bild.gesamt?.let { "Gestrichelt: der Schnitt über alle Tage, " + form(it) + einheit + "." }
-        ?: "Noch kein Schnitt."
+    ) = bild.gesamt?.let { ctx.getString(R.string.tr_gestrichelt, form(it) + einheit) }
+        ?: ctx.getString(R.string.tr_kein_schnitt)
 
     private fun extreme(
         ctx: Context,
@@ -605,9 +599,11 @@ object TrendTab {
         val schwach = bild.schwaechster ?: return
         if (stark.tag == schwach.tag) return
         karte.addView(ctx.fliesstext(
-            "Am meisten am " + lang(stark.tag) + " (" + form(stark.mittel!!) + einheit +
-                "), am wenigsten am " + lang(schwach.tag) + " (" +
-                form(schwach.mittel!!) + einheit + ")."
+            ctx.getString(
+                R.string.tr_extreme,
+                lang(stark.tag), form(stark.mittel!!) + einheit,
+                lang(schwach.tag), form(schwach.mittel!!) + einheit,
+            )
         ))
     }
 
@@ -618,17 +614,27 @@ object TrendTab {
      * falsch, und die Zahl kann in beide Richtungen zeigen. Ein Doppelpunkt
      * stimmt immer.
      */
-    private fun richtung(bild: Auswertung.Bild, was: String = "Letzte vier Wochen") =
+    private fun richtung(ctx: Context, bild: Auswertung.Bild, was: String = ctx.getString(R.string.tr_letzte_4w)) =
         bild.veraenderung?.let { v ->
             val vorzeichen = if (v >= 0) "+" else ""
-            "$was: $vorzeichen${Zahlen.ganz(v)} % gegenüber den vier davor."
-        } ?: "Für einen Vergleich über acht Wochen fehlen noch Tage."
+            ctx.getString(R.string.tr_richtung, was, vorzeichen + Zahlen.ganz(v))
+        } ?: ctx.getString(R.string.tr_kein_vergleich)
 
+    // Wochentage in der Sprache des Telefons - "Mo" ist nur auf Deutsch Montag.
     private fun kurz(tag: DayOfWeek) =
-        tag.getDisplayName(TextStyle.SHORT, Locale.GERMAN)
+        tag.getDisplayName(TextStyle.SHORT, Locale.getDefault())
 
     private fun lang(tag: DayOfWeek) =
-        tag.getDisplayName(TextStyle.FULL, Locale.GERMAN)
+        tag.getDisplayName(TextStyle.FULL, Locale.getDefault())
+
+    /** Der erste Buchstabe gross - die Namen im Satz sind ausser im Deutschen klein. */
+    private fun gross(s: String) = s.replaceFirstChar { it.titlecase(Locale.getDefault()) }
+
+    /** Ein Datum, wie man es im Land des Telefons schreibt. */
+    private fun datum(d: LocalDate?): String = d?.format(
+        java.time.format.DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.MEDIUM)
+            .withLocale(Locale.getDefault())
+    ) ?: ""
 
     private fun kw(montag: LocalDate) =
         montag.get(WeekFields.ISO.weekOfWeekBasedYear()).toString()

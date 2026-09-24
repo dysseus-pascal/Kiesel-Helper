@@ -151,7 +151,9 @@ class HauptActivity : KieselActivity(), Eingaben {
         // Beim Wechsel nach oben rollen: der neue Reiter faengt oben an, und
         // eine halb heruntergescrollte Seite, die man nie angeschaut hat,
         // sieht aus wie ein Fehler.
-        aussen.addView(fussleiste(listOf("Gesundheit", "Training", "Ernährung")) { welcher ->
+        aussen.addView(fussleiste(listOf(
+            getString(R.string.reiter_gesundheit), getString(R.string.training), getString(R.string.reiter_ernaehrung)
+        )) { welcher ->
             gesundheit.visibility = if (welcher == 0) View.VISIBLE else View.GONE
             training.visibility = if (welcher == 1) View.VISIBLE else View.GONE
             ernaehrung.visibility = if (welcher == 2) View.VISIBLE else View.GONE
@@ -252,15 +254,12 @@ class HauptActivity : KieselActivity(), Eingaben {
         Ton.setze(Ton.GESUNDHEIT)
         if (bild.fehlt.isNotEmpty()) {
             val k = karte()
-            k.addView(schild(false, "Lese-Erlaubnis fehlt"))
+            k.addView(schild(false, getString(R.string.h_lese_erlaubnis_fehlt)))
             k.addView(zart(
-                bild.fehlt.size.toString() + " von " +
-                    Gesundheit.BERECHTIGUNGEN.size + " Werten sind " +
-                    "gesperrt. Gesperrt heisst hier leer — die Akte sagt " +
-                    "nicht Nein, sie schweigt."
+                getString(R.string.h_gesperrt, bild.fehlt.size, Gesundheit.BERECHTIGUNGEN.size)
             ))
-            k.addView(knopfHaupt("Erlaubnis erteilen", breit = true) {
-                erlaubnisStarter?.launch(bild.fehlt) ?: melde("Noch nicht bereit")
+            k.addView(knopfHaupt(getString(R.string.erlaubnis_erteilen), breit = true) {
+                erlaubnisStarter?.launch(bild.fehlt) ?: melde(getString(R.string.noch_nicht_bereit))
             })
             gesundheit.addView(k)
         }

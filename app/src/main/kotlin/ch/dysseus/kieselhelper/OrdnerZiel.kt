@@ -31,17 +31,16 @@ class OrdnerZiel(private val context: Context, private val baum: Uri) {
     }
 
     val name: String
-        get() = DocumentFile.fromTreeUri(context, baum)?.name ?: baum.lastPathSegment ?: "Ordner"
+        get() = DocumentFile.fromTreeUri(context, baum)?.name ?: baum.lastPathSegment
+            ?: context.getString(R.string.oz_ordner)
 
     private fun wurzel(): DocumentFile? =
         DocumentFile.fromTreeUri(context, baum)?.takeIf { it.exists() && it.isDirectory }
 
     /** Erreichbar und beschreibbar? */
     fun pruefe(): Ergebnis {
-        val w = wurzel() ?: return Ergebnis.Schlecht(
-            "Der Ordner auf dem Telefon ist nicht mehr erreichbar — bitte neu wählen"
-        )
-        if (!w.canWrite()) return Ergebnis.Schlecht("In diesen Ordner darf die App nicht schreiben")
+        val w = wurzel() ?: return Ergebnis.Schlecht(context.getString(R.string.oz_nicht_erreichbar))
+        if (!w.canWrite()) return Ergebnis.Schlecht(context.getString(R.string.oz_nicht_schreiben))
         return Ergebnis.Gut
     }
 
@@ -52,7 +51,7 @@ class OrdnerZiel(private val context: Context, private val baum: Uri) {
         val da = w.findFile(name)
         if (da != null && da.isDirectory) return Ergebnis.Gut
         return if (w.createDirectory(name) != null) Ergebnis.Gut
-        else Ergebnis.Schlecht("Unterordner »$name« liess sich nicht anlegen")
+        else Ergebnis.Schlecht(context.getString(R.string.oz_unterordner, name))
     }
 
     /** "spuren/spur-1.jsonl" -> der Unterordner und der Dateiname darin. */
@@ -72,13 +71,15 @@ class OrdnerZiel(private val context: Context, private val baum: Uri) {
             // Namen gaebe "kiesel-helper (1).json" - und die Sicherung von
             // gestern bliebe die, die man beim Zurueckholen findet.
             val ziel = d.findFile(datei)?.takeIf { it.isFile } ?: d.createFile(typ, datei)
-                ?: return Ergebnis.Schlecht("»$datei« liess sich nicht anlegen")
+                ?: return Ergebnis.Schlecht(context.getString(R.string.oz_nicht_anlegen, datei))
             context.contentResolver.openOutputStream(ziel.uri, "wt")?.use { it.write(inhalt) }
-                ?: return Ergebnis.Schlecht("»$datei« liess sich nicht schreiben")
+                ?: return Ergebnis.Schlecht(context.getString(R.string.oz_nicht_geschrieben, datei))
             Ergebnis.Gut
         } catch (e: Exception) {
             Log.w(PebbleEmpfaenger.TAG, "Ordner schreiben: " + e.message)
-            Ergebnis.Schlecht("Schreiben fehlgeschlagen: " + (e.message ?: e.javaClass.simpleName))
+            Ergebnis.Schlecht(
+                context.getString(R.string.oz_schreiben_fehlgeschlagen, e.message ?: e.javaClass.simpleName)
+            )
         }
     }
 

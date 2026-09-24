@@ -86,33 +86,31 @@ class UhrKarten(private val a: Activity) {
         val jetzt = System.currentTimeMillis()
         val gemeldet = Uhreinstellungen.gemeldet(a, z.dienst)
         zeile.text = when {
-            geaendert(z, stand) -> "Geändert — noch nicht an die Uhr geschickt."
+            geaendert(z, stand) -> a.getString(R.string.uk_geaendert)
             z.gesendet != null && stand != z.gesendet ->
                 if (jetzt - Uhreinstellungen.gesendet(a, z.dienst) < 12_000L) {
-                    "Unterwegs zur Uhr … ${z.app} öffnet sich dafür kurz."
+                    a.getString(R.string.uk_unterwegs, z.app)
                 } else {
-                    "Die Uhr hat den neuen Stand nicht bestätigt. Ist sie verbunden? Dann nochmal schicken."
+                    a.getString(R.string.uk_nicht_bestaetigt)
                 }
             stand == null ->
-                "Die Uhr hat sich noch nicht gemeldet — öffne ${z.app} einmal auf der Uhr. " +
-                    "Bis dahin stehen hier die Vorgaben."
-            else -> "Stand der Uhr, gemeldet " +
-                DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(gemeldet))
+                a.getString(R.string.uk_nie_gemeldet, z.app)
+            else -> a.getString(
+                R.string.uk_stand,
+                DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(gemeldet)),
+            )
         }
     }
 
     private fun kopf(k: LinearLayout) {
         k.removeAllViews()
-        k.addView(a.kartentitel("Auf der Uhr"))
-        k.addView(a.zart(
-            "Dieselben Einstellungen wie auf der Konfigseite in der Pebble-App. " +
-                "Geändert wird hier oder dort; es gilt, was die Uhr zuletzt gemeldet hat."
-        ))
+        k.addView(a.kartentitel(a.getString(R.string.uk_auf_der_uhr)))
+        k.addView(a.zart(a.getString(R.string.uk_kopf_text)))
     }
 
     private fun <T> fuss(z: Zustand<T>, k: LinearLayout, stand: T?, schicke: () -> Unit) {
         k.luft(12f)
-        k.addView(a.knopfHaupt("An die Uhr schicken", breit = true) { schicke() })
+        k.addView(a.knopfHaupt(a.getString(R.string.uk_schicken), breit = true) { schicke() })
         val zeile = a.zart("").apply { setPadding(0, a.dp(8f), 0, 0) }
         z.zeile = zeile
         k.addView(zeile)
@@ -134,19 +132,16 @@ class UhrKarten(private val a: Activity) {
         val d = dt.entwurf ?: stand ?: dt.vorgabe
         kopf(k)
         k.luft(6f)
-        k.addView(stufer("Gläser am Tag", (4..16).toList(), d.soll, { "$it" }) {
+        k.addView(stufer(a.getString(R.string.uk_glaeser_tag), (4..16).toList(), d.soll, { "$it" }) {
             merke(dt, standDt(), (dt.entwurf ?: d).copy(soll = it))
         })
-        k.addView(stufer("Glasgrösse", Uhreinstellungen.GLASGROESSEN, d.glasMl, this::glas) {
+        k.addView(stufer(a.getString(R.string.uk_glasgroesse), Uhreinstellungen.GLASGROESSEN, d.glasMl, this::glas) {
             merke(dt, standDt(), (dt.entwurf ?: d).copy(glasMl = it))
         })
-        k.addView(schalter("Trink-Animation", d.animation) {
+        k.addView(schalter(a.getString(R.string.uk_trink_animation), d.animation) {
             merke(dt, standDt(), (dt.entwurf ?: d).copy(animation = it))
         })
-        k.addView(a.zart(
-            "Das Soll gilt ab sofort und setzt das heutige Ziel zurück; »Ziel+« auf der " +
-                "Uhr erhöht es nur für heute."
-        ).apply { setPadding(0, a.dp(8f), 0, 0) })
+        k.addView(a.zart(a.getString(R.string.uk_dt_hinweis)).apply { setPadding(0, a.dp(8f), 0, 0) })
         fuss(dt, k, stand) {
             val neu = dt.entwurf ?: d
             Uhreinstellungen.sendeDrinktervall(a, neu)
@@ -173,31 +168,31 @@ class UhrKarten(private val a: Activity) {
         val jetzt = { sp.entwurf ?: s }
         kopf(k)
         k.luft(6f)
-        k.addView(unter("PULS"))
-        k.addView(stufer("Maximalpuls", (120..220).toList(), s.maxpuls, { "$it" }, grob = 5) {
+        k.addView(unter(a.getString(R.string.uk_puls)))
+        k.addView(stufer(a.getString(R.string.uk_maxpuls), (120..220).toList(), s.maxpuls, { "$it" }, grob = 5) {
             merke(sp, standSp(), jetzt().copy(maxpuls = it))
         })
-        k.addView(a.zart("Lang drücken: in Fünferschritten. Die Zonen hier rechnen mit demselben Wert."))
-        k.addView(unter("KRAFT"))
-        k.addView(stufer("Pause bis zum Brummen", (0..300 step 15).toList(), s.pause,
-            { if (it == 0) "nie" else "$it s" }) {
+        k.addView(a.zart(a.getString(R.string.uk_maxpuls_hinweis)))
+        k.addView(unter(a.getString(R.string.uk_kraft)))
+        k.addView(stufer(a.getString(R.string.uk_pause), (0..300 step 15).toList(), s.pause,
+            { if (it == 0) a.getString(R.string.uk_nie) else "$it s" }) {
             merke(sp, standSp(), jetzt().copy(pause = it))
         })
-        k.addView(stufer("Empfindlichkeit", listOf(1, 2, 3), s.empfind,
-            { listOf("träge", "normal", "fein")[it - 1] }) {
+        k.addView(stufer(a.getString(R.string.uk_empfind), listOf(1, 2, 3), s.empfind,
+            { a.getString(listOf(R.string.uk_traege, R.string.uk_normal, R.string.uk_fein)[it - 1]) }) {
             merke(sp, standSp(), jetzt().copy(empfind = it))
         })
-        k.addView(unter("SCHWIMMEN"))
-        k.addView(stufer("Beckenlänge", (10..50 step 5).toList(), s.becken, { "$it m" }) {
+        k.addView(unter(a.getString(R.string.uk_schwimmen)))
+        k.addView(stufer(a.getString(R.string.uk_becken), (10..50 step 5).toList(), s.becken, { "$it m" }) {
             merke(sp, standSp(), jetzt().copy(becken = it))
         })
-        k.addView(unter("PIN IN DER TIMELINE"))
+        k.addView(unter(a.getString(R.string.uk_pin)))
         // "HH:MM" wie die Konfigseite - sonst meldete die Uhr "08:00" zurueck,
         // wo "8:00" geschickt wurde, und der Stand saehe unbestaetigt aus.
-        val zeitKnopf = zeitknopf("Uhrzeit", s.pinZeit, zweistellig = true) { neu ->
+        val zeitKnopf = zeitknopf(a.getString(R.string.uk_uhrzeit), s.pinZeit, zweistellig = true) { neu ->
             merke(sp, standSp(), jetzt().copy(pinZeit = neu))
         }.apply { visibility = if (s.pinArt > 0) View.VISIBLE else View.GONE }
-        k.addView(stufer("Sportart", (0..7).toList(), s.pinArt, { Uhreinstellungen.SPORTARTEN[it] }) {
+        k.addView(stufer(a.getString(R.string.uk_sportart), (0..7).toList(), s.pinArt, { a.getString(Uhreinstellungen.SPORTARTEN[it]) }) {
             merke(sp, standSp(), jetzt().copy(pinArt = it))
             zeitKnopf.visibility = if (it > 0) View.VISIBLE else View.GONE
         })
@@ -254,7 +249,7 @@ class UhrKarten(private val a: Activity) {
             fun beschrifte() {
                 val q = plaetze[i]
                 val name = q?.name.orEmpty()
-                titel.text = name.ifBlank { "Platz ${i + 1} — leer" }
+                titel.text = name.ifBlank { a.getString(R.string.uk_platz_leer, i + 1) }
                 zusammen.text = if (q == null || name.isBlank()) "" else zusammenfassung(q)
                 zusammen.visibility = if (zusammen.text.isEmpty()) View.GONE else View.VISIBLE
                 pfeil.text = if (inhalt.visibility == View.VISIBLE) "▾" else "▸"
@@ -280,7 +275,7 @@ class UhrKarten(private val a: Activity) {
                 }
             }
             val nachAenderung = { aendere(); beschrifte() }
-            val feld = a.eingabefeld("Name — leer heisst kein Präparat").apply {
+            val feld = a.eingabefeld(a.getString(R.string.uk_name_hinweis)).apply {
                 setText(p0?.name.orEmpty())
                 inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
                 addTextChangedListener(object : TextWatcher {
@@ -295,28 +290,28 @@ class UhrKarten(private val a: Activity) {
                 })
             }
             inhalt.addView(feld)
-            val pauseZeile = stufer("Wochen Pause", (0..52).toList(), p.wochenAus,
-                { if (it == 0) "keine" else "$it" }) {
+            val pauseZeile = stufer(a.getString(R.string.uk_wochen_pause), (0..52).toList(), p.wochenAus,
+                { if (it == 0) a.getString(R.string.uk_keine) else "$it" }) {
                 plaetze[i] = (plaetze[i] ?: leer).copy(wochenAus = it); nachAenderung()
             }.apply { visibility = if (p.wochenAn > 0) View.VISIBLE else View.GONE }
-            val seitZeile = stufer("Zyklus läuft seit", (0..25).toList(),
-                Math.floorDiv(heute - p.anker, 7).coerceIn(0, 25), { "$it Wo." }) { neu ->
+            val seitZeile = stufer(a.getString(R.string.uk_zyklus_seit), (0..25).toList(),
+                Math.floorDiv(heute - p.anker, 7).coerceIn(0, 25), { a.getString(R.string.uk_n_wo, it) }) { neu ->
                 // DER ANKER RUECKT UM GANZE WOCHEN: so bleibt der Wochentag,
                 // an dem der Zyklus wechselt, derselbe wie auf der Uhr.
                 val alt = plaetze[i] ?: leer
                 val bisher = Math.floorDiv(heute - alt.anker, 7).coerceIn(0, 25)
                 plaetze[i] = alt.copy(anker = alt.anker - (neu - bisher) * 7); nachAenderung()
             }.apply { visibility = if (p.wochenAn > 0) View.VISIBLE else View.GONE }
-            details.addView(zeitknopf("Uhrzeit", "%d:%02d".format(p.stunde, p.minute)) { hhmm ->
+            details.addView(zeitknopf(a.getString(R.string.uk_uhrzeit), "%d:%02d".format(p.stunde, p.minute)) { hhmm ->
                 val (h, m) = hhmm.split(":").map { it.toInt() }
                 plaetze[i] = (plaetze[i] ?: leer).copy(stunde = h, minute = m); nachAenderung()
             })
-            details.addView(stufer("Alle … Tage", (1..30).toList(), p.alleTage,
-                { if (it == 1) "täglich" else "$it" }) {
+            details.addView(stufer(a.getString(R.string.uk_alle_tage), (1..30).toList(), p.alleTage,
+                { if (it == 1) a.getString(R.string.uk_taeglich) else "$it" }) {
                 plaetze[i] = (plaetze[i] ?: leer).copy(alleTage = it); nachAenderung()
             })
-            details.addView(stufer("Wochen Einnahme", (0..52).toList(), p.wochenAn,
-                { if (it == 0) "immer" else "$it" }) {
+            details.addView(stufer(a.getString(R.string.uk_wochen_einnahme), (0..52).toList(), p.wochenAn,
+                { if (it == 0) a.getString(R.string.uk_immer) else "$it" }) {
                 plaetze[i] = (plaetze[i] ?: leer).copy(wochenAn = it); nachAenderung()
                 val zyklus = if (it > 0) View.VISIBLE else View.GONE
                 pauseZeile.visibility = zyklus
@@ -342,7 +337,7 @@ class UhrKarten(private val a: Activity) {
                 feld.requestFocus()
             }
         }
-        hinzu = a.knopfLeise("+ Präparat hinzufügen") {
+        hinzu = a.knopfLeise(a.getString(R.string.uk_hinzu)) {
             val frei = (0 until Uhreinstellungen.SC_PLAETZE)
                 .firstOrNull { plaetze[it]?.name.isNullOrBlank() && it !in scOffen } ?: return@knopfLeise
             oeffner[frei]()
@@ -350,12 +345,9 @@ class UhrKarten(private val a: Activity) {
         }.apply { (layoutParams as? LinearLayout.LayoutParams)?.topMargin = a.dp(8f) }
         k.addView(hinzu)
         zeigeHinzu()
-        k.addView(unter("UHR"))
-        k.addView(schalter("Animation beim Abhaken", animation) { animation = it; aendere() })
-        k.addView(a.zart(
-            "Namen höchstens 15 Byte — Umlaute zählen doppelt. »Zyklus läuft seit« " +
-                "sagt, in welcher Woche der Kur du bist; die Uhr zeigt dann gleich die richtige Phase."
-        ).apply { setPadding(0, a.dp(8f), 0, 0) })
+        k.addView(unter(a.getString(R.string.uk_uhr)))
+        k.addView(schalter(a.getString(R.string.uk_anim_abhaken), animation) { animation = it; aendere() })
+        k.addView(a.zart(a.getString(R.string.uk_sc_hinweis)).apply { setPadding(0, a.dp(8f), 0, 0) })
         fuss(sc, k, stand) {
             val soll = Uhreinstellungen.sendeSupCycle(a, Uhreinstellungen.SupCycle(plaetze.toList(), animation))
             sc.entwurf = normal(soll)
@@ -369,10 +361,10 @@ class UhrKarten(private val a: Activity) {
     private fun zusammenfassung(p: Uhreinstellungen.Praeparat): String = buildString {
         append("%d:%02d".format(p.stunde, p.minute))
         append(" · ")
-        append(if (p.alleTage <= 1) "täglich" else "alle ${p.alleTage} Tage")
+        append(if (p.alleTage <= 1) a.getString(R.string.uk_taeglich) else a.getString(R.string.uk_alle_n_tage, p.alleTage))
         if (p.wochenAn > 0) {
-            append(" · ${p.wochenAn} Wo. an")
-            if (p.wochenAus > 0) append(", ${p.wochenAus} Pause")
+            append(" " + a.getString(R.string.uk_wo_an, p.wochenAn))
+            if (p.wochenAus > 0) append(a.getString(R.string.uk_pause_n, p.wochenAus))
         }
     }
 
@@ -444,9 +436,9 @@ class UhrKarten(private val a: Activity) {
     private fun schalter(titel: String, an: Boolean, neu: (Boolean) -> Unit): LinearLayout {
         var zustand = an
         lateinit var knopf: Button
-        knopf = a.knopfLeise(if (an) "an" else "aus") {
+        knopf = a.knopfLeise(a.getString(if (an) R.string.an else R.string.aus)) {
             zustand = !zustand
-            knopf.text = if (zustand) "an" else "aus"
+            knopf.text = a.getString(if (zustand) R.string.an else R.string.aus)
             neu(zustand)
         }.apply { layoutParams = LinearLayout.LayoutParams(a.dp(104f + 92f), ViewGroup.LayoutParams.WRAP_CONTENT) }
         return a.reihe().apply {

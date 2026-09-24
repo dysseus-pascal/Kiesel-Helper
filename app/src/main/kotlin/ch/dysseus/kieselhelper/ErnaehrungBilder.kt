@@ -293,7 +293,7 @@ class RingView(
         }
         leinwand.drawText("$genommen/$faellig", width / 2f, height / 2f + gross.textSize * 0.2f, gross)
         leinwand.drawText(
-            if (faellig in 1..genommen) "fertig" else "genommen",
+            context.getString(if (faellig in 1..genommen) R.string.eb_fertig else R.string.eb_genommen),
             width / 2f, height / 2f + gross.textSize * 0.2f + klein.textSize * 1.4f, klein,
         )
     }
@@ -387,7 +387,7 @@ class KoffeinView(
         if (jetzt in von..bis) {
             leinwand.drawLine(x(jetzt), kopf, x(jetzt), boden, strich)
             schrift.textAlign = Paint.Align.CENTER
-            leinwand.drawText("jetzt", x(jetzt), kopf - context.dp(5f), schrift)
+            leinwand.drawText(context.getString(R.string.jetzt), x(jetzt), kopf - context.dp(5f), schrift)
         }
         val bx = x(bett)
         leinwand.drawLine(bx, kopf, bx, boden, strich)

@@ -73,20 +73,23 @@ class EinstellungenActivity : KieselActivity() {
      * Seite stehen die Dienste dieses Themas untereinander, jeder mit seinem
      * Namen darueber. Was nur die App angeht (Erscheinungsbild, Sicherung,
      * Zustand), steht auf ihrer eigenen Seite.
+     *
+     * Name und Unterzeile als Ressourcen-Nummern: die Liste entsteht mit der
+     * Activity, bevor sie Ressourcen lesen kann.
      */
     private data class Seite(
-        val schluessel: String, val name: String, val unter: String, val farbe: Int, val ton: Int,
+        val schluessel: String, val nameId: Int, val unterId: Int, val farbe: Int, val ton: Int,
     )
 
     private val THEMEN = listOf(
-        Seite("gesundheit", "Gesundheit", "Herzintervall · HRV, Schlaf, Ruhepuls", R.color.akzent, Ton.GESUNDHEIT),
-        Seite("training", "Training", "Kieselsport · Strecke, Puls, Pin", R.color.akzent_training, Ton.TRAINING),
-        Seite("ernaehrung", "Ernährung", "Drinktervall, SupCycle, Koffein", R.color.akzent_ernaehrung, Ton.ERNAEHRUNG),
+        Seite("gesundheit", R.string.reiter_gesundheit, R.string.ei_unter_gesundheit, R.color.akzent, Ton.GESUNDHEIT),
+        Seite("training", R.string.training, R.string.ei_unter_training, R.color.akzent_training, Ton.TRAINING),
+        Seite("ernaehrung", R.string.reiter_ernaehrung, R.string.ei_unter_ernaehrung, R.color.akzent_ernaehrung, Ton.ERNAEHRUNG),
         // KEIN REITER, ABER EIN EIGENES THEMA: Navigation ist kein Training -
         // man faehrt auch zum Einkaufen mit OsmAnd.
-        Seite("navigation", "Navigation", "Kieselstrasse · OsmAnd, Kartenlinks", R.color.sport_wandern, Ton.GESUNDHEIT),
+        Seite("navigation", R.string.ei_navigation, R.string.ei_unter_navigation, R.color.sport_wandern, Ton.GESUNDHEIT),
     )
-    private val APP_SEITE = Seite("app", "Kiesel-Helper", "Darstellung, Sicherung, Zustand", R.color.akzent, Ton.GESUNDHEIT)
+    private val APP_SEITE = Seite("app", R.string.app_name, R.string.ei_unter_app, R.color.akzent, Ton.GESUNDHEIT)
 
     /** Die Seiten bis 0.45.0 hiessen nach den Uhr-Apps; gemerkt ist womoeglich noch eine davon. */
     private fun thema(alt: String): String = when (alt) {
@@ -223,13 +226,13 @@ class EinstellungenActivity : KieselActivity() {
             gravity = android.view.Gravity.CENTER_VERTICAL
             addView(HamburgerView(this@EinstellungenActivity).apply {
                 layoutParams = LinearLayout.LayoutParams(dp(44f), dp(44f)).apply { marginEnd = dp(8f) }
-                contentDescription = "Menü"
+                contentDescription = getString(R.string.ei_menue)
                 setOnClickListener { drawer.openDrawer(android.view.Gravity.START) }
             })
             addView(spalte().apply {
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                addView(zart("Einstellungen"))
-                addView(kopf(aktuelleSeite().name))
+                addView(zart(getString(R.string.ei_einstellungen)))
+                addView(kopf(getString(aktuelleSeite().nameId)))
             })
         })
         wurzel.luft(6f)
@@ -250,7 +253,7 @@ class EinstellungenActivity : KieselActivity() {
 
     private fun fuelleMenue(liste: LinearLayout, drawer: androidx.drawerlayout.widget.DrawerLayout) {
         liste.removeAllViews()
-        liste.addView(kopf("Einstellungen").apply { setPadding(dp(12f), 0, 0, dp(12f)) })
+        liste.addView(kopf(getString(R.string.ei_einstellungen)).apply { setPadding(dp(12f), 0, 0, dp(12f)) })
         THEMEN.forEach { liste.addView(menuepunkt(it, drawer)) }
         liste.addView(strich().apply {
             (layoutParams as? LinearLayout.LayoutParams)?.setMargins(dp(12f), dp(10f), dp(12f), dp(10f))
@@ -306,11 +309,11 @@ class EinstellungenActivity : KieselActivity() {
             })
             addView(spalte().apply {
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                addView(fliesstext(s.name).apply {
+                addView(fliesstext(getString(s.nameId)).apply {
                     setTypeface(typeface, android.graphics.Typeface.BOLD)
                     if (gewaehlt) setTextColor(akzentfarbe())
                 })
-                addView(zart(s.unter))
+                addView(zart(getString(s.unterId)))
             })
         }.also {
             (it.layoutParams as LinearLayout.LayoutParams).bottomMargin = dp(2f)
@@ -320,27 +323,24 @@ class EinstellungenActivity : KieselActivity() {
     // --- Die Seiten ---------------------------------------------------------
 
     private fun seiteApp(w: LinearLayout) {
-        w.addView(fliesstext(
-            "Nimmt entgegen, was die Uhr meldet, und holt bei OsmAnd, was für " +
-                "die Navigation auf die Uhr gehört."
-        ))
+        w.addView(fliesstext(getString(R.string.ei_app_text)))
         w.luft(8f)
-        w.addView(abschnitt("ERSCHEINUNGSBILD"))
+        w.addView(abschnitt(getString(R.string.ei_erscheinungsbild)))
         w.addView(darstellungskarte())
         w.luft(8f)
-        w.addView(abschnitt("DER TAG"))
+        w.addView(abschnitt(getString(R.string.ei_der_tag)))
         w.addView(grenzkarte())
         w.luft(8f)
-        w.addView(abschnitt("SICHERUNG"))
+        w.addView(abschnitt(getString(R.string.ei_sicherung_titel)))
         w.addView(sicherungskarte())
         w.luft(8f)
-        w.addView(abschnitt("FRÜHERE DATEN"))
+        w.addView(abschnitt(getString(R.string.ei_fruehere_daten)))
         w.addView(historienkarte())
         w.luft(8f)
-        w.addView(abschnitt("ZUSTAND"))
+        w.addView(abschnitt(getString(R.string.ei_zustand)))
         w.addView(zustand)
         w.luft(12f)
-        w.addView(knopfHaupt("Verlauf ansehen", breit = true) {
+        w.addView(knopfHaupt(getString(R.string.ei_verlauf_ansehen), breit = true) {
             startActivity(Intent(this, VerlaufActivity::class.java))
         })
     }
@@ -365,12 +365,10 @@ class EinstellungenActivity : KieselActivity() {
         seiteDrinktervall(w)
         w.addView(dienstkopf("SupCycle", R.color.akzent_ernaehrung))
         seiteSupCycle(w)
-        w.addView(dienstkopf("Koffein", R.color.koffein))
+        w.addView(dienstkopf(getString(R.string.ei_koffein), R.color.koffein))
         w.addView(aufgabenKarte(
-            "Koffein → Gesundheitsakte",
-            "Was du in der App antippst, wird als Ernährungssatz mit " +
-                "Koffeinmenge eingetragen. Die Akte ist damit auch hier die " +
-                "Quelle: gelesen wird, was dort steht, nicht die eigene Zählung."
+            getString(R.string.ei_koffein_akte),
+            getString(R.string.ei_koffein_akte_text)
         ))
     }
 
@@ -395,14 +393,13 @@ class EinstellungenActivity : KieselActivity() {
 
     private fun seiteDrinktervall(w: LinearLayout) {
         w.addView(aufgabenKarte(
-            "Drinktervall → Gesundheitsakte",
-            "Jedes getrunkene Glas wird als Wassermenge eingetragen, mit dem " +
-                "Zeitpunkt von der Uhr. Dasselbe Glas nur einmal."
+            getString(R.string.ei_dt_akte),
+            getString(R.string.ei_dt_akte_text)
         ))
         w.luft(8f)
-        w.addView(abschnitt("HEUTE"))
+        w.addView(abschnitt(getString(R.string.ei_heute)))
         w.addView(karte().apply {
-            addView(kartentitel("Tagesziel"))
+            addView(kartentitel(getString(R.string.ei_tagesziel)))
             val glaeser = Einstellungen.wasserGlaeser(this@EinstellungenActivity)
             val ml = Einstellungen.glasMl(this@EinstellungenActivity)
             addView(TextView(this@EinstellungenActivity).apply {
@@ -412,67 +409,54 @@ class EinstellungenActivity : KieselActivity() {
                 setTextColor(farbe(R.color.schrift))
                 setPadding(0, dp(10f), 0, dp(6f))
             })
-            addView(zart(
-                "Das heutige Ziel, wie die Uhr es zuletzt gemeldet hat — mit »Ziel+« " +
-                    "kann es über dem Soll liegen."
-            ))
+            addView(zart(getString(R.string.ei_tagesziel_text)))
         })
         w.luft(8f)
-        w.addView(abschnitt("EINSTELLUNGEN"))
+        w.addView(abschnitt(getString(R.string.ei_einstellungen_gross)))
         w.addView(uhr.drinktervall())
     }
 
     private fun seiteHerzintervall(w: LinearLayout) {
         w.addView(aufgabenKarte(
-            "Herzintervall → Gesundheitsakte",
-            "Die nächtliche RMSSD-Messung wird als Herzratenvariabilität " +
-                "eingetragen. Mit ihr kommen die letzte Nacht — Schlafbeginn " +
-                "und -ende — und der mittlere Nachtpuls als Ruhepuls."
+            getString(R.string.ei_hz_akte),
+            getString(R.string.ei_hz_akte_text)
         ))
         w.luft(8f)
-        w.addView(abschnitt("SCHLAF"))
+        w.addView(abschnitt(getString(R.string.ei_schlaf)))
         w.addView(schlafkarte())
     }
 
     private fun seiteSupCycle(w: LinearLayout) {
         w.addView(aufgabenKarte(
-            "SupCycle → Ernährung",
-            "Was heute ansteht, was davon abgehakt ist, und die Namen dazu. " +
-                "Jedes genommene Präparat geht als Ernährungssatz in die Akte " +
-                "— ohne Mengen, denn SupCycle kennt Namen und Zyklen, keine " +
-                "Milligramm."
+            getString(R.string.ei_sc_akte),
+            getString(R.string.ei_sc_akte_text)
         ))
         w.luft(8f)
-        w.addView(abschnitt("PLAN"))
+        w.addView(abschnitt(getString(R.string.ei_plan)))
         w.addView(uhr.supCycle())
     }
 
     private fun seiteKieselsport(w: LinearLayout) {
         w.addView(aufgabenKarte(
-            "Kieselsport → Gesundheitsakte",
-            "Ein beendetes Training wird als Trainingssitzung eingetragen, mit " +
-                "Sätzen oder Bahnen, der Pulskurve und — bei Laufen, Bike, " +
-                "Wandern — der Strecke vom Telefon. Schritte, Distanz und " +
-                "Kalorien trägt die Pebble-App selbst ein."
+            getString(R.string.ei_ks_akte),
+            getString(R.string.ei_ks_akte_text)
         ))
         w.luft(8f)
-        w.addView(abschnitt("STRECKE"))
+        w.addView(abschnitt(getString(R.string.ei_strecke)))
         w.addView(spurkarte())
         w.luft(8f)
-        w.addView(abschnitt("EINSTELLUNGEN"))
+        w.addView(abschnitt(getString(R.string.ei_einstellungen_gross)))
         w.addView(uhr.kieselsport())
     }
 
     private fun seiteKieselstrasse(w: LinearLayout) {
         w.addView(aufgabenKarte(
-            "OsmAnd → Kieselstrasse",
-            "Abbiegeart, Entfernung, Strasse und Ankunftszeit gehen an die Uhr " +
-                "— aus OsmAnds eigener Schnittstelle, nicht aus seiner " +
-                "Benachrichtigung."
+            getString(R.string.ei_ks_osmand),
+            getString(R.string.ei_ks_osmand_text)
         ))
         w.addView(osmandKarte())
         w.luft(8f)
-        w.addView(abschnitt("KARTENLINKS"))
+        w.addView(abschnitt(getString(R.string.ei_kartenlinks)))
         w.addView(linkkarte())
     }
 
@@ -484,10 +468,12 @@ class EinstellungenActivity : KieselActivity() {
      */
     private fun darstellungskarte(): LinearLayout {
         val k = karte()
-        k.addView(kartentitel("Hell oder dunkel"))
+        k.addView(kartentitel(getString(R.string.ei_hell_dunkel)))
         val modus = Einstellungen.themaModus(this)
         val reihe = reihe()
-        listOf(Thema.SYSTEM to "System", Thema.HELL to "Hell", Thema.DUNKEL to "Dunkel").forEach { (m, name) ->
+        listOf(
+            Thema.SYSTEM to getString(R.string.ei_system), Thema.HELL to getString(R.string.ei_hell), Thema.DUNKEL to getString(R.string.ei_dunkel),
+        ).forEach { (m, name) ->
             val knopf = if (m == modus) knopfHaupt(name) {} else knopfLeise(name) {
                 Einstellungen.setzeThemaModus(this, m)
                 GesundheitWidget.stosseAn(this)
@@ -500,27 +486,20 @@ class EinstellungenActivity : KieselActivity() {
             })
         }
         k.addView(reihe.apply { setPadding(0, dp(10f), 0, dp(4f)) })
-        k.addView(zart(
-            "»System« folgt dem Nachtschalter des Telefons. Das Widget folgt " +
-                "der Wahl hier ab Android 12; davor folgt es dem System."
-        ))
+        k.addView(zart(getString(R.string.ei_system_text)))
 
         k.luft(14f)
         k.addView(kartentitel("Material You"))
         if (Thema.materialYouMoeglich()) {
             val an = Einstellungen.materialYou(this)
-            k.addView(zart(
-                "Grund, Karten, Schrift und die Farben der drei Reiter kommen aus " +
-                    "dem Hintergrundbild. Sportarten, Schlafphasen, Pulszonen, " +
-                    "Wasser und Koffein behalten ihre Farben — sie tragen Bedeutung."
-            ))
-            k.addView(knopfLeise(if (an) "Material You: an" else "Material You: aus") {
+            k.addView(zart(getString(R.string.ei_my_text)))
+            k.addView(knopfLeise(getString(if (an) R.string.ei_my_an else R.string.ei_my_aus)) {
                 Einstellungen.setzeMaterialYou(this, !an)
                 GesundheitWidget.stosseAn(this)
                 recreate()
             }.apply { (layoutParams as? LinearLayout.LayoutParams)?.topMargin = dp(8f) })
         } else {
-            k.addView(zart("Material You gibt es ab Android 12."))
+            k.addView(zart(getString(R.string.ei_my_fehlt)))
         }
         return k
     }
@@ -538,11 +517,8 @@ class EinstellungenActivity : KieselActivity() {
      */
     private fun schlafkarte(): LinearLayout {
         val k = karte()
-        k.addView(kartentitel("Mein Idealwert"))
-        k.addView(zart(
-            "Er steht als farbige Linie im Schlafbild und im Wochenprofil — " +
-                "und der Trend zählt, in wie vielen Nächten du ihn erreicht hast."
-        ))
+        k.addView(kartentitel(getString(R.string.ei_idealwert)))
+        k.addView(zart(getString(R.string.ei_idealwert_text)))
 
         schlafwert = TextView(this).apply {
             setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 30f)
@@ -579,11 +555,8 @@ class EinstellungenActivity : KieselActivity() {
      */
     private fun grenzkarte(): LinearLayout {
         val k = karte()
-        k.addView(kartentitel("Ein Tag beginnt um"))
-        k.addView(zart(
-            "Gilt für alles, was »heute« heisst. Der Schlaf hat sein eigenes " +
-                "Fenster: eine Nacht beginnt um 18 Uhr, egal wo der Tag beginnt."
-        ))
+        k.addView(kartentitel(getString(R.string.ei_tag_beginnt)))
+        k.addView(zart(getString(R.string.ei_tag_beginnt_text)))
 
         grenzwert = TextView(this).apply {
             setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 30f)
@@ -618,7 +591,7 @@ class EinstellungenActivity : KieselActivity() {
     private fun zeigeGrenze() {
         val stunde = Einstellungen.tagesgrenze(this)
         grenzwert.text = String.format("%02d:00", stunde) +
-            if (stunde == 0) " (Mitternacht)" else ""
+            if (stunde == 0) " " + getString(R.string.ei_mitternacht) else ""
     }
 
     private fun schiebe(minuten: Int) {
@@ -646,11 +619,8 @@ class EinstellungenActivity : KieselActivity() {
      */
     private fun linkkarte(): LinearLayout {
         val k = karte()
-        k.addView(kartentitel("Kartenlink ausprobieren"))
-        k.addView(zart(
-            "Link einfügen und prüfen. Überspringt Androids Link-Freigabe — " +
-                "was hier klappt und draussen nicht, liegt an ihr."
-        ))
+        k.addView(kartentitel(getString(R.string.ei_link_probieren)))
+        k.addView(zart(getString(R.string.ei_link_probieren_text)))
 
         linkfeld = eingabefeld("https://maps.app.goo.gl/…")
         k.addView(linkfeld)
@@ -659,23 +629,23 @@ class EinstellungenActivity : KieselActivity() {
         k.addView(linkbefund)
 
         val zeile = reihe()
-        zeile.addView(knopfLeise("Einfügen") {
+        zeile.addView(knopfLeise(getString(R.string.ei_einfuegen)) {
             val ablage = getSystemService(android.content.ClipboardManager::class.java)
             val text = ablage?.primaryClip?.getItemAt(0)?.coerceToText(this)?.toString()
-            if (text.isNullOrBlank()) melde("Zwischenablage ist leer")
+            if (text.isNullOrBlank()) melde(getString(R.string.ei_ablage_leer))
             else linkfeld.setText(text.trim())
         })
         zeile.addView(TextView(this).apply {
             layoutParams = LinearLayout.LayoutParams(dp(8f), dp(1f))
         })
-        zeile.addView(knopfLeise("Nur prüfen") { pruefeLink(false) })
+        zeile.addView(knopfLeise(getString(R.string.ei_nur_pruefen)) { pruefeLink(false) })
         k.addView(zeile)
-        k.addView(knopfHaupt("An OsmAnd geben", breit = true) { pruefeLink(true) })
+        k.addView(knopfHaupt(getString(R.string.ei_an_osmand), breit = true) { pruefeLink(true) })
 
         k.addView(strich())
-        k.addView(kartentitel("Was ein Link auslöst"))
+        k.addView(kartentitel(getString(R.string.ei_was_link)))
         val wahl = reihe()
-        listOf("Ort zeigen" to false, "Führung starten" to true).forEach { (name, fuehrt) ->
+        listOf(getString(R.string.ei_ort_zeigen) to false, getString(R.string.ei_fuehrung) to true).forEach { (name, fuehrt) ->
             val gewaehlt = Einstellungen.kartenlinkFuehrt(this) == fuehrt
             wahl.addView(TextView(this).apply {
                 text = name
@@ -702,11 +672,7 @@ class EinstellungenActivity : KieselActivity() {
             })
         }
         k.addView(wahl)
-        k.addView(zart(
-            "»Ort zeigen« setzt den Punkt auf die Karte und überlässt dir den " +
-                "Start. Eine Führung, die von selbst anspringt, entscheidet " +
-                "sonst mit, ob jetzt überhaupt gefahren wird."
-        ))
+        k.addView(zart(getString(R.string.ei_ort_zeigen_text)))
         return k
     }
 
@@ -714,21 +680,22 @@ class EinstellungenActivity : KieselActivity() {
     private fun pruefeLink(weitergeben: Boolean) {
         val roh = linkfeld.text?.toString()?.trim().orEmpty()
         if (roh.isEmpty()) {
-            linkbefund.text = "Kein Link eingefügt."
+            linkbefund.text = getString(R.string.ei_kein_link)
             return
         }
-        linkbefund.text = "Wird gelesen …"
+        linkbefund.text = getString(R.string.ei_wird_gelesen)
         lifecycleScope.launch {
             val voll = withContext(kotlinx.coroutines.Dispatchers.IO) {
                 if (Kartenlink.istKurzlink(roh)) Kartenlink.folge(roh) else roh
             }
             val ziel = Kartenlink.zerlege(voll)
             if (ziel == null || !ziel.brauchbar) {
-                linkbefund.text = "Kein Ziel erkannt.\n\nAufgelöst: " + voll.take(160)
+                linkbefund.text = getString(R.string.ei_kein_ziel) + "\n\n" +
+                    getString(R.string.ei_aufgeloest, voll.take(160))
                 return@launch
             }
             val gefunden = buildString {
-                append("Erkannt: ")
+                append(getString(R.string.ei_erkannt) + " ")
                 if (ziel.lat != null && ziel.lon != null) {
                     append(Zahlen.zwei(ziel.lat) + ", " + Zahlen.zwei(ziel.lon))
                 }
@@ -736,19 +703,18 @@ class EinstellungenActivity : KieselActivity() {
                     if (ziel.lat != null) append(" — ")
                     append("»" + ziel.text + "«")
                 }
-                if (voll != roh) append("\nAufgelöst: " + voll.take(120))
+                if (voll != roh) append("\n" + getString(R.string.ei_aufgeloest, voll.take(120)))
             }
             if (!weitergeben) {
                 linkbefund.text = gefunden
                 return@launch
             }
-            linkbefund.text = gefunden + "\n\nWird übergeben …"
+            linkbefund.text = gefunden + "\n\n" + getString(R.string.ei_wird_uebergeben)
             val aus = Kartenlink.uebergib(this@EinstellungenActivity, ziel)
             linkbefund.text = gefunden + "\n\n" + if (aus.geschafft) {
-                "Übergeben — " + aus.beschreibung
+                getString(R.string.ei_uebergeben, aus.beschreibung)
             } else {
-                "OsmAnd hat abgelehnt (" + aus.weg + "). Meist fehlt dort " +
-                    "die Freigabe unter Menü → Plugins."
+                getString(R.string.ei_abgelehnt, aus.weg)
             }
         }
     }
@@ -762,26 +728,21 @@ class EinstellungenActivity : KieselActivity() {
      */
     private fun spurkarte(): LinearLayout {
         val k = karte()
-        k.addView(kartentitel("Strecke aufzeichnen"))
+        k.addView(kartentitel(getString(R.string.ei_strecke_aufzeichnen)))
 
         val erlaubt = SpurDienst.darfOrten(this)
         val immer = SpurDienst.darfImmerOrten(this)
         k.addView(schild(
             erlaubt && immer,
             when {
-                !erlaubt -> "Standort nicht erlaubt"
-                !immer -> "Nur während der Nutzung — zu wenig"
-                else -> "Standort immer erlaubt"
+                !erlaubt -> getString(R.string.ei_standort_nicht)
+                !immer -> getString(R.string.ei_standort_nutzung)
+                else -> getString(R.string.ei_standort_immer)
             }
         ))
-        k.addView(zart(
-            "Die Uhr hat kein GPS. Während eines Trainings zeichnet das Telefon " +
-                "die Strecke auf — mit sichtbarer Meldung in der Leiste, und nur " +
-                "zwischen Start und Stop. Ohne die Erlaubnis wird das Training " +
-                "trotzdem eingetragen, nur ohne Karte."
-        ))
+        k.addView(zart(getString(R.string.ei_kein_gps)))
         if (!erlaubt) {
-            k.addView(knopfHaupt("Standort erlauben", breit = true) {
+            k.addView(knopfHaupt(getString(R.string.ei_standort_erlauben), breit = true) {
                 ortStarter?.launch(arrayOf(
                     android.Manifest.permission.ACCESS_FINE_LOCATION,
                     android.Manifest.permission.ACCESS_COARSE_LOCATION,
@@ -790,15 +751,8 @@ class EinstellungenActivity : KieselActivity() {
         } else if (!immer) {
             // DAS IST DER HAEUFIGE FALL, und er sieht aus wie ein Fehler der
             // App: die Erlaubnis steht da, die Karte bleibt leer.
-            k.addView(fliesstext(
-                "»Nur während der Nutzung« genügt hier nicht. Das Training " +
-                    "beginnt auf der Uhr, während das Telefon in der Tasche " +
-                    "liegt und diese App zu ist — in diesem Zustand lässt " +
-                    "Android keine Ortung zu, und die Strecke bliebe leer. " +
-                    "Nötig ist »Immer erlauben«. Gemessen wird trotzdem nur " +
-                    "zwischen Start und Stop eines Trainings."
-            ))
-            k.addView(knopfHaupt("Immer erlauben", breit = true) {
+            k.addView(fliesstext(getString(R.string.ei_nur_nutzung_text)))
+            k.addView(knopfHaupt(getString(R.string.ei_immer_erlauben), breit = true) {
                 oeffneAppEinstellungen()
             })
         }
@@ -824,7 +778,7 @@ class EinstellungenActivity : KieselActivity() {
             )
         } catch (e: Exception) {
             android.widget.Toast.makeText(
-                this, "Einstellungen nicht erreichbar", android.widget.Toast.LENGTH_SHORT
+                this, getString(R.string.ei_einstellungen_fehlen), android.widget.Toast.LENGTH_SHORT
             ).show()
         }
     }
@@ -840,17 +794,12 @@ class EinstellungenActivity : KieselActivity() {
      */
     private fun historienkarte(): LinearLayout {
         val k = karte()
-        k.addView(kartentitel("Aus Health Connect nachladen"))
+        k.addView(kartentitel(getString(R.string.ei_nachladen_titel)))
         k.addView(zartMitHinweis(
-            "Füllt den Trend aus dem, was Health Connect gespeichert hat",
-            "Ohne weitere Erlaubnis gibt Health Connect nur die dreissig Tage " +
-                "vor der ersten Erlaubnis heraus — nach einer Neuinstallation " +
-                "also einen Monat. Mit der Erlaubnis für ältere Daten holt die " +
-                "App ein Jahr. Was nur in der App steht — die Einschätzung des " +
-                "Tages, die Präparate —, bleibt unberührt. Nicht jedes Telefon kennt " +
-                "diese Erlaubnis; dann bleibt es beim Monat."
+            getString(R.string.ei_nachladen_kurz),
+            getString(R.string.ei_nachladen_lang)
         ))
-        k.addView(knopfHaupt("Nachladen", breit = true) {
+        k.addView(knopfHaupt(getString(R.string.ei_nachladen), breit = true) {
             lifecycleScope.launch {
                 val erteilt = runCatching {
                     Akte(this@EinstellungenActivity).bereit()
@@ -870,16 +819,17 @@ class EinstellungenActivity : KieselActivity() {
     }
 
     private suspend fun ladeNach() {
-        melde("Hole aus Health Connect …")
+        melde(getString(R.string.ei_hole_hc))
         val erteilt = runCatching {
             Akte(this).bereit()?.permissionController?.getGrantedPermissions()
         }.getOrNull().orEmpty()
         val tage = Gesundheit(this).nachtragen()
         melde(
-            if (tage == 0) "Nichts gefunden. Fehlt die Lese-Erlaubnis?"
-            else "$tage Tage geholt" +
-                if (Gesundheit.HISTORIE in erteilt) "."
-                else " — ältere gibt Health Connect ohne die Erlaubnis nicht frei."
+            if (tage == 0) getString(R.string.ei_nichts_gefunden)
+            else resources.getQuantityString(
+                if (Gesundheit.HISTORIE in erteilt) R.plurals.ei_tage_geholt else R.plurals.ei_tage_geholt_ohne,
+                tage, tage,
+            )
         )
     }
 
@@ -897,25 +847,22 @@ class EinstellungenActivity : KieselActivity() {
      */
     private fun sicherungskarte(): LinearLayout {
         val k = karte()
-        k.addView(kartentitel("Sicherung"))
+        k.addView(kartentitel(getString(R.string.ei_sicherung)))
 
         val zuletzt = Einstellungen.sicherungZuletzt(this)
         k.addView(schild(
             zuletzt > 0,
-            if (zuletzt > 0) "Zuletzt " + java.text.DateFormat
-                .getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
-                .format(java.util.Date(zuletzt))
-            else "Noch nie gesichert"
+            if (zuletzt > 0) getString(
+                R.string.ei_zuletzt,
+                java.text.DateFormat
+                    .getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
+                    .format(java.util.Date(zuletzt)),
+            )
+            else getString(R.string.ei_nie_gesichert)
         ))
         k.addView(zartMitHinweis(
-            "Tagestabelle und Strecken in einen Ordner auf dem Telefon",
-            "Die Gesundheitsakte hält rund dreissig Tage. Alles, was diese App " +
-                "an Wochenprofilen und Zusammenhängen rechnet, steht danach nur " +
-                "noch in ihrer eigenen Tabelle — und die liegt in den App-Daten " +
-                "eines einzigen Telefons. Gesichert wird als lesbares JSON: das " +
-                "ist auch dann noch etwas wert, wenn es diese App nicht mehr " +
-                "gibt. Die Strecken liegen daneben, eine Datei je Training, und " +
-                "gehen nur einmal hinauf."
+            getString(R.string.ei_sicherung_kurz),
+            getString(R.string.ei_sicherung_lang)
         ))
 
         // EIN ORDNER, DEN EINE SYNC-APP ABGLEICHT: er geht mit jedem Anbieter.
@@ -929,28 +876,23 @@ class EinstellungenActivity : KieselActivity() {
         k.addView(schild(
             ordnerName != null,
             when {
-                ordnerName != null -> "Ordner auf dem Telefon: $ordnerName"
-                ordnerUri.isNotBlank() -> "Ordner auf dem Telefon nicht mehr erreichbar"
-                else -> "Kein Ordner auf dem Telefon gewählt"
+                ordnerName != null -> getString(R.string.ei_ordner_da, ordnerName)
+                ordnerUri.isNotBlank() -> getString(R.string.ei_ordner_weg)
+                else -> getString(R.string.ei_kein_ordner)
             }
         ))
         k.addView(zartMitHinweis(
-            "Einen Ordner wählen, den eine Sync-App abgleicht",
-            "Wähle im Dialog einen Ordner, den DAVx5, Nextcloud, mailbox.org " +
-                "Drive oder Syncthing synchronisiert — oder einen Ordner in " +
-                "»Dokumente«. Kiesel-Helper schreibt dorthin, die Sync-App trägt " +
-                "es hinauf; Anmeldung und Eigenheiten des Servers sind deren " +
-                "Sache. Ohne Sync-App bleibt es eine Kopie auf dem Telefon, die " +
-                "man abholen kann. Gesichert wird als lesbares JSON."
+            getString(R.string.ei_ordner_kurz),
+            getString(R.string.ei_ordner_lang)
         ))
         val ordnerReihe = reihe()
         ordnerReihe.addView(knopfHaupt(
-            if (ordnerName != null) "Anderen Ordner wählen" else "Ordner auf dem Telefon wählen"
+            getString(if (ordnerName != null) R.string.ei_anderer_ordner else R.string.ei_ordner_waehlen)
         ) {
             ordnerStarter?.launch(null)
         }.breitInReihe())
         if (ordnerUri.isNotBlank()) {
-            ordnerReihe.addView(knopfLeise("Ordner entfernen") {
+            ordnerReihe.addView(knopfLeise(getString(R.string.ei_ordner_entfernen)) {
                 Einstellungen.setzeSicherungOrdner(this, "")
                 neuAufbauen()
             }.breitInReihe())
@@ -958,23 +900,20 @@ class EinstellungenActivity : KieselActivity() {
         k.addView(ordnerReihe)
 
         val reihe = reihe()
-        reihe.addView(knopfLeise("Jetzt sichern") {
+        reihe.addView(knopfLeise(getString(R.string.ei_jetzt_sichern)) {
             lifecycleScope.launch {
-                melde("Sichere …")
+                melde(getString(R.string.ei_sichere))
                 melde(Sichern.jetzt(this@EinstellungenActivity))
                 neuAufbauen()
             }
         }.breitInReihe())
-        reihe.addView(knopfLeise("Zurückholen") {
+        reihe.addView(knopfLeise(getString(R.string.ei_zurueckholen)) {
             // ZWEIMAL FRAGEN, WEIL ES DIE TABELLE ANFASST. Zurueckholen
             // schreibt zwar nur in Luecken - aber das muss jemand wissen,
             // bevor er tippt, und nicht danach.
-            bestaetige(
-                "Zurückholen ergänzt nur, was hier fehlt — vorhandene Tage und " +
-                    "Strecken bleiben, wie sie sind. Weiter?"
-            ) {
+            bestaetige(getString(R.string.ei_zurueckholen_frage)) {
                 lifecycleScope.launch {
-                    melde("Hole …")
+                    melde(getString(R.string.ei_hole))
                     melde(Sichern.zurueck(this@EinstellungenActivity))
                 }
             }
@@ -983,7 +922,7 @@ class EinstellungenActivity : KieselActivity() {
 
         val taeglich = Einstellungen.sicherungTaeglich(this)
         k.addView(knopfLeise(
-            if (taeglich) "Tägliche Sicherung: an" else "Tägliche Sicherung: aus"
+            getString(if (taeglich) R.string.ei_taeglich_an else R.string.ei_taeglich_aus)
         ) {
             val neu = !taeglich
             Einstellungen.setzeSicherungTaeglich(this, neu)
@@ -1062,10 +1001,7 @@ class EinstellungenActivity : KieselActivity() {
             when (HealthConnectClient.getSdkStatus(this@EinstellungenActivity)) {
                 HealthConnectClient.SDK_UNAVAILABLE -> {
                     kk.addView(schild(false, getString(R.string.hc_fehlt)))
-                    kk.addView(zart(
-                        "Ohne Health Connect lässt sich nichts eintragen. Die " +
-                            "Navigation zur Uhr geht trotzdem."
-                    ))
+                    kk.addView(zart(getString(R.string.ei_ohne_hc)))
                 }
                 HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED ->
                     kk.addView(schild(false, getString(R.string.hc_update)))
@@ -1073,16 +1009,13 @@ class EinstellungenActivity : KieselActivity() {
                     val fehlt = Akte(this@EinstellungenActivity)
                         .fehlendeBerechtigungen(Aufgaben.BERECHTIGUNGEN)
                     if (fehlt.isEmpty()) {
-                        kk.addView(schild(true, "Schreib-Erlaubnis erteilt"))
+                        kk.addView(schild(true, getString(R.string.ei_schreib_ok)))
                     } else {
-                        kk.addView(schild(false, "Schreib-Erlaubnis fehlt"))
-                        kk.addView(zart(
-                            "Ohne sie kommt eine Messung an und verschwindet " +
-                                "still — das fällt erst auf, wenn man sie sucht."
-                        ))
-                        kk.addView(knopfHaupt("Erlaubnis erteilen", breit = true) {
+                        kk.addView(schild(false, getString(R.string.ei_schreib_fehlt)))
+                        kk.addView(zart(getString(R.string.ei_schreib_fehlt_text)))
+                        kk.addView(knopfHaupt(getString(R.string.erlaubnis_erteilen), breit = true) {
                             erlaubnisStarter?.launch(fehlt)
-                                ?: melde("Noch nicht bereit")
+                                ?: melde(getString(R.string.noch_nicht_bereit))
                         })
                     }
                 }
@@ -1095,18 +1028,15 @@ class EinstellungenActivity : KieselActivity() {
             val befunde = Gesundheit(this@EinstellungenActivity).pruefe()
             if (befunde.isNotEmpty()) {
                 val kb = karte()
-                kb.addView(kartentitel("Was in der Akte steht (48 h)"))
+                kb.addView(kartentitel(getString(R.string.ei_in_der_akte)))
                 befunde.forEach { b ->
                     kb.addView(zart(
                         b.name + ": " +
-                            (if (b.anzahl == 0) "nichts" else b.anzahl.toString() + " Sätze") +
+                            (if (b.anzahl == 0) getString(R.string.ei_nichts) else resources.getQuantityString(R.plurals.ei_saetze, b.anzahl, b.anzahl)) +
                             (if (b.quellen.isEmpty()) "" else " — " + b.quellen.joinToString(", "))
                     ))
                 }
-                kb.addView(zart(
-                    "Ein leeres Feld auf dem Gesundheits-Schirm hat hier seine " +
-                        "Antwort: steht nichts in der Akte, schreibt es niemand."
-                ))
+                kb.addView(zart(getString(R.string.ei_leeres_feld)))
                 zustand.addView(kb)
             }
         }
@@ -1120,24 +1050,19 @@ class EinstellungenActivity : KieselActivity() {
         // nichts warnte, und auf der Uhr kam einfach nichts an.
         val ko = karte()
         val lage = OsmandNavigation.lage
-        ko.addView(schild(lage.startsWith("verbunden"), "OsmAnd: $lage"))
-        if (!lage.startsWith("verbunden")) {
+        val verbunden = lage == OsmandNavigation.Lage.VERBUNDEN || lage == OsmandNavigation.Lage.ABONNIERT
+        ko.addView(schild(verbunden, getString(R.string.ei_osmand_x, OsmandNavigation.lageText(this))))
+        if (!verbunden) {
             ko.addView(zart(
-                if (lage.startsWith("in OsmAnd freischalten"))
-                    "OsmAnd lässt fremde Apps erst nach einem Schalter zu. " +
-                        "Kiesel-Helper steht dort schon in der Liste — der " +
-                        "erste Verbindungsversuch hat ihn eingetragen, nur " +
-                        "ausgeschaltet. Nach dem Umlegen hierher " +
-                        "zurückkehren, das genügt."
-                else
-                    "Ohne Verbindung zu OsmAnd bleibt Kieselstrasse auf der " +
-                        "Uhr leer. OsmAnd muss installiert sein; die " +
-                        "Verbindung entsteht, sobald dieser Dienst läuft."
+                getString(
+                    if (lage == OsmandNavigation.Lage.FREISCHALTEN) R.string.ei_osmand_freischalten
+                    else R.string.ei_osmand_fehlt
+                )
             ))
-            ko.addView(knopfHaupt("OsmAnd öffnen", breit = true) {
+            ko.addView(knopfHaupt(getString(R.string.ei_osmand_oeffnen), breit = true) {
                 val start = packageManager.getLaunchIntentForPackage("net.osmand.plus")
                     ?: packageManager.getLaunchIntentForPackage("net.osmand")
-                if (start != null) startActivity(start) else melde("OsmAnd nicht gefunden")
+                if (start != null) startActivity(start) else melde(getString(R.string.ei_osmand_nicht_gefunden))
             })
         }
         return ko

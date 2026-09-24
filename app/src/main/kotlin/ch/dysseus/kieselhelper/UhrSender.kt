@@ -41,7 +41,7 @@ object UhrSender {
      * Nachricht aber ohnehin schneller da als eine Antwort auf die letzte.
      */
     fun sende(context: Context, an: UUID, starten: Boolean, felder: Map<Int, Wert>): String {
-        if (felder.isEmpty()) return "nichts zu senden"
+        if (felder.isEmpty()) return context.getString(R.string.us_nichts)
 
         if (starten) {
             // Idempotent laut Gegenseite: laeuft die App schon, passiert nichts.
@@ -58,7 +58,7 @@ object UhrSender {
         }
         context.sendBroadcast(intent)
         Log.i(PebbleEmpfaenger.TAG, "An die Uhr: " + felder.size + " Felder an " + an)
-        return felder.size.toString() + " Felder an die Uhr"
+        return context.resources.getQuantityString(R.plurals.us_felder, felder.size, felder.size)
     }
 
     /** Die Uhr-App anhalten. Bisher von keinem Zettel benutzt, aber symmetrisch. */

@@ -190,22 +190,24 @@ object Kartenlink {
                 )
                 return@withContext Uebergabe(
                     weg != null,
-                    (weg ?: "abgelehnt") + ", Koordinate aus dem Link",
+                    context.getString(R.string.kl_weg_koordinate, weg ?: context.getString(R.string.kl_abgelehnt_kurz)),
                     ziel.lat, ziel.lon,
                 )
             }
             val name = ziel.text
-            if (name.isNullOrBlank()) return@withContext Uebergabe(false, "kein Ziel")
+            if (name.isNullOrBlank()) return@withContext Uebergabe(false, context.getString(R.string.kl_kein_ziel_kurz))
 
             Ortsuche.finde(context, name)?.let { (lat, lon) ->
                 val weg = OsmandNavigation.oeffneZiel(context, lat, lon, name, fuehren)
                 return@withContext Uebergabe(
-                    weg != null, (weg ?: "abgelehnt") + ", Adresse umgesetzt", lat, lon
+                    weg != null,
+                    context.getString(R.string.kl_weg_adresse, weg ?: context.getString(R.string.kl_abgelehnt_kurz)),
+                    lat, lon,
                 )
             }
             // Letzter Ausweg: OsmAnd selbst suchen lassen.
             val weg = OsmandNavigation.oeffneZiel(context, null, null, name, fuehren)
-            Uebergabe(weg != null, weg ?: "abgelehnt")
+            Uebergabe(weg != null, weg ?: context.getString(R.string.kl_abgelehnt_kurz))
         }
 
     /** Was bei der Uebergabe herauskam - fuer den Verlauf und den Pruefstand. */

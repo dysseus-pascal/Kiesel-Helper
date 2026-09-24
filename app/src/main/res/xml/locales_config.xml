@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Die Sprachen der App - fuer die Sprachwahl je App ab Android 13
+     (Einstellungen, System, Sprachen). Dieselben wie die values-Ordner;
+     Englisch ist der Rueckfall fuer alles andere. -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+    <locale android:name="de" />
+    <locale android:name="fr" />
+    <locale android:name="it" />
+    <locale android:name="es" />
+</locale-config>

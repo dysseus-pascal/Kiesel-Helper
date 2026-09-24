@@ -37,8 +37,8 @@ class StartEmpfaenger : BroadcastReceiver() {
         try {
             EmpfangsDienst.starte(context)
             Verlauf(context).merkeMeldung(
-                if (intent.action == Intent.ACTION_BOOT_COMPLETED) "Empfang nach Neustart wieder an"
-                else "Empfang nach Update wieder an"
+                if (intent.action == Intent.ACTION_BOOT_COMPLETED) context.getString(R.string.v_empfang_neustart)
+                else context.getString(R.string.v_empfang_update)
             )
         } catch (e: Exception) {
             Log.w(PebbleEmpfaenger.TAG, "Start abgelehnt: " + e.message)

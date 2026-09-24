@@ -409,7 +409,7 @@ class Gesundheit(private val context: Context) {
                 suppGenommen = speicher.wert(heute, "supp_genommen"),
                 suppWocheF = wocheAusSpeicher(speicher, "supp_faellig", heute),
                 suppWocheG = wocheAusSpeicher(speicher, "supp_genommen", heute),
-                suppListe = Supplemente.lies(context)?.heute.orEmpty(),
+                suppListe = Supplemente.lies(context)?.heute(context).orEmpty(),
                 energie = speicher.wert(heute, "energie"),
                 koffeinMg = speicher.wert(heute, "koffein_mg"),
                 koffeinLetzt = speicher.wert(heute, "koffein_letzt"),
@@ -422,30 +422,30 @@ class Gesundheit(private val context: Context) {
         val schlafsitzungen = sitzungen.await()
 
         val stand = Stand(
-            schritte = Wert("Schritte", sum?.get(StepsRecord.COUNT_TOTAL)?.toDouble(),
+            schritte = Wert(context.getString(R.string.schritte), sum?.get(StepsRecord.COUNT_TOTAL)?.toDouble(),
                             "", ZIEL_SCHRITTE),
-            distanz = Wert("Distanz",
+            distanz = Wert(context.getString(R.string.distanz),
                            sum?.get(DistanceRecord.DISTANCE_TOTAL)?.inKilometers, "km"),
-            kalorien = Wert("Aktive Kalorien",
+            kalorien = Wert(context.getString(R.string.aktive_kalorien),
                             sum?.get(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
                                 ?.inKilocalories, "kcal"),
-            aktiv = Wert("Aktiv",
+            aktiv = Wert(context.getString(R.string.aktiv),
                          sum?.get(ExerciseSessionRecord.EXERCISE_DURATION_TOTAL)
                              ?.toMinutes()?.toDouble(), "min", ZIEL_AKTIV_MIN),
-            wasser = Wert("Wasser",
+            wasser = Wert(context.getString(R.string.wasser),
                           sum?.get(HydrationRecord.VOLUME_TOTAL)?.inMilliliters,
                           "ml", wasserziel()),
-            schlaf = Wert("Schlaf", schlafMin.await(), "min",
+            schlaf = Wert(context.getString(R.string.schlaf), schlafMin.await(), "min",
                           Einstellungen.schlafziel(context).toDouble()),
             ruhepuls = ruhe.await(),
-            puls = Wert("Puls", puls.await(), "bpm"),
-            pulsHoch = Wert("Puls hoch", sum?.get(HeartRateRecord.BPM_MAX)?.toDouble(), "bpm"),
-            pulsTief = Wert("Puls tief", sum?.get(HeartRateRecord.BPM_MIN)?.toDouble(), "bpm"),
-            nachtStreuung = Wert("Nachtpuls", nachtpuls?.streuung, "bpm"),
+            puls = Wert(context.getString(R.string.puls), puls.await(), "bpm"),
+            pulsHoch = Wert(context.getString(R.string.puls_hoch), sum?.get(HeartRateRecord.BPM_MAX)?.toDouble(), "bpm"),
+            pulsTief = Wert(context.getString(R.string.puls_tief), sum?.get(HeartRateRecord.BPM_MIN)?.toDouble(), "bpm"),
+            nachtStreuung = Wert(context.getString(R.string.nachtpuls), nachtpuls?.streuung, "bpm"),
             nachtProben = nachtpuls?.proben ?: 0,
-            hrv = Wert("HRV", hrv.await(), "ms"),
-            suppFaellig = Wert("Geplant", eig.suppFaellig, ""),
-            suppGenommen = Wert("Supplemente", eig.suppGenommen, "", ziel = eig.suppFaellig),
+            hrv = Wert(context.getString(R.string.hrv), hrv.await(), "ms"),
+            suppFaellig = Wert(context.getString(R.string.geplant), eig.suppFaellig, ""),
+            suppGenommen = Wert(context.getString(R.string.supplemente), eig.suppGenommen, "", ziel = eig.suppFaellig),
             suppListe = eig.suppListe,
             energie = eig.energie?.toInt(),
             koffeinMg = sum?.get(NutritionRecord.CAFFEINE_TOTAL)
@@ -726,7 +726,7 @@ class Gesundheit(private val context: Context) {
                     timeRangeFilter = TimeRangeFilter.between(gestern, jetzt),
                 )
             )[RestingHeartRateRecord.BPM_AVG]
-        }?.let { return Wert("Ruhepuls", it.toDouble(), "bpm") }
+        }?.let { return Wert(context.getString(R.string.ruhepuls), it.toDouble(), "bpm") }
 
         fange("Ruhepuls (Woche)") {
             klient.readRecords(
@@ -737,12 +737,12 @@ class Gesundheit(private val context: Context) {
                     ),
                 )
             ).records.maxByOrNull { it.time }?.beatsPerMinute
-        }?.let { return Wert("Ruhepuls", it.toDouble(), "bpm") }
+        }?.let { return Wert(context.getString(R.string.ruhepuls), it.toDouble(), "bpm") }
 
         nachtpuls(klient, nacht)
-            ?.let { return Wert("Ruhepuls", it.ruhe, "bpm", geschaetzt = true) }
+            ?.let { return Wert(context.getString(R.string.ruhepuls), it.ruhe, "bpm", geschaetzt = true) }
 
-        return Wert("Ruhepuls", null, "bpm")
+        return Wert(context.getString(R.string.ruhepuls), null, "bpm")
     }
 
     /**
@@ -1054,17 +1054,17 @@ class Gesundheit(private val context: Context) {
             Instant.now().minus(Duration.ofDays(2)), Instant.now()
         )
         return listOf(
-            "Schritte" to StepsRecord::class,
-            "Distanz" to DistanceRecord::class,
-            "Kalorien" to ActiveCaloriesBurnedRecord::class,
-            "Training" to ExerciseSessionRecord::class,
-            "Wasser" to HydrationRecord::class,
-            "Schlaf" to SleepSessionRecord::class,
-            "Puls" to HeartRateRecord::class,
-            "Ruhepuls" to RestingHeartRateRecord::class,
-            "HRV" to HeartRateVariabilityRmssdRecord::class,
-            "Ernährung" to NutritionRecord::class,
-        ).map { (name, klasse) -> zaehle(klient, name, klasse, fenster) }
+            R.string.schritte to StepsRecord::class,
+            R.string.distanz to DistanceRecord::class,
+            R.string.kalorien to ActiveCaloriesBurnedRecord::class,
+            R.string.training to ExerciseSessionRecord::class,
+            R.string.wasser to HydrationRecord::class,
+            R.string.schlaf to SleepSessionRecord::class,
+            R.string.puls to HeartRateRecord::class,
+            R.string.ruhepuls to RestingHeartRateRecord::class,
+            R.string.hrv to HeartRateVariabilityRmssdRecord::class,
+            R.string.reiter_ernaehrung to NutritionRecord::class,
+        ).map { (name, klasse) -> zaehle(klient, context.getString(name), klasse, fenster) }
     }
 
     private suspend fun <T : Record> zaehle(

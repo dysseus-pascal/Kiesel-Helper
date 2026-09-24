@@ -37,7 +37,10 @@ object Zonenfarben {
         Color.rgb(0xFF, 0xAA, 0x00),   // 4 ChromeYellow
         Color.rgb(0xFF, 0x00, 0x55),   // 5 Folly
     )
-    val NAMEN = arrayOf("darunter", "Erholung", "Grundlage", "Ausdauer", "Schwelle", "Maximal")
+    /** Die Namen der Zonen 1 bis 5 - Ressourcen, weil sie dastehen. */
+    val NAMEN = intArrayOf(
+        R.string.zone_unter, R.string.zone_1, R.string.zone_2, R.string.zone_3, R.string.zone_4, R.string.zone_5,
+    )
 
     /** Langsam blau, schnell rot - ueber Cyan, Gruen und Gelb, damit man die Mitte sieht. */
     fun tempofarbe(anteil: Float): Int {
@@ -93,7 +96,10 @@ fun Context.zonenliste(sekunden: LongArray, maxpuls: Int): LinearLayout {
                     setColor(Zonenfarben.FARBEN[z])
                 }
             })
-            addView(fliesstext(if (z == 0) "unter Zone 1" else "Zone $z · " + Zonenfarben.NAMEN[z]).apply {
+            addView(fliesstext(
+                if (z == 0) getString(R.string.zone_unter)
+                else getString(R.string.zone_n, z, getString(Zonenfarben.NAMEN[z]))
+            ).apply {
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             })
             addView(zart("$von–$bis  ").apply { minWidth = dp(64f) })
@@ -344,8 +350,8 @@ fun Context.farbkarte(
         }
         ansicht.overlays.add(m)
     }
-    marke(strecke.first(), "Start", Color.rgb(0x2E, 0x7D, 0x32))
-    marke(strecke.last(), "Ende", Color.rgb(0xC6, 0x28, 0x28))
+    marke(strecke.first(), getString(R.string.t_start), Color.rgb(0x2E, 0x7D, 0x32))
+    marke(strecke.last(), getString(R.string.t_ende), Color.rgb(0xC6, 0x28, 0x28))
 
     ansicht.post {
         ansicht.zoomToBoundingBox(BoundingBox.fromGeoPoints(saum.actualPoints).increaseByScale(1.25f), false)

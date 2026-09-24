@@ -123,20 +123,25 @@ object Aufgaben {
      *
      * Wer sie dort umsortiert, macht hier aus jedem Wandern ein
      * Krafttraining - rueckwirkend und lautlos.
+     *
+     * Der Titel geht in der Sprache des Telefons in die Akte - er ist das,
+     * was man dort liest. Was schon drinsteht, bleibt, wie es war.
      */
-    private fun artAlsSatzart(art: Long): Pair<Int, String> = when (art.toInt()) {
-        0 -> ExerciseSessionRecord.EXERCISE_TYPE_RUNNING to "Laufen"
+    private fun artAlsSatzart(context: Context, art: Long): Pair<Int, String> = when (art.toInt()) {
+        0 -> ExerciseSessionRecord.EXERCISE_TYPE_RUNNING to context.getString(R.string.a_titel_laufen)
         // ZWEIMAL DIESELBE SATZART, ZWEI NAMEN. Die Gesundheitsakte kennt
         // nur ein Radfahren und kein Mountainbike; die Unterscheidung traegt
         // deshalb der Titel. Strasse und Gravel stehen zusammen - sie
         // unterscheiden sich im Reifen, nicht in dem, was die Uhr sieht.
-        1 -> ExerciseSessionRecord.EXERCISE_TYPE_BIKING to "Bike Strasse/Gravel"
-        2 -> ExerciseSessionRecord.EXERCISE_TYPE_HIKING to "Wandern"
-        3 -> ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING to "Kraft"
-        4 -> ExerciseSessionRecord.EXERCISE_TYPE_BIKING to "Bike MTB"
-        5 -> ExerciseSessionRecord.EXERCISE_TYPE_YOGA to "Yoga"
-        6 -> ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL to "Schwimmen"
-        else -> ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT to "Training"
+        // "MTB" MUSS IN JEDER SPRACHE IM TITEL STEHEN: [Sportart.von] erkennt
+        // das Mountainbike nur daran. Der SprachenTest haelt das fest.
+        1 -> ExerciseSessionRecord.EXERCISE_TYPE_BIKING to context.getString(R.string.a_titel_strasse)
+        2 -> ExerciseSessionRecord.EXERCISE_TYPE_HIKING to context.getString(R.string.a_titel_wandern)
+        3 -> ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING to context.getString(R.string.a_titel_kraft)
+        4 -> ExerciseSessionRecord.EXERCISE_TYPE_BIKING to context.getString(R.string.a_titel_mtb)
+        5 -> ExerciseSessionRecord.EXERCISE_TYPE_YOGA to context.getString(R.string.a_titel_yoga)
+        6 -> ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL to context.getString(R.string.a_titel_schwimmen)
+        else -> ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT to context.getString(R.string.training)
     }
 
     private const val SP_HRV = 10017
@@ -259,6 +264,7 @@ object Aufgaben {
      * Schirm zeigt sie so; "12/10/8/8" in einer Zeile liest jeder.
      */
     private fun abschnittsnotiz(
+        context: Context,
         satzart: Int,
         felder: Map<Int, Long>,
         abschnitte: List<Abschnitt>,
@@ -269,7 +275,8 @@ object Aufgaben {
             bahnen > 0 -> {
                 val meter = felder[SP_METER] ?: 0
                 val je = if (bahnen > 0) meter / bahnen else 0
-                "$bahnen Bahnen" + (if (je > 0) " à $je m" else "")
+                context.getString(R.string.a_bahnen, bahnen.toInt()) +
+                    (if (je > 0) " " + context.getString(R.string.a_a_m, je.toInt()) else "")
             }
             saetze > 0 -> {
                 val reps = felder[SP_REPS] ?: 0
@@ -277,10 +284,10 @@ object Aufgaben {
                     .joinToString("/") { it.anzahl.toString() }
                 val pausen = pausenSchnitt(abschnitte)
                 buildString {
-                    append("$saetze Sätze")
+                    append(context.getString(R.string.a_saetze, saetze.toInt()))
                     if (liste.isNotBlank()) append(" ($liste)")
-                    if (reps > 0) append(", $reps Wdh.")
-                    if (pausen > 0) append(", Pause ⌀ $pausen s")
+                    if (reps > 0) append(", " + context.getString(R.string.a_wdh, reps.toInt()))
+                    if (pausen > 0) append(", " + context.getString(R.string.a_pause, pausen.toInt()))
                 }
             }
             else -> null
@@ -330,7 +337,7 @@ object Aufgaben {
             }
             return if (ab + werte.size >= anzahl) {
                 if (Pulskurve.eintragen(context, beginn)) null
-                else "Pulskurve nicht eingetragen"
+                else context.getString(R.string.a_pulskurve_nicht)
             } else {
                 null
             }
@@ -347,15 +354,21 @@ object Aufgaben {
             // Eine blosse Zustandsmeldung: sie steuert nur die Aufzeichnung.
             val beginn = felder[SP_BEGINN] ?: return null
             val artNummer = felder[SP_ART] ?: -1
-            val (_, name) = artAlsSatzart(artNummer)
+            val (_, name) = artAlsSatzart(context, artNummer)
             // NUR WO ES EINE STRECKE GIBT, laeuft das GPS: Laufen, Bike,
             // Wandern, MTB. Beim Kraft in der Halle, beim Yoga und im Becken
             // zeichnete es nur Rauschen auf - und kostete den Akku.
             val mitStrecke = artNummer in setOf(0L, 1L, 2L, 4L)
             return when (zustand) {
-                1L -> { if (mitStrecke) SpurDienst.starte(context, beginn, name); "$name begonnen" }
-                2L -> { SpurDienst.stoppe(context); "$name pausiert" }
-                3L -> { if (mitStrecke) SpurDienst.starte(context, beginn, name); "$name fortgesetzt" }
+                1L -> {
+                    if (mitStrecke) SpurDienst.starte(context, beginn, name)
+                    context.getString(R.string.a_begonnen, name)
+                }
+                2L -> { SpurDienst.stoppe(context); context.getString(R.string.a_pausiert, name) }
+                3L -> {
+                    if (mitStrecke) SpurDienst.starte(context, beginn, name)
+                    context.getString(R.string.a_fortgesetzt, name)
+                }
                 0L -> { SpurDienst.stoppe(context); null }
                 else -> null
             }
@@ -378,7 +391,7 @@ object Aufgaben {
         val klient = Akte(context).bereit()
         if (klient == null) {
             Riegel.loese(context, "kieselsport")
-            return "Gesundheitsakte nicht verfügbar"
+            return context.getString(R.string.g_akte_fehlt)
         }
         val anfang = Instant.ofEpochSecond(beginn)
         val ende = anfang.plusSeconds(dauer)
@@ -386,10 +399,10 @@ object Aufgaben {
         // Traegt schon jemand anders eine Sitzung ueber dieselbe Zeit ein?
         schonDa(context, klient, ExerciseSessionRecord::class, anfang, FENSTER_TRAINING)?.let {
             Log.i(TAG, "Training steht schon da, von " + it)
-            return "Übersprungen — $it hat das Training schon eingetragen"
+            return context.getString(R.string.a_uebersprungen_training, it)
         }
 
-        val (satzart, name) = artAlsSatzart(felder[SP_ART] ?: -1)
+        val (satzart, name) = artAlsSatzart(context, felder[SP_ART] ?: -1)
         val puls = felder[SP_PULS_MITTEL] ?: 0
         val kcal = felder[SP_KCAL] ?: 0
 
@@ -424,19 +437,19 @@ object Aufgaben {
             if (bahnen > 0) alsBahnen(abschnitte, anfang, ende, becken) else emptyList()
 
         val notiz = buildString {
-            if (puls > 0) append("Puls ⌀ $puls")
-            felder[SP_PULS_MAX]?.takeIf { it > 0 }?.let { append(", max $it") }
+            if (puls > 0) append(context.getString(R.string.a_puls_schnitt, puls.toInt()))
+            felder[SP_PULS_MAX]?.takeIf { it > 0 }?.let { append(", " + context.getString(R.string.a_max, it.toInt())) }
             if (strecke > 0) {
                 append(", ")
                 append(Zahlen.eine(strecke / 1000) ?: "")
                 append(" km (GPS)")
             } else {
                 felder[SP_METER]?.takeIf { it > 0 }?.let {
-                    append(", ${it / 1000},${(it % 1000) / 100} km")
+                    append(", " + (Zahlen.eine(it / 100 / 10.0) ?: "") + " km")
                 }
             }
             if (kcal > 0) append(", $kcal kcal")
-            abschnittsnotiz(satzart, felder, abschnitte)?.let {
+            abschnittsnotiz(context, satzart, felder, abschnitte)?.let {
                 if (isNotEmpty()) append(" — ")
                 append(it)
             }
@@ -481,16 +494,21 @@ object Aufgaben {
         )
         val hatAbschnitte = satz != null && (segmente.isNotEmpty() || runden.isNotEmpty())
         val kurz = buildString {
-            append("$name, ${dauer / 60} min")
-            if (strecke > 0) append(", " + (Zahlen.eine(strecke / 1000) ?: "") + " km")
-            if (bahnen > 0) append(", $bahnen Bahnen")
-            if (segmente.isNotEmpty()) append(", ${felder[SP_SAETZE] ?: 0} Sätze")
-            append(" eingetragen")
+            // Name und Dauer vorn, das Weitere als Liste dahinter - der Platzhalter
+            // nimmt sie mitsamt ihren Kommas.
+            val dazu = buildString {
+                if (strecke > 0) append(", " + (Zahlen.eine(strecke / 1000) ?: "") + " km")
+                if (bahnen > 0) append(", " + context.getString(R.string.a_bahnen, bahnen.toInt()))
+                if (segmente.isNotEmpty()) {
+                    append(", " + context.getString(R.string.a_saetze, (felder[SP_SAETZE] ?: 0).toInt()))
+                }
+            }
+            append(context.getString(R.string.a_eingetragen, name, (dauer / 60).toInt(), dazu))
         }
         var meldung = schreibe(context, satz ?: ohne, kurz, riegel = "kieselsport")
-        if (hatAbschnitte && meldung.startsWith("Nicht eingetragen")) {
+        if (hatAbschnitte && meldung == context.getString(R.string.a_nicht_eingetragen)) {
             Log.w(TAG, "Eintrag mit Abschnitten abgewiesen, zweiter Anlauf ohne")
-            meldung = schreibe(context, ohne, "$kurz (ohne die einzelnen Abschnitte)",
+            meldung = schreibe(context, ohne, context.getString(R.string.a_ohne_abschnitte, kurz),
                 riegel = "kieselsport")
         }
 
@@ -503,14 +521,14 @@ object Aufgaben {
                     zoneOffset = null,
                     heartRateVariabilityMillis = hrv.toDouble(),
                     metadata = vonDerUhr("kieselsport-hrv-" + beginn),
-                ), "HRV $hrv ms eingetragen", riegel = "kieselsport-hrv")
-                meldung += ", HRV $hrv ms"
+                ), context.getString(R.string.a_hrv_eingetragen, hrv.toInt()), riegel = "kieselsport-hrv")
+                meldung += ", " + context.getString(R.string.a_hrv, hrv.toInt())
             }
         }
 
         // Die Pulskurve, falls die Uhr sie schon geliefert hat. Kommt sie
         // spaeter, traegt der Datenlog-Empfaenger sie selbst ein.
-        if (Pulskurve.eintragen(context, beginn)) meldung += ", Pulskurve"
+        if (Pulskurve.eintragen(context, beginn)) meldung += ", " + context.getString(R.string.a_pulskurve)
         return meldung
     }
 
@@ -610,7 +628,7 @@ object Aufgaben {
         val neuGenommen = genommen and faellig and vorher.inv()
         for (platz in 0 until 64) {
             if (((neuGenommen shr platz) and 1L) == 0L) continue
-            val name = namen.getOrNull(platz)?.ifBlank { null } ?: "Präparat ${platz + 1}"
+            val name = namen.getOrNull(platz)?.ifBlank { null } ?: context.getString(R.string.a_praeparat_n, platz + 1)
             praeparat(context, name, tag, platz, Instant.now())
         }
 
@@ -627,7 +645,7 @@ object Aufgaben {
             ))
         }
         GesundheitWidget.stosseAn(context)
-        return "$davon von $wieViele Präparaten"
+        return context.getString(R.string.a_davon_von, davon, wieViele)
     }
 
     /**
@@ -661,11 +679,11 @@ object Aufgaben {
         val klient = Akte(context).bereit()
         if (klient == null) {
             Riegel.loese(context, "drinktervall")
-            return "Gesundheitsakte nicht verfügbar"
+            return context.getString(R.string.g_akte_fehlt)
         }
         schonDa(context, klient, HydrationRecord::class, beginn, FENSTER_WASSER)?.let {
             Log.i(TAG, "Wasser steht schon da, von " + it)
-            return "Übersprungen — $it hat dasselbe Glas schon eingetragen"
+            return context.getString(R.string.a_uebersprungen_glas, it)
         }
         val satz = HydrationRecord(
             startTime = beginn,
@@ -677,7 +695,7 @@ object Aufgaben {
             volume = Volume.milliliters(ml.toDouble()),
             metadata = vonDerUhr("drinktervall-" + wann),
         )
-        return schreibe(context, satz, "$ml ml eingetragen", riegel = "drinktervall")
+        return schreibe(context, satz, context.getString(R.string.a_ml_eingetragen, ml.toInt()), riegel = "drinktervall")
     }
 
     /**
@@ -696,7 +714,7 @@ object Aufgaben {
         if (start > 0 && ende > start + 1800 && Riegel.neu(context, "schlaf", ende.toString())) {
             if (klient == null) {
                 Riegel.loese(context, "schlaf")
-                return "Gesundheitsakte nicht verfügbar"
+                return context.getString(R.string.g_akte_fehlt)
             }
             val von = Instant.ofEpochSecond(start)
             val bis = Instant.ofEpochSecond(ende)
@@ -709,12 +727,13 @@ object Aufgaben {
                     startZoneOffset = null,
                     endTime = bis,
                     endZoneOffset = null,
-                    title = "Schlaf (Uhr)",
+                    title = context.getString(R.string.a_schlaf_titel),
                     metadata = vonDerUhr("uhr-schlaf-" + ende),
                 )
                 val stunden = Duration.between(von, bis).toMinutes()
                 meldungen += schreibe(context, satz,
-                    "Schlaf ${stunden / 60} h ${stunden % 60} min eingetragen", riegel = "schlaf")
+                    context.getString(R.string.a_schlaf_eingetragen, (stunden / 60).toInt(), (stunden % 60).toInt()),
+                    riegel = "schlaf")
             }
         }
 
@@ -730,7 +749,8 @@ object Aufgaben {
                     beatsPerMinute = ruhe,
                     metadata = vonDerUhr("uhr-ruhepuls-" + tag),
                 )
-                meldungen += schreibe(context, satz, "Ruhepuls $ruhe eingetragen", riegel = "ruhepuls")
+                meldungen += schreibe(context, satz, context.getString(R.string.a_ruhepuls_eingetragen, ruhe.toInt()),
+                    riegel = "ruhepuls")
             }
         }
         return meldungen.takeIf { it.isNotEmpty() }?.joinToString(", ")
@@ -757,7 +777,7 @@ object Aufgaben {
         val klient = Akte(context).bereit()
         if (klient == null) {
             Riegel.loese(context, "herzintervall")
-            return "Gesundheitsakte nicht verfügbar"
+            return context.getString(R.string.g_akte_fehlt)
         }
         val zeitpunkt = Instant.ofEpochSecond(wann)
         schonDa(
@@ -765,7 +785,7 @@ object Aufgaben {
             zeitpunkt, FENSTER_HRV,
         )?.let {
             Log.i(TAG, "HRV steht schon da, von " + it)
-            return "Übersprungen — $it hat die Messung schon eingetragen"
+            return context.getString(R.string.a_uebersprungen_messung, it)
         }
 
         val satz = HeartRateVariabilityRmssdRecord(
@@ -774,7 +794,7 @@ object Aufgaben {
             heartRateVariabilityMillis = ms.toDouble(),
             metadata = vonDerUhr("herzintervall-" + wann),
         )
-        return schreibe(context, satz, "$ms ms eingetragen", riegel = "herzintervall")
+        return schreibe(context, satz, context.getString(R.string.a_ms_eingetragen, ms.toInt()), riegel = "herzintervall")
     }
 
     /**
@@ -812,7 +832,7 @@ object Aufgaben {
             caffeine = Mass.grams(mg / 1000.0),
             metadata = vonHand("koffein-" + zeitpunkt.epochSecond),
         )
-        return schreibe(context, satz, "$mg mg Koffein eingetragen")
+        return schreibe(context, satz, context.getString(R.string.a_koffein_eingetragen, mg))
     }
 
     /**
@@ -937,7 +957,7 @@ object Aufgaben {
         val klient = Akte(context).bereit()
         if (klient == null) {
             riegel?.let { Riegel.loese(context, it) }
-            return "Gesundheitsakte nicht verfügbar"
+            return context.getString(R.string.g_akte_fehlt)
         }
         return try {
             klient.insertRecords(listOf(satz))
@@ -950,7 +970,7 @@ object Aufgaben {
             // nennen ist nuetzlicher als "Fehler".
             Log.w(TAG, "Eintragen fehlgeschlagen: " + e.message)
             riegel?.let { Riegel.loese(context, it) }
-            "Nicht eingetragen — Erlaubnis in der App prüfen"
+            context.getString(R.string.a_nicht_eingetragen)
         }
     }
 }

@@ -40,8 +40,8 @@ class Akte(private val context: Context) {
     private fun nichtVerfuegbar(): String {
         return when (HealthConnectClient.getSdkStatus(context)) {
             HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED ->
-                "Health Connect muss aktualisiert werden"
-            else -> "Health Connect ist auf diesem Gerät nicht verfügbar"
+                context.getString(R.string.hc_update)
+            else -> context.getString(R.string.hc_nicht_verfuegbar)
         }
     }
 
