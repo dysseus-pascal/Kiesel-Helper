@@ -648,4 +648,11 @@
     <string name="ei_exportieren">Export CSV</string>
     <string name="ei_neu_auswerten">Re-analyse</string>
     <string name="ei_keine_nacht">No stored night.</string>
+    <string name="spo2">SpO2</string>
+    <string name="g_spo2">BLOOD OXYGEN</string>
+    <string name="spo2_mittel">Average 24 h</string>
+    <string name="spo2_tiefster">Lowest</string>
+    <string name="g_spo2_letzte">Last: %1$s %% at %2$s · %3$d readings in 24 h</string>
+    <string name="g_spo2_lang" formatted="false">The watch measures at the interval set in the Pebble app and discards readings taken while moving. Healthy values at rest are usually 95–100 %. A single low value is mostly a measuring error; if values stay below 90 %, talk to a doctor.</string>
+    <string name="g_spo2_leer">No readings yet. SpO2 comes from the watch via the Pebble app with SpO2 (turn on Blood Oxygen and Sync to Health Connect there) into Health Connect.</string>
 </resources>

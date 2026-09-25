@@ -654,4 +654,11 @@
     <string name="ei_exportieren">Exportar CSV</string>
     <string name="ei_neu_auswerten">Volver a analizar</string>
     <string name="ei_keine_nacht">No hay ninguna noche guardada.</string>
+    <string name="spo2">SpO2</string>
+    <string name="g_spo2">OXÍGENO EN SANGRE</string>
+    <string name="spo2_mittel">Media 24 h</string>
+    <string name="spo2_tiefster">Mínimo</string>
+    <string name="g_spo2_letzte">Última: %1$s %% a las %2$s · %3$d mediciones en 24 h</string>
+    <string name="g_spo2_lang" formatted="false">El reloj mide con el intervalo ajustado en la app Pebble y descarta las mediciones en movimiento. En reposo los valores sanos suelen estar entre 95 y 100 %. Un valor bajo aislado suele ser un error de medición; si los valores siguen por debajo del 90 %, consulta a un médico.</string>
+    <string name="g_spo2_leer">Aún no hay valores. La SpO2 llega del reloj a Health Connect a través de la app Pebble con SpO2 (activa allí Blood Oxygen y Sync to Health Connect).</string>
 </resources>

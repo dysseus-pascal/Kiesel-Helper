@@ -11,6 +11,7 @@ import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.NutritionRecord
+import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
@@ -167,6 +168,25 @@ class Gesundheit(private val context: Context) {
          * Abend: es ist heute frueh noch nicht abgebaut.
          */
         val koffeinDosen: List<Dosis> = emptyList(),
+        /** SpO2 der letzten 24 Stunden - null, solange keiner in der Akte steht. */
+        val sauerstoff: Sauerstoff? = null,
+    )
+
+    /**
+     * Der Blutsauerstoff der letzten 24 Stunden.
+     *
+     * NUR WAS GEMESSEN WURDE. Die Uhr misst im eingestellten Abstand und
+     * verwirft, was sie in Bewegung misst; es sind also wenige Werte, und
+     * jeder zaehlt einzeln. Kein Wert heisst: keiner da - nicht 0 %.
+     */
+    data class Sauerstoff(
+        val mittel: Double,
+        val tiefster: Double,
+        val letzter: Double,
+        val letzterZeit: Instant,
+        val anzahl: Int,
+        /** Minuten seit Fensterbeginn, wie im Pulsbild. */
+        val verlauf: List<Punkt>,
     )
 
     /** Eine Portion Koffein: wann, und wie viel. */
@@ -188,6 +208,7 @@ class Gesundheit(private val context: Context) {
             HealthPermission.getReadPermission(RestingHeartRateRecord::class),
             HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
             HealthPermission.getReadPermission(NutritionRecord::class),
+            HealthPermission.getReadPermission(OxygenSaturationRecord::class),
         )
 
         /**
@@ -352,6 +373,7 @@ class Gesundheit(private val context: Context) {
         val wocheWasser = async { wocheSchritteWasser(klient, HydrationRecord.VOLUME_TOTAL) }
         val wocheSchl = async { wocheSchlaf(klient, heute) }
         val verlauf = async { pulsverlauf(klient) }
+        val spo2 = async { sauerstoff(klient) }
 
         // DIE EINZELNEN GLAESER UND TASSEN, nicht nur ihre Summe. Die Summe
         // sagt, wie viel; erst die Zeitpunkte sagen, ob der Nachmittag
@@ -457,6 +479,7 @@ class Gesundheit(private val context: Context) {
             gelesen = Instant.now(),
             glaeser = glaeser.await(),
             koffeinDosen = tassen.await(),
+            sauerstoff = spo2.await(),
         )
 
         // JEDES LESEN IST EIN EINTRAG. Die Akte selbst vergisst; was hier
@@ -1093,6 +1116,7 @@ class Gesundheit(private val context: Context) {
             R.string.puls to HeartRateRecord::class,
             R.string.ruhepuls to RestingHeartRateRecord::class,
             R.string.hrv to HeartRateVariabilityRmssdRecord::class,
+            R.string.spo2 to OxygenSaturationRecord::class,
             R.string.reiter_ernaehrung to NutritionRecord::class,
         ).map { (name, klasse) -> zaehle(klient, context.getString(name), klasse, fenster) }
     }
@@ -1168,6 +1192,45 @@ class Gesundheit(private val context: Context) {
     ): Double? = fange("Puls") {
         klient.readRecords(ReadRecordsRequest(HeartRateRecord::class, tag))
             .records.lastOrNull()?.samples?.lastOrNull()?.beatsPerMinute?.toDouble()
+    }
+
+    /**
+     * Die SpO2-Werte der letzten 24 Stunden - von welcher App auch immer.
+     *
+     * Die Uhr schreibt sie nicht selbst: die Pebble-App (Gravel mit SpO2)
+     * holt sie mit den Minutendaten und traegt sie ein. Kiesel-Helper liest
+     * nur, wie beim Puls.
+     */
+    private suspend fun sauerstoff(klient: HealthConnectClient): Sauerstoff? {
+        val jetzt = Instant.now()
+        val beginn = jetzt.minus(Duration.ofHours(24))
+        val saetze = fange("SpO2") {
+            klient.readRecords(
+                ReadRecordsRequest(
+                    OxygenSaturationRecord::class, TimeRangeFilter.between(beginn, jetzt)
+                )
+            ).records
+        } ?: return null
+        // Doppelte Minuten (zwei Apps, oder dieselbe zweimal) zaehlen einmal.
+        val werte = saetze
+            .filter { it.percentage.value in 50.0..100.0 }
+            .distinctBy { it.time.epochSecond / 60 }
+            .sortedBy { it.time }
+        if (werte.isEmpty()) return null
+        val prozente = werte.map { it.percentage.value }
+        return Sauerstoff(
+            mittel = prozente.average(),
+            tiefster = prozente.min(),
+            letzter = prozente.last(),
+            letzterZeit = werte.last().time,
+            anzahl = werte.size,
+            verlauf = werte.map {
+                Punkt(
+                    Duration.between(beginn, it.time).toMinutes().toInt().coerceIn(0, 1440),
+                    it.percentage.value,
+                )
+            },
+        )
     }
 
     /**

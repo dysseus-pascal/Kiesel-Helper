@@ -58,6 +58,7 @@
     <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
     <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE" />
     <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY" />
+    <uses-permission android:name="android.permission.health.READ_OXYGEN_SATURATION" />
     <!-- Aelter als dreissig Tage: ohne sie gibt die Akte nach einer
          Neuinstallation nur den letzten Monat heraus. -->
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY" />

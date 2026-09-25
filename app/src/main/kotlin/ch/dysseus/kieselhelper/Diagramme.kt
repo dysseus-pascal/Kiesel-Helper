@@ -671,6 +671,88 @@ fun Context.pulsbild(
         ).apply { topMargin = dp(10f) }
     }
 
+// --- Blutsauerstoff ---------------------------------------------------------
+
+/**
+ * Die SpO2-Werte von 24 Stunden als Punkte, die Achse von 85 bis 100 %.
+ *
+ * DIE ACHSE BEGINNT NICHT BEI NULL: gesund liegt alles zwischen 95 und 100,
+ * und bei null als Boden waere das ein Strich am oberen Rand. Gestrichelt
+ * die 90 %: darunter steht ein Wert, den man ansehen sollte - einzeln ist
+ * er meist eine Messung in Bewegung.
+ */
+class Spo2View(
+    ctx: Context,
+    private val punkte: List<Gesundheit.Punkt>,
+    private val beginnMinute: Int,
+) : View(ctx) {
+
+    private val tupfen = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = context.akzentfarbe()
+    }
+    private val gitter = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = context.dp(1f).toFloat()
+        color = context.farbe(R.color.linie)
+    }
+    private val grenze = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = context.dp(1f).toFloat()
+        color = context.farbe(R.color.schrift_zart)
+        pathEffect = DashPathEffect(
+            floatArrayOf(context.dp(3f).toFloat(), context.dp(3f).toFloat()), 0f
+        )
+    }
+    private val schrift = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_SP, 10f, context.resources.displayMetrics
+        )
+        color = context.farbe(R.color.schrift_zart)
+    }
+
+    override fun onDraw(leinwand: Canvas) {
+        val fuss = context.dp(14f).toFloat()
+        val rand = context.dp(30f).toFloat()
+        val boden = height - fuss
+        val breite = width - rand
+        // Faellt ein Wert tiefer als 85, waechst die Achse mit - nichts
+        // verschwindet unter dem Rand.
+        val unten = minOf(85.0, (punkte.minOfOrNull { it.wert } ?: 85.0) - 1)
+        val oben = 100.0
+        val kopf = schrift.textSize
+        fun y(w: Double) = (kopf + (boden - kopf) * (1 - (w - unten) / (oben - unten))).toFloat()
+        fun x(minute: Int) = breite * (minute / 1440f)
+
+        listOf(360, 720, 1080).forEach { versatz ->
+            val sx = x(versatz)
+            leinwand.drawLine(sx, 0f, sx, boden, gitter)
+            schrift.textAlign = Paint.Align.CENTER
+            val stunde = ((beginnMinute + versatz) / 60) % 24
+            leinwand.drawText(String.format("%02d", stunde), sx, height - context.dp(2f).toFloat(), schrift)
+        }
+
+        schrift.textAlign = Paint.Align.LEFT
+        val rechts = breite + context.dp(4f).toFloat()
+        listOf(100.0, 95.0).forEach { w ->
+            leinwand.drawLine(0f, y(w), breite, y(w), gitter)
+            leinwand.drawText("${w.toInt()} %", rechts, y(w) + schrift.textSize / 3, schrift)
+        }
+        leinwand.drawLine(0f, y(90.0), breite, y(90.0), grenze)
+        leinwand.drawText("90 %", rechts, y(90.0) + schrift.textSize / 3, schrift)
+
+        val gross = context.dp(2.4f).toFloat()
+        punkte.forEach { p -> leinwand.drawCircle(x(p.minute), y(p.wert), gross, tupfen) }
+    }
+}
+
+fun Context.spo2bild(punkte: List<Gesundheit.Punkt>, beginnMinute: Int): View =
+    Spo2View(this, punkte, beginnMinute).apply {
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(110f)
+        ).apply { topMargin = dp(10f) }
+    }
+
 // --- Streubild --------------------------------------------------------------
 
 /**

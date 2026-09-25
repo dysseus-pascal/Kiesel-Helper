@@ -645,4 +645,11 @@
     <string name="ei_exportieren">CSV exportieren</string>
     <string name="ei_neu_auswerten">Neu auswerten</string>
     <string name="ei_keine_nacht">Keine gespeicherte Nacht.</string>
+    <string name="spo2">SpO2</string>
+    <string name="g_spo2">BLUTSAUERSTOFF</string>
+    <string name="spo2_mittel">Schnitt 24 h</string>
+    <string name="spo2_tiefster">Tiefster</string>
+    <string name="g_spo2_letzte">Zuletzt %1$s %% um %2$s · %3$d Messungen in 24 h</string>
+    <string name="g_spo2_lang" formatted="false">Die Uhr misst im Abstand, der in der Pebble-App eingestellt ist, und verwirft Messungen in Bewegung. Gesunde Werte in Ruhe liegen meist bei 95–100 %. Ein einzelner tiefer Wert ist meist ein Messfehler; bleiben die Werte unter 90 %, sprich mit einer Ärztin oder einem Arzt.</string>
+    <string name="g_spo2_leer">Noch keine Werte. SpO2 kommt von der Uhr über die Pebble-App mit SpO2 (dort Blood Oxygen und Sync to Health Connect einschalten) in Health Connect.</string>
 </resources>

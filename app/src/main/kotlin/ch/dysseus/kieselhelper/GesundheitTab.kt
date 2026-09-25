@@ -6,6 +6,8 @@ import android.graphics.drawable.GradientDrawable
 import android.util.TypedValue
 import android.widget.LinearLayout
 import android.widget.TextView
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 /**
  * Der Gesundheits-Schirm: drei Karten, drei Bilder.
@@ -168,6 +170,33 @@ object GesundheitTab {
             ))
         }
         s.addView(herz)
+
+        // --- Blutsauerstoff ---
+        //
+        // DIE KARTE STEHT AUCH OHNE WERTE DA, mit einem Satz, woher sie kommen
+        // muessten. Sonst suchte man nach einer Karte, die es nur gibt, wenn
+        // schon alles laeuft.
+        s.addView(ctx.abschnitt(ctx.getString(R.string.g_spo2)))
+        val spo2 = ctx.karte()
+        val o = stand.sauerstoff
+        spo2.addView(ctx.messreihe(
+            ctx.messwert(ctx.getString(R.string.spo2_mittel), Zahlen.ganz(o?.mittel), "%", 0f, false),
+            ctx.messwert(ctx.getString(R.string.spo2_tiefster), Zahlen.ganz(o?.tiefster), "%", 0f, false),
+        ))
+        if (o != null) {
+            val z = LocalDateTime.ofInstant(o.letzterZeit, ZoneId.systemDefault())
+            spo2.addView(ctx.zartMitHinweis(
+                ctx.getString(
+                    R.string.g_spo2_letzte,
+                    Zahlen.ganz(o.letzter) ?: "", String.format("%02d:%02d", z.hour, z.minute), o.anzahl,
+                ),
+                ctx.getString(R.string.g_spo2_lang)
+            ))
+            spo2.addView(ctx.spo2bild(o.verlauf, stand.pulsBeginn))
+        } else {
+            spo2.addView(ctx.zart(ctx.getString(R.string.g_spo2_leer)))
+        }
+        s.addView(spo2)
 
         if (eingaben != null) {
             s.addView(ctx.abschnitt(ctx.getString(R.string.g_wie_war_tag)))
