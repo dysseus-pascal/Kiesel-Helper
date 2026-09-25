@@ -652,4 +652,13 @@
     <string name="g_spo2_letzte">Zuletzt %1$s %% um %2$s · %3$d Messungen in 24 h</string>
     <string name="g_spo2_lang" formatted="false">Die Uhr misst im Abstand, der in der Pebble-App eingestellt ist, und verwirft Messungen in Bewegung. Gesunde Werte in Ruhe liegen meist bei 95–100 %. Ein einzelner tiefer Wert ist meist ein Messfehler; bleiben die Werte unter 90 %, sprich mit einer Ärztin oder einem Arzt.</string>
     <string name="g_spo2_leer">Noch keine Werte. SpO2 kommt von der Uhr über die Pebble-App mit SpO2 (dort Blood Oxygen und Sync to Health Connect einschalten) in Health Connect.</string>
+    <string name="t_spo2_schnitt">SpO2 Schnitt</string>
+    <string name="t_spo2_messungen">SpO2-Messungen</string>
+    <string name="spo2_hoechster">Höchster</string>
+    <string name="v_spo2_keine">Keine SpO2-Werte während dieses Trainings. Sie kommen von der Uhr über die Pebble-App mit SpO2 in Health Connect.</string>
+    <string name="v_spo2_zeit">SpO2 über die Zeit, samt 10 Minuten danach</string>
+    <plurals name="v_spo2_n">
+        <item quantity="one">%1$d SpO2-Messung</item>
+        <item quantity="other">%1$d SpO2-Messungen</item>
+    </plurals>
 </resources>

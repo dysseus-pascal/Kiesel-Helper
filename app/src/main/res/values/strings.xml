@@ -655,4 +655,13 @@
     <string name="g_spo2_letzte">Last: %1$s %% at %2$s · %3$d readings in 24 h</string>
     <string name="g_spo2_lang" formatted="false">The watch measures at the interval set in the Pebble app and discards readings taken while moving. Healthy values at rest are usually 95–100 %. A single low value is mostly a measuring error; if values stay below 90 %, talk to a doctor.</string>
     <string name="g_spo2_leer">No readings yet. SpO2 comes from the watch via the Pebble app with SpO2 (turn on Blood Oxygen and Sync to Health Connect there) into Health Connect.</string>
+    <string name="t_spo2_schnitt">SpO2 average</string>
+    <string name="t_spo2_messungen">SpO2 readings</string>
+    <string name="spo2_hoechster">Highest</string>
+    <string name="v_spo2_keine">No SpO2 readings during this session. They come from the watch via the Pebble app with SpO2 into Health Connect.</string>
+    <string name="v_spo2_zeit">SpO2 over time, including 10 minutes afterwards</string>
+    <plurals name="v_spo2_n">
+        <item quantity="one">%1$d SpO2 reading</item>
+        <item quantity="other">%1$d SpO2 readings</item>
+    </plurals>
 </resources>

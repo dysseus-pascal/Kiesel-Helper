@@ -661,4 +661,13 @@
     <string name="g_spo2_letzte">Ultima: %1$s %% alle %2$s · %3$d misurazioni in 24 h</string>
     <string name="g_spo2_lang" formatted="false">L\'orologio misura all\'intervallo impostato nell\'app Pebble e scarta le misurazioni fatte in movimento. A riposo i valori sani sono di solito 95–100 %. Un singolo valore basso è per lo più un errore di misura; se i valori restano sotto il 90 %, parlane con un medico.</string>
     <string name="g_spo2_leer">Ancora nessun valore. La SpO2 arriva dall\'orologio tramite l\'app Pebble con SpO2 (attiva lì Blood Oxygen e Sync to Health Connect) in Health Connect.</string>
+    <string name="t_spo2_schnitt">SpO2 media</string>
+    <string name="t_spo2_messungen">Misurazioni SpO2</string>
+    <string name="spo2_hoechster">Massimo</string>
+    <string name="v_spo2_keine">Nessun valore SpO2 durante questo allenamento. Arrivano dall\'orologio tramite l\'app Pebble con SpO2 in Health Connect.</string>
+    <string name="v_spo2_zeit">SpO2 nel tempo, compresi 10 minuti dopo</string>
+    <plurals name="v_spo2_n">
+        <item quantity="one">%1$d misurazione SpO2</item>
+        <item quantity="other">%1$d misurazioni SpO2</item>
+    </plurals>
 </resources>

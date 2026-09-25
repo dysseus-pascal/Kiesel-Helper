@@ -8,6 +8,7 @@ import androidx.health.connect.client.records.ExerciseSegment
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import kotlinx.coroutines.Dispatchers
@@ -67,6 +68,12 @@ object TrainingTab {
         val meter: Double,
         /** Der Puls waehrend des Trainings - wie die Punkte nur beim juengsten. */
         val puls: List<Pulspunkt> = emptyList(),
+        /**
+         * SpO2 waehrend des Trainings: Sekunde ab Beginn, Prozent. Die Uhr
+         * verwirft Messungen in Bewegung - es gibt sie also dort, wo man
+         * still ist: beim Yoga, in der Satzpause, beim Dehnen.
+         */
+        val spo2: List<Pair<Long, Double>> = emptyList(),
     )
 
     /** Fuer so viele wird die Spur gelesen; die uebrigen zaehlen nur in den Bildern. */
@@ -115,6 +122,7 @@ object TrainingTab {
                 if (i == 0) punkte else emptyList(),
                 Spur.laenge(punkte),
                 if (i == 0) puls(klient, sitzung) else emptyList(),
+                if (i == 0) spo2(klient, sitzung) else emptyList(),
             )
         }
     }
@@ -141,6 +149,29 @@ object TrainingTab {
     }
 
     /**
+     * Die SpO2-Messungen waehrend eines Trainings - und zehn Minuten danach.
+     *
+     * DANACH GEHOERT DAZU: die Uhr misst im eingestellten Abstand, und die
+     * Messung am Ende einer Yogastunde faellt oft kurz hinter den Schluss.
+     * So haelt es auch die HRV auf der Seite des Trainings.
+     */
+    suspend fun spo2(
+        klient: HealthConnectClient,
+        s: ExerciseSessionRecord,
+    ): List<Pair<Long, Double>> = try {
+        val bis = s.endTime.plusSeconds(600)
+        klient.readRecords(
+            ReadRecordsRequest(OxygenSaturationRecord::class, TimeRangeFilter.between(s.startTime, bis))
+        ).records
+            .filter { it.percentage.value in 50.0..100.0 }
+            .distinctBy { it.time.epochSecond / 60 }
+            .sortedBy { it.time }
+            .map { Duration.between(s.startTime, it.time).seconds to it.percentage.value }
+    } catch (e: Exception) {
+        emptyList()
+    }
+
+    /**
      * Ein Eintrag mit allem, was die grosse Karte braucht.
      *
      * Die Liste holt Spur und Puls nur fuer das juengste Training. Wer auf
@@ -153,6 +184,7 @@ object TrainingTab {
             punkte = punkte,
             meter = Spur.laenge(punkte),
             puls = klient?.let { puls(it, e.sitzung) }.orEmpty(),
+            spo2 = klient?.let { spo2(it, e.sitzung) }.orEmpty(),
         )
     }
 
@@ -369,6 +401,17 @@ object TrainingTab {
             })
             if (eintrag.puls.size >= 2) {
                 k.addView(ctx.trainingspuls(eintrag.puls, ton))
+            }
+            // SPO2 NUR, WO ES WELCHES GIBT. Beim Laufen verwirft die Uhr fast
+            // jede Messung; eine leere Zeile dort sagte nur "nichts".
+            if (eintrag.spo2.isNotEmpty()) {
+                val werte = eintrag.spo2.map { it.second }
+                k.addView(ctx.reihe().apply {
+                    setPadding(0, ctx.dp(10f), 0, 0)
+                    addView(ctx.messwert(ctx.getString(R.string.t_spo2_schnitt), Zahlen.ganz(werte.average()), "%", 0f, false))
+                    addView(ctx.messwert(ctx.getString(R.string.spo2_tiefster), Zahlen.ganz(werte.min()), "%", 0f, false))
+                    addView(ctx.messwert(ctx.getString(R.string.t_spo2_messungen), werte.size.toString(), "", 0f, false))
+                })
             }
             saetzeUndBahnen(ctx, sitzung, ton)?.let { k.addView(it) }
         }

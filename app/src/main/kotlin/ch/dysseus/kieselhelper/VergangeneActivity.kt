@@ -134,6 +134,45 @@ class VergangeneActivity : KieselActivity() {
             ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER -> schwimmen(e, ton)
             else -> strecke(e, ton, maxpuls)
         }
+        sauerstoff(e, ton)
+    }
+
+    /**
+     * Der Blutsauerstoff waehrend des Trainings.
+     *
+     * BEIM YOGA IMMER, sonst nur mit Werten. Yoga ist still genug, dass die
+     * Uhr gueltig misst - fehlen dort die Werte, ist das eine Auskunft (SpO2
+     * aus, oder die Pebble-App schreibt nicht). Beim Laufen verwirft die Uhr
+     * fast jede Messung; eine leere Karte dort waere nur Laerm.
+     */
+    private fun sauerstoff(e: TrainingTab.Eintrag, ton: Int) {
+        val yoga = e.sitzung.exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_YOGA ||
+            e.sitzung.exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_PILATES
+        if (e.spo2.isEmpty() && !yoga) return
+        inhalt.addView(abschnitt(getString(R.string.g_spo2)))
+        inhalt.addView(karte().apply {
+            if (e.spo2.isEmpty()) {
+                addView(zart(getString(R.string.v_spo2_keine)))
+                return@apply
+            }
+            val werte = e.spo2.map { it.second }
+            addView(reihe().apply {
+                addView(messwert(getString(R.string.t_spo2_schnitt), Zahlen.ganz(werte.average()), "%", 0f, false))
+                addView(messwert(getString(R.string.spo2_tiefster), Zahlen.ganz(werte.min()), "%", 0f, false))
+                addView(messwert(getString(R.string.spo2_hoechster), Zahlen.ganz(werte.max()), "%", 0f, false))
+            })
+            if (e.spo2.size >= 2) {
+                addView(zart(getString(R.string.v_spo2_zeit)))
+                addView(streckenverlauf(
+                    e.spo2.map { Trainingsanalyse.Verlaufspunkt(it.first.toDouble(), it.second) },
+                    ton, "%", flaeche = false, hoehe = 120f, zeitachse = true,
+                ))
+            }
+            addView(zartMitHinweis(
+                resources.getQuantityString(R.plurals.v_spo2_n, e.spo2.size, e.spo2.size),
+                getString(R.string.g_spo2_lang)
+            ))
+        })
     }
 
     private fun zonenkarte(e: TrainingTab.Eintrag, maxpuls: Int) {
