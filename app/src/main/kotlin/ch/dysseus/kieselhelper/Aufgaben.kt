@@ -583,15 +583,23 @@ object Aufgaben {
      * Ruhepuls und HRV stehen zum Aufwachen: dort sucht jede App den Wert
      * "dieser Nacht", und dort stand er auch bei Herzintervall.
      */
-    private suspend fun nachtEintragen(context: Context, beginn: Long): String? {
-        if (!Riegel.neu(context, "schlaf", beginn.toString())) return null
+    private suspend fun nachtEintragen(context: Context, beginn: Long, nochmal: Boolean = false): String? {
+        if (!nochmal && !Riegel.neu(context, "schlaf", beginn.toString())) return null
+        // DIE VERSION IST DIE ZEIT DES EINTRAGENS. Mit derselben Kennung und
+        // einer hoeheren Version ersetzt die Akte den alten Satz, statt einen
+        // zweiten danebenzulegen - so ueberschreibt "Neu auswerten" die
+        // Nacht, statt sie zu verdoppeln.
+        val version = System.currentTimeMillis()
+        fun herkunft(kennung: String) = Metadata.autoRecorded(Device(type = Device.TYPE_WATCH), kennung, version)
         val daten = withContext(Dispatchers.IO) { Nachtdaten.lies(context, beginn) } ?: return null
         val (bewegung, puls, hrvBytes) = daten
         val nacht = Schlafanalyse.werte(bewegung, puls, Schlafanalyse.hrvAus(hrvBytes))
         if (nacht == null) {
             // Keine Nacht darin - die Uhr lag auf dem Tisch. Das ist eine
-            // Antwort, kein Fehler: die Daten sind fertig ausgewertet.
-            withContext(Dispatchers.IO) { Nachtdaten.loesche(context, beginn) }
+            // Antwort, kein Fehler: die Daten sind fertig ausgewertet. Beim
+            // Neu-Auswerten verschwindet dann auch der alte Eintrag.
+            if (nochmal) loescheEigeneNacht(context, beginn)
+            withContext(Dispatchers.IO) { Nachtdaten.archiviere(context, beginn) }
             return context.getString(R.string.a_nacht_keine)
         }
 
@@ -604,40 +612,60 @@ object Aufgaben {
             endTime = aufgewacht,
             endZoneOffset = null,
             title = context.getString(R.string.a_schlaf_titel),
-            metadata = vonDerUhr("kieselsport-schlaf-" + beginn),
+            metadata = herkunft("kieselsport-schlaf-" + beginn),
             stages = nacht.phasen.map {
                 SleepSessionRecord.Stage(zeit(it.von), zeit(it.bis), stufe(it.phase))
             },
         )
         val kurz = nachtMeldung(context, nacht)
-        val meldung = schreibe(context, satz, kurz, riegel = "schlaf")
+        val meldung = schreibe(context, satz, kurz, riegel = if (nochmal) null else "schlaf")
         // Gescheitert: die Datei bleibt liegen, der Riegel ist wieder offen -
         // mit dem naechsten Stueck einer Nacht kommt sie noch einmal dran.
         if (meldung != kurz) return meldung
         val teile = mutableListOf(meldung)
 
         nacht.ruhepuls?.takeIf { it in 30..120 }?.let { ruhe ->
-            if (Riegel.neu(context, "ruhepuls", beginn.toString())) {
+            if (nochmal || Riegel.neu(context, "ruhepuls", beginn.toString())) {
                 teile += schreibe(context, RestingHeartRateRecord(
                     time = aufgewacht,
                     zoneOffset = null,
                     beatsPerMinute = ruhe.toLong(),
-                    metadata = vonDerUhr("kieselsport-ruhepuls-" + beginn),
+                    metadata = herkunft("kieselsport-ruhepuls-" + beginn),
                 ), context.getString(R.string.a_ruhepuls_eingetragen, ruhe), riegel = "ruhepuls")
             }
         }
         nacht.hrv?.takeIf { it in 5..300 }?.let { ms ->
-            if (Riegel.neu(context, "nacht-hrv", beginn.toString())) {
+            if (nochmal || Riegel.neu(context, "nacht-hrv", beginn.toString())) {
                 teile += schreibe(context, HeartRateVariabilityRmssdRecord(
                     time = aufgewacht,
                     zoneOffset = null,
                     heartRateVariabilityMillis = ms.toDouble(),
-                    metadata = vonDerUhr("kieselsport-nacht-hrv-" + beginn),
+                    metadata = herkunft("kieselsport-nacht-hrv-" + beginn),
                 ), context.getString(R.string.a_hrv_eingetragen, ms), riegel = "nacht-hrv")
             }
         }
-        withContext(Dispatchers.IO) { Nachtdaten.loesche(context, beginn) }
+        withContext(Dispatchers.IO) { Nachtdaten.archiviere(context, beginn) }
         return teile.joinToString(", ")
+    }
+
+    /**
+     * Die juengste archivierte Nacht noch einmal auswerten und die eigenen
+     * Eintraege in der Akte ersetzen - nach einer neuen Rechnung, oder um zu
+     * sehen, was sie heute daraus macht.
+     */
+    suspend fun nachtNeuAuswerten(context: Context): String? {
+        val beginn = withContext(Dispatchers.IO) { Nachtdaten.archiv(context).firstOrNull() } ?: return null
+        return nachtEintragen(context, beginn, nochmal = true)
+    }
+
+    /** Die eigenen Saetze einer Nacht aus der Akte nehmen. */
+    private suspend fun loescheEigeneNacht(context: Context, beginn: Long) {
+        val klient = Akte(context).bereit() ?: return
+        runCatching {
+            klient.deleteRecords(SleepSessionRecord::class, emptyList(), listOf("kieselsport-schlaf-$beginn"))
+            klient.deleteRecords(RestingHeartRateRecord::class, emptyList(), listOf("kieselsport-ruhepuls-$beginn"))
+            klient.deleteRecords(HeartRateVariabilityRmssdRecord::class, emptyList(), listOf("kieselsport-nacht-hrv-$beginn"))
+        }.onFailure { Log.w(TAG, "Alte Nacht nicht geloescht: " + it.message) }
     }
 
     /** Die Phasen der Auswertung in die Satzarten der Akte. */

@@ -223,4 +223,19 @@ class SchlafanalyseTest {
             g,
         )
     }
+
+    @Test
+    fun `die Tabelle hat je Minute eine Zeile und die HRV-Fenster darunter`() {
+        val bewegung = IntArray(120) { if (it < 10) 40 else 2 }.also { it[5] = Schlafanalyse.UNGUELTIG }
+        val puls = IntArray(120) { 55 }
+        val hrv = listOf(Schlafanalyse.HrvFenster(30, 48, 54))
+        val text = Schlafanalyse.tabelle(bewegung, puls, hrv) { "m$it" }
+        val zeilen = text.lines()
+        assertEquals("minute,uhrzeit,bewegung,vmc,puls,gewichtet,schwelle,phase", zeilen[0])
+        // 120 Minuten, dann eine Leerzeile, der Kopf der HRV und ein Fenster
+        assertEquals("5,m5,,,55", zeilen[6].split(',').take(5).joinToString(","))
+        assertTrue(zeilen.contains("hrv_minute,uhrzeit,rmssd,puls"))
+        assertTrue(zeilen.contains("30,m30,48,54"))
+        assertEquals(121, zeilen.indexOf(""))
+    }
 }

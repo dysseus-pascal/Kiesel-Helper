@@ -286,5 +286,16 @@
                 android:resource="@xml/widget_gesundheit_info" />
         </receiver>
 
+        <!-- Zum Teilen der Nacht als CSV (EinstellungenActivity, Rohdaten). -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.dateien"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/dateien" />
+        </provider>
+
     </application>
 </manifest>

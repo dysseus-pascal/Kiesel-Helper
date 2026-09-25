@@ -638,4 +638,11 @@
     <string name="ei_osmand_fehlt">Ohne Verbindung zu OsmAnd bleibt Kieselstrasse auf der Uhr leer. OsmAnd muss installiert sein; die Verbindung entsteht, sobald dieser Dienst läuft.</string>
     <string name="ei_osmand_oeffnen">OsmAnd öffnen</string>
     <string name="ei_osmand_nicht_gefunden">OsmAnd nicht gefunden</string>
+    <string name="ei_rohdaten">ROHDATEN</string>
+    <string name="ei_rohdaten_titel">Letzte Nacht, Minute für Minute</string>
+    <string name="ei_rohdaten_text">%1$d Nächte gespeichert, die neueste vom %2$s. Als CSV exportieren, um sie mit einem anderen Schlaftracker zu vergleichen, oder nach einem Update neu auswerten.</string>
+    <string name="ei_rohdaten_leer">Noch keine Nacht gespeichert. Ab jetzt bleibt jede Nacht 30 Tage.</string>
+    <string name="ei_exportieren">CSV exportieren</string>
+    <string name="ei_neu_auswerten">Neu auswerten</string>
+    <string name="ei_nichts">Keine gespeicherte Nacht.</string>
 </resources>

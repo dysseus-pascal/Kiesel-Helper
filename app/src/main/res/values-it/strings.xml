@@ -647,4 +647,11 @@
     <string name="ei_osmand_fehlt">Senza connessione a OsmAnd, Kieselstrasse resta vuota sull\'orologio. OsmAnd deve essere installato; la connessione nasce appena questo servizio è attivo.</string>
     <string name="ei_osmand_oeffnen">Apri OsmAnd</string>
     <string name="ei_osmand_nicht_gefunden">OsmAnd non trovato</string>
+    <string name="ei_rohdaten">DATI GREZZI</string>
+    <string name="ei_rohdaten_titel">Ultima notte, minuto per minuto</string>
+    <string name="ei_rohdaten_text">%1$d notti salvate, la più recente del %2$s. Esportala in CSV per confrontarla con un altro tracker del sonno, o rianalizzala dopo un aggiornamento.</string>
+    <string name="ei_rohdaten_leer">Nessuna notte salvata. D\'ora in poi ogni notte resta 30 giorni.</string>
+    <string name="ei_exportieren">Esporta CSV</string>
+    <string name="ei_neu_auswerten">Rianalizza</string>
+    <string name="ei_nichts">Nessuna notte salvata.</string>
 </resources>

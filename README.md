@@ -619,6 +619,23 @@ bestimmt haben.
 ebenfalls in Health Connect, stehen dort zwei Nächte. Kiesel-Helper zählt nur
 die eigene, andere Apps aber beide.
 
+### Rohdaten, Export und neu auswerten (seit 0.53.0)
+
+Eine eingetragene Nacht wird nicht mehr gelöscht, sondern liegt 30 Tage im
+Archiv (`files/nacht/archiv/`). Unter Einstellungen → Gesundheit → Rohdaten:
+
+- **CSV exportieren** – je Minute `minute, uhrzeit, bewegung, vmc, puls,
+  gewichtet, schwelle, phase`, darunter die HRV-Fenster. Zum Abgleich mit
+  einem anderen Schlaftracker.
+- **Neu auswerten** – die jüngste Nacht noch einmal rechnen. Die Sätze tragen
+  als Version die Zeit des Eintragens; mit derselben Kennung und höherer
+  Version ersetzt Health Connect den alten Satz, statt einen zweiten
+  daneben zu legen. Findet die Rechnung keine Nacht mehr, werden die alten
+  Sätze gelöscht.
+
+Warum: die erste echte Nacht ergab 2 h 38 Schlaf, wo ein Fitbit gut sieben
+Stunden sah – und ihre Minuten waren schon weg.
+
 ## Sicherung in einen Ordner auf dem Telefon
 
 **Die Gesundheitsakte hält rund dreissig Tage.** Alles, was diese App an

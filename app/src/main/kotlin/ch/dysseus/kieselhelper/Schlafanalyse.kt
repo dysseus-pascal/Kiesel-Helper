@@ -111,6 +111,46 @@ object Schlafanalyse {
         HrvFenster(u(0) or (u(1) shl 8), u(2), u(3))
     }
 
+    // --- Zum Nachsehen ---
+
+    /**
+     * Die Nacht Minute fuer Minute als CSV - zum Vergleich mit einem anderen
+     * Schlaftracker. Je Minute: Uhrzeit, das Byte von der Uhr, daraus vmc,
+     * Puls, der gewichtete Mittelwert, an dem wach/schlaf entschieden wird,
+     * und die Phase, die diese Rechnung daraus macht. Die HRV-Fenster darunter.
+     *
+     * @param uhrzeit Minute ab Nachtbeginn -> "HH:MM"
+     */
+    fun tabelle(
+        bewegung: IntArray,
+        puls: IntArray,
+        hrv: List<HrvFenster>,
+        uhrzeit: (Int) -> String,
+    ): String {
+        val n = minOf(bewegung.size, puls.size)
+        val gueltig = BooleanArray(n) { bewegung[it] != UNGUELTIG }
+        val a = DoubleArray(n) { if (gueltig[it]) bewegung[it].toDouble() * bewegung[it] / 16.0 else 0.0 }
+        val w = gewichtet(a, gueltig)
+        val nacht = werte(bewegung, puls, hrv)
+        val phase = arrayOfNulls<Phase>(n)
+        nacht?.phasen?.forEach { ab -> for (i in ab.von until minOf(ab.bis, n)) phase[i] = ab.phase }
+        val b = StringBuilder()
+        b.append("minute,uhrzeit,bewegung,vmc,puls,gewichtet,schwelle,phase\n")
+        for (i in 0 until n) {
+            b.append(i).append(',').append(uhrzeit(i)).append(',')
+            b.append(if (gueltig[i]) bewegung[i].toString() else "").append(',')
+            b.append(if (gueltig[i]) a[i].roundToInt().toString() else "").append(',')
+            b.append(if (puls[i] > 0) puls[i].toString() else "").append(',')
+            b.append("%.1f".format(java.util.Locale.ROOT, w[i])).append(',')
+            b.append(SCHWELLE.roundToInt()).append(',')
+            b.append(phase[i]?.name?.lowercase() ?: "").append('\n')
+        }
+        b.append("\nhrv_minute,uhrzeit,rmssd,puls\n")
+        hrv.forEach { f -> b.append(f.minute).append(',').append(uhrzeit(f.minute)).append(',')
+            .append(f.rmssd).append(',').append(f.puls).append('\n') }
+        return b.toString()
+    }
+
     // --- Die Rechnung ---
 
     /**

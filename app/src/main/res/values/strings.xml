@@ -641,4 +641,11 @@
     <string name="ei_osmand_fehlt">Without a connection to OsmAnd, Kieselstrasse stays empty on the watch. OsmAnd must be installed; the connection is made as soon as this service runs.</string>
     <string name="ei_osmand_oeffnen">Open OsmAnd</string>
     <string name="ei_osmand_nicht_gefunden">OsmAnd not found</string>
+    <string name="ei_rohdaten">RAW DATA</string>
+    <string name="ei_rohdaten_titel">Last night, minute by minute</string>
+    <string name="ei_rohdaten_text">%1$d nights stored, the newest from %2$s. Export it as CSV to compare with another sleep tracker, or re-analyse it after an update.</string>
+    <string name="ei_rohdaten_leer">No night stored yet. From now on each night is kept for 30 days.</string>
+    <string name="ei_exportieren">Export CSV</string>
+    <string name="ei_neu_auswerten">Re-analyse</string>
+    <string name="ei_nichts">No stored night.</string>
 </resources>

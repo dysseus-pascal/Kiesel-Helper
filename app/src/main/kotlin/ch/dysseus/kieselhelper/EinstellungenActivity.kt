@@ -430,6 +430,66 @@ class EinstellungenActivity : KieselActivity() {
         // Das Zeitfenster der Nacht auf der Uhr - hier, nicht beim Sport.
         w.addView(abschnitt(getString(R.string.uk_nacht)))
         w.addView(uhr.nacht())
+        w.luft(8f)
+        w.addView(abschnitt(getString(R.string.ei_rohdaten)))
+        w.addView(rohdatenkarte())
+    }
+
+    /**
+     * Die gespeicherten Naechte: exportieren und neu auswerten.
+     *
+     * FUER DEN ABGLEICH MIT EINEM ANDEREN SCHLAFTRACKER. Die Schwellen der
+     * Auswertung (Schlafanalyse) sind geschaetzt; einstellen lassen sie sich
+     * nur an echten Naechten, Minute fuer Minute neben einer zweiten Messung.
+     */
+    private fun rohdatenkarte(): LinearLayout {
+        val k = karte()
+        k.addView(kartentitel(getString(R.string.ei_rohdaten_titel)))
+        val naechte = Nachtdaten.archiv(this)
+        val neueste = naechte.firstOrNull()
+        if (neueste == null) {
+            k.addView(zart(getString(R.string.ei_rohdaten_leer)))
+            return k
+        }
+        val datum = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(neueste * 1000))
+        k.addView(zart(getString(R.string.ei_rohdaten_text, naechte.size, datum)))
+        val reihe = reihe().apply { setPadding(0, dp(10f), 0, 0) }
+        reihe.addView(knopfLeise(getString(R.string.ei_exportieren)) { teileNacht(neueste) }.breitInReihe())
+        reihe.addView(knopfLeise(getString(R.string.ei_neu_auswerten)) {
+            lifecycleScope.launch {
+                melde(Aufgaben.nachtNeuAuswerten(this@EinstellungenActivity) ?: getString(R.string.ei_nichts))
+            }
+        }.breitInReihe())
+        k.addView(reihe)
+        return k
+    }
+
+    private fun teileNacht(beginn: Long) {
+        lifecycleScope.launch {
+            val datei = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val daten = Nachtdaten.lies(this@EinstellungenActivity, beginn) ?: return@withContext null
+                val (bewegung, puls, hrv) = daten
+                val zone = java.time.ZoneId.systemDefault()
+                val format = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
+                val text = Schlafanalyse.tabelle(bewegung, puls, Schlafanalyse.hrvAus(hrv)) { minute ->
+                    java.time.Instant.ofEpochSecond(beginn + minute * 60L).atZone(zone).format(format)
+                }
+                val tag = java.time.Instant.ofEpochSecond(beginn).atZone(zone).toLocalDate()
+                java.io.File(cacheDir, "export").apply { mkdirs() }
+                    .let { java.io.File(it, "nacht-$tag.csv") }
+                    .apply { writeText(text) }
+            }
+            if (datei == null) { melde(getString(R.string.ei_nichts)); return@launch }
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                this@EinstellungenActivity, "$packageName.dateien", datei)
+            val senden = Intent(Intent.ACTION_SEND).apply {
+                type = "text/csv"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, datei.name)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(senden, datei.name))
+        }
     }
 
     private fun seiteSupCycle(w: LinearLayout) {

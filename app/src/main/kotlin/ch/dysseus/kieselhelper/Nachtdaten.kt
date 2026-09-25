@@ -27,7 +27,11 @@ object Nachtdaten {
     /** Eine Nacht, die so lange unvollstaendig bleibt, kommt nicht mehr. */
     private const val AUFHEBEN_S = 14L * 86400
 
+    /** Eingetragene Naechte bleiben so lange im Archiv - zum Exportieren und Neu-Auswerten. */
+    private const val ARCHIV_S = 30L * 86400
+
     private fun ordner(context: Context): File = File(context.filesDir, ORDNER).apply { mkdirs() }
+    private fun archivOrdner(context: Context): File = File(ordner(context), "archiv").apply { mkdirs() }
     private fun datei(context: Context, beginn: Long) = File(ordner(context), "$beginn.bin")
     private fun hrvDatei(context: Context, beginn: Long) = File(ordner(context), "$beginn.hrv")
 
@@ -53,20 +57,45 @@ object Nachtdaten {
         }
     }
 
-    /** Bewegung, Puls und HRV-Bytes einer Nacht; null, wenn nichts da ist. */
+    /** Bewegung, Puls und HRV-Bytes einer Nacht - offen oder im Archiv; null, wenn nichts da ist. */
     @Synchronized
     fun lies(context: Context, beginn: Long): Triple<IntArray, IntArray, ByteArray>? {
-        val f = datei(context, beginn)
+        val offen = datei(context, beginn)
+        val ort = if (offen.exists()) ordner(context) else archivOrdner(context)
+        val f = File(ort, "$beginn.bin")
         if (!f.exists()) return null
         val (bewegung, puls) = zerlege(f.readBytes())
-        val hrv = hrvDatei(context, beginn).takeIf { it.exists() }?.readBytes() ?: ByteArray(0)
+        val hrv = File(ort, "$beginn.hrv").takeIf { it.exists() }?.readBytes() ?: ByteArray(0)
         return Triple(bewegung, puls, hrv)
     }
+
+    /**
+     * Eine eingetragene Nacht ins Archiv, statt sie zu loeschen.
+     *
+     * DIE ERSTE ECHTE NACHT LAG GANZ DANEBEN - 2 h 38 statt gut sieben
+     * Stunden -, und ihre Minuten waren da schon weg: geloescht nach dem
+     * Eintragen, auf der Uhr wie hier. Ohne sie laesst sich keine Schwelle
+     * einstellen. Jetzt bleiben sie dreissig Tage: zum Exportieren und, nach
+     * einer neuen Rechnung, zum Neu-Auswerten.
+     */
+    @Synchronized
+    fun archiviere(context: Context, beginn: Long) {
+        val ziel = archivOrdner(context)
+        datei(context, beginn).takeIf { it.exists() }?.let { it.copyTo(File(ziel, it.name), true); it.delete() }
+        hrvDatei(context, beginn).takeIf { it.exists() }?.let { it.copyTo(File(ziel, it.name), true); it.delete() }
+    }
+
+    /** Die archivierten Naechte, die juengste zuerst. */
+    @Synchronized
+    fun archiv(context: Context): List<Long> =
+        archivOrdner(context).listFiles { f -> f.name.endsWith(".bin") }.orEmpty()
+            .mapNotNull { it.nameWithoutExtension.toLongOrNull() }
+            .sortedDescending()
 
     /** Die Naechte, deren Daten ganz da sind - auch solche, deren Eintragen scheiterte. */
     @Synchronized
     fun vollstaendige(context: Context): List<Long> =
-        ordner(context).listFiles { f -> f.name.endsWith(".bin") }.orEmpty()
+        ordner(context).listFiles { f -> f.isFile && f.name.endsWith(".bin") }.orEmpty()
             .filter { f -> try { vollstaendig(f.readBytes()) } catch (e: Exception) { false } }
             .mapNotNull { it.nameWithoutExtension.toLongOrNull() }
 
@@ -85,8 +114,13 @@ object Nachtdaten {
      */
     private fun raeumeAuf(context: Context, jetzt: Long) {
         ordner(context).listFiles()?.forEach { f ->
+            if (!f.isFile) return@forEach
             val b = f.nameWithoutExtension.toLongOrNull() ?: return@forEach
             if (b < jetzt - AUFHEBEN_S) f.delete()
+        }
+        archivOrdner(context).listFiles()?.forEach { f ->
+            val b = f.nameWithoutExtension.toLongOrNull() ?: return@forEach
+            if (b < jetzt - ARCHIV_S) f.delete()
         }
     }
 
