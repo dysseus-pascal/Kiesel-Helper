@@ -14,6 +14,7 @@ import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.NutritionRecord
+import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
@@ -150,6 +151,12 @@ object Aufgaben {
     // Eine einzelne HRV-Messung aus dem Menue der Uhr: ihr Zeitpunkt, der
     // Wert steht in SP_HRV.
     private const val SP_HRV_ZEIT = 10031
+    // SpO2 auf Anfrage der Uhr (Menue "Messen"): sie fragt, wir antworten.
+    private const val SP_SPO2_FRAGE = 10032
+    private const val SP_SPO2_WERT = 10033
+    private const val SP_SPO2_ZEIT = 10034
+    private const val SP_SPO2_NACHT_MITTEL = 10035
+    private const val SP_SPO2_NACHT_TIEF = 10036
     private const val SP_SAETZE = 10013
     private const val SP_REPS = 10014
     private const val SP_BAHNEN = 10015
@@ -346,6 +353,12 @@ object Aufgaben {
         rohdaten[SP_NACHT_MINUTEN]?.let { minuten ->
             return nachtstueck(context, felder, minuten, rohdaten[SP_NACHT_HRV])
         }
+
+        // DIE UHR FRAGT NACH SPO2. Sie kann es nicht selbst lesen (die
+        // Firmware gibt es keiner Watchapp heraus); wir holen den juengsten
+        // Wert aus der Akte und schicken ihn zurueck. Ins Protokoll gehoert
+        // das nicht.
+        if (felder[SP_SPO2_FRAGE] != null) { spo2Antwort(context); return null }
 
         // EINE HRV VON HAND GEMESSEN - ohne Art, mit Zeitpunkt.
         if (felder[SP_ART] == null) felder[SP_HRV_ZEIT]?.let { wann -> return hrvEinzeln(context, felder, wann) }
@@ -695,6 +708,42 @@ object Aufgaben {
      * Eine HRV, von Hand auf der Uhr gemessen (Menuepunkt "HRV" in
      * Kieselsport): ein Satz zu ihrem Zeitpunkt, und je Zeitpunkt einmal.
      */
+    /**
+     * Den juengsten SpO2-Wert an Kieselsport schicken - und die letzte Nacht.
+     *
+     * Wert 0 heisst: keiner da. Die Nacht ist 22 bis 8 Uhr innerhalb der
+     * letzten 24 Stunden; ohne Werte dort bleiben beide Nachtfelder 0.
+     */
+    private suspend fun spo2Antwort(context: Context) {
+        val jetzt = Instant.now()
+        val werte = try {
+            Akte(context).bereit()?.readRecords(
+                ReadRecordsRequest(
+                    OxygenSaturationRecord::class,
+                    TimeRangeFilter.between(jetzt.minus(Duration.ofHours(24)), jetzt),
+                )
+            )?.records.orEmpty()
+                .filter { it.percentage.value in 50.0..100.0 }
+                .sortedBy { it.time }
+        } catch (e: Exception) {
+            Log.w(TAG, "SpO2 fuer die Uhr: " + e.message)
+            emptyList()
+        }
+        val zone = java.time.ZoneId.systemDefault()
+        val nacht = werte.filter {
+            val h = it.time.atZone(zone).hour
+            h >= 22 || h < 8
+        }.map { it.percentage.value }
+        val letzter = werte.lastOrNull()
+        val felder = mapOf(
+            SP_SPO2_WERT to Wert.Zahl(letzter?.percentage?.value?.let { Math.round(it) } ?: 0L),
+            SP_SPO2_ZEIT to Wert.Zahl(letzter?.time?.epochSecond ?: 0L),
+            SP_SPO2_NACHT_MITTEL to Wert.Zahl(if (nacht.isEmpty()) 0L else Math.round(nacht.average())),
+            SP_SPO2_NACHT_TIEF to Wert.Zahl(if (nacht.isEmpty()) 0L else Math.round(nacht.min())),
+        )
+        UhrSender.sende(context.applicationContext, KIESELSPORT, starten = false, felder = felder)
+    }
+
     private suspend fun hrvEinzeln(context: Context, felder: Map<Int, Long>, wann: Long): String? {
         val ms = felder[SP_HRV] ?: return null
         if (wann <= 0 || ms !in 5..300) return null
