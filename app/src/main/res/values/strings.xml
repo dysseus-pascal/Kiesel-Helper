@@ -647,5 +647,5 @@
     <string name="ei_rohdaten_leer">No night stored yet. From now on each night is kept for 30 days.</string>
     <string name="ei_exportieren">Export CSV</string>
     <string name="ei_neu_auswerten">Re-analyse</string>
-    <string name="ei_nichts">No stored night.</string>
+    <string name="ei_keine_nacht">No stored night.</string>
 </resources>

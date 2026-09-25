@@ -644,5 +644,5 @@
     <string name="ei_rohdaten_leer">Noch keine Nacht gespeichert. Ab jetzt bleibt jede Nacht 30 Tage.</string>
     <string name="ei_exportieren">CSV exportieren</string>
     <string name="ei_neu_auswerten">Neu auswerten</string>
-    <string name="ei_nichts">Keine gespeicherte Nacht.</string>
+    <string name="ei_keine_nacht">Keine gespeicherte Nacht.</string>
 </resources>

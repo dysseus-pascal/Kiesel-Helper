@@ -457,7 +457,7 @@ class EinstellungenActivity : KieselActivity() {
         reihe.addView(knopfLeise(getString(R.string.ei_exportieren)) { teileNacht(neueste) }.breitInReihe())
         reihe.addView(knopfLeise(getString(R.string.ei_neu_auswerten)) {
             lifecycleScope.launch {
-                melde(Aufgaben.nachtNeuAuswerten(this@EinstellungenActivity) ?: getString(R.string.ei_nichts))
+                melde(Aufgaben.nachtNeuAuswerten(this@EinstellungenActivity) ?: getString(R.string.ei_keine_nacht))
             }
         }.breitInReihe())
         k.addView(reihe)
@@ -479,7 +479,7 @@ class EinstellungenActivity : KieselActivity() {
                     .let { java.io.File(it, "nacht-$tag.csv") }
                     .apply { writeText(text) }
             }
-            if (datei == null) { melde(getString(R.string.ei_nichts)); return@launch }
+            if (datei == null) { melde(getString(R.string.ei_keine_nacht)); return@launch }
             val uri = androidx.core.content.FileProvider.getUriForFile(
                 this@EinstellungenActivity, "$packageName.dateien", datei)
             val senden = Intent(Intent.ACTION_SEND).apply {

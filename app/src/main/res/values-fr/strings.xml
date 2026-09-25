@@ -653,5 +653,5 @@
     <string name="ei_rohdaten_leer">Aucune nuit enregistrée. Désormais, chaque nuit est conservée 30 jours.</string>
     <string name="ei_exportieren">Exporter en CSV</string>
     <string name="ei_neu_auswerten">Analyser à nouveau</string>
-    <string name="ei_nichts">Aucune nuit enregistrée.</string>
+    <string name="ei_keine_nacht">Aucune nuit enregistrée.</string>
 </resources>

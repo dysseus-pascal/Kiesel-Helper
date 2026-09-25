@@ -653,5 +653,5 @@
     <string name="ei_rohdaten_leer">Aún no hay ninguna noche guardada. A partir de ahora, cada noche se guarda 30 días.</string>
     <string name="ei_exportieren">Exportar CSV</string>
     <string name="ei_neu_auswerten">Volver a analizar</string>
-    <string name="ei_nichts">No hay ninguna noche guardada.</string>
+    <string name="ei_keine_nacht">No hay ninguna noche guardada.</string>
 </resources>

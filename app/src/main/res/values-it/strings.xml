@@ -653,5 +653,5 @@
     <string name="ei_rohdaten_leer">Nessuna notte salvata. D\'ora in poi ogni notte resta 30 giorni.</string>
     <string name="ei_exportieren">Esporta CSV</string>
     <string name="ei_neu_auswerten">Rianalizza</string>
-    <string name="ei_nichts">Nessuna notte salvata.</string>
+    <string name="ei_keine_nacht">Nessuna notte salvata.</string>
 </resources>
