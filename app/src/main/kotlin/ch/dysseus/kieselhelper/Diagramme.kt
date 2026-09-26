@@ -440,10 +440,15 @@ class PhasenView(
     }
 }
 
-/** Der Phasenbalken samt Beschriftung darunter. */
-fun Context.phasenbild(phasen: Gesundheit.Phasen): LinearLayout {
+/**
+ * Der Phasenbalken samt Beschriftung darunter.
+ *
+ * Ohne Balken ([mitBalken] = false), wo das Hypnogramm darueber steht: es
+ * zeigt dieselben Anteile, und zweimal dasselbe Bild waere eines zu viel.
+ */
+fun Context.phasenbild(phasen: Gesundheit.Phasen, mitBalken: Boolean = true): LinearLayout {
     val kasten = spalte()
-    kasten.addView(PhasenView(this, phasen).apply {
+    if (mitBalken) kasten.addView(PhasenView(this, phasen).apply {
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(14f)
         ).apply { topMargin = dp(10f) }

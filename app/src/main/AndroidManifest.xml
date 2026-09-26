@@ -216,6 +216,12 @@
             android:exported="false"
             android:parentActivityName=".HauptActivity" />
 
+        <!-- Eine Nacht im Verlauf: Phasen, Bewegung, Puls, HRV, SpO2. -->
+        <activity
+            android:name=".NachtActivity"
+            android:exported="false"
+            android:parentActivityName=".HauptActivity" />
+
         <!-- Die aelteren Trainings, und eines davon im Einzelnen. -->
         <activity
             android:name=".VergangeneActivity"

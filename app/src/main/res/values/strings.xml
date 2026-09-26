@@ -664,4 +664,18 @@
         <item quantity="one">%1$d SpO2 reading</item>
         <item quantity="other">%1$d SpO2 readings</item>
     </plurals>
+    <string name="n_titel">Night</string>
+    <string name="n_verlauf">Course of the night ›</string>
+    <string name="n_lade">Loading …</string>
+    <string name="n_keine">No sleep in Health Connect for this night.</string>
+    <string name="n_zeiten">Asleep %1$s · awake %2$s · %3$d min awake</string>
+    <string name="n_tipp">Tap or drag for details</string>
+    <string name="n_info">%1$s · %2$s · pulse %3$s · movement %4$s</string>
+    <string name="n_keine_daten">no data</string>
+    <string name="n_bewegung">Movement</string>
+    <string name="n_phasen">PHASES</string>
+    <string name="n_schaetzung">The phases are an estimate from the pulse. At night the watch measures a pulse only about every fourth minute; asleep and awake are more reliable than the phases.</string>
+    <string name="n_wachphasen">AWAKE PERIODS</string>
+    <string name="n_keine_wachphasen">No awake period longer than 5 minutes.</string>
+    <string name="n_wach_zeile">%1$s–%2$s · %3$d min</string>
 </resources>

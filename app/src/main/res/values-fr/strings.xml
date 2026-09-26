@@ -670,4 +670,18 @@
         <item quantity="one">%1$d mesure SpO2</item>
         <item quantity="other">%1$d mesures SpO2</item>
     </plurals>
+    <string name="n_titel">Nuit</string>
+    <string name="n_verlauf">Déroulé de la nuit ›</string>
+    <string name="n_lade">Chargement …</string>
+    <string name="n_keine">Aucun sommeil dans Health Connect pour cette nuit.</string>
+    <string name="n_zeiten">Endormi %1$s · réveillé %2$s · %3$d min éveillé</string>
+    <string name="n_tipp">Touchez ou glissez pour les détails</string>
+    <string name="n_info">%1$s · %2$s · pouls %3$s · mouvement %4$s</string>
+    <string name="n_keine_daten">pas de données</string>
+    <string name="n_bewegung">Mouvement</string>
+    <string name="n_phasen">PHASES</string>
+    <string name="n_schaetzung">Les phases sont une estimation à partir du pouls. La nuit, la montre ne mesure le pouls qu\'environ une minute sur quatre ; sommeil et éveil sont plus fiables que les phases.</string>
+    <string name="n_wachphasen">PÉRIODES D’ÉVEIL</string>
+    <string name="n_keine_wachphasen">Aucune période d’éveil de plus de 5 minutes.</string>
+    <string name="n_wach_zeile">%1$s–%2$s · %3$d min</string>
 </resources>

@@ -661,4 +661,18 @@
         <item quantity="one">%1$d SpO2-Messung</item>
         <item quantity="other">%1$d SpO2-Messungen</item>
     </plurals>
+    <string name="n_titel">Nacht</string>
+    <string name="n_verlauf">Verlauf der Nacht ›</string>
+    <string name="n_lade">Lade …</string>
+    <string name="n_keine">Für diese Nacht steht kein Schlaf in Health Connect.</string>
+    <string name="n_zeiten">Eingeschlafen %1$s · aufgewacht %2$s · %3$d min wach</string>
+    <string name="n_tipp">Tippen oder ziehen für Details</string>
+    <string name="n_info">%1$s · %2$s · Puls %3$s · Bewegung %4$s</string>
+    <string name="n_keine_daten">keine Daten</string>
+    <string name="n_bewegung">Bewegung</string>
+    <string name="n_phasen">PHASEN</string>
+    <string name="n_schaetzung">Die Phasen sind eine Schätzung aus dem Puls. Die Uhr misst nachts nur etwa jede vierte Minute einen Puls; Schlaf und Wach sind verlässlicher als die Phasen.</string>
+    <string name="n_wachphasen">WACHPHASEN</string>
+    <string name="n_keine_wachphasen">Keine Wachphase über 5 Minuten.</string>
+    <string name="n_wach_zeile">%1$s–%2$s · %3$d min</string>
 </resources>

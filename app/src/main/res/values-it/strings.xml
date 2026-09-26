@@ -670,4 +670,18 @@
         <item quantity="one">%1$d misurazione SpO2</item>
         <item quantity="other">%1$d misurazioni SpO2</item>
     </plurals>
+    <string name="n_titel">Notte</string>
+    <string name="n_verlauf">Andamento della notte ›</string>
+    <string name="n_lade">Caricamento …</string>
+    <string name="n_keine">Nessun sonno in Health Connect per questa notte.</string>
+    <string name="n_zeiten">Addormentato %1$s · sveglio %2$s · %3$d min sveglio</string>
+    <string name="n_tipp">Tocca o trascina per i dettagli</string>
+    <string name="n_info">%1$s · %2$s · battito %3$s · movimento %4$s</string>
+    <string name="n_keine_daten">nessun dato</string>
+    <string name="n_bewegung">Movimento</string>
+    <string name="n_phasen">FASI</string>
+    <string name="n_schaetzung">Le fasi sono una stima dal battito. Di notte l\'orologio misura il battito solo circa un minuto su quattro; sonno e veglia sono più affidabili delle fasi.</string>
+    <string name="n_wachphasen">VEGLIA</string>
+    <string name="n_keine_wachphasen">Nessuna veglia oltre 5 minuti.</string>
+    <string name="n_wach_zeile">%1$s–%2$s · %3$d min</string>
 </resources>

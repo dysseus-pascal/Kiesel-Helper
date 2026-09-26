@@ -670,4 +670,18 @@
         <item quantity="one">%1$d medición SpO2</item>
         <item quantity="other">%1$d mediciones SpO2</item>
     </plurals>
+    <string name="n_titel">Noche</string>
+    <string name="n_verlauf">Evolución de la noche ›</string>
+    <string name="n_lade">Cargando …</string>
+    <string name="n_keine">No hay sueño en Health Connect para esta noche.</string>
+    <string name="n_zeiten">Dormido %1$s · despierto %2$s · %3$d min despierto</string>
+    <string name="n_tipp">Toca o arrastra para ver detalles</string>
+    <string name="n_info">%1$s · %2$s · pulso %3$s · movimiento %4$s</string>
+    <string name="n_keine_daten">sin datos</string>
+    <string name="n_bewegung">Movimiento</string>
+    <string name="n_phasen">FASES</string>
+    <string name="n_schaetzung">Las fases son una estimación a partir del pulso. De noche el reloj mide el pulso solo aproximadamente cada cuatro minutos; dormido y despierto son más fiables que las fases.</string>
+    <string name="n_wachphasen">DESPERTARES</string>
+    <string name="n_keine_wachphasen">Ningún despertar de más de 5 minutos.</string>
+    <string name="n_wach_zeile">%1$s–%2$s · %3$d min</string>
 </resources>

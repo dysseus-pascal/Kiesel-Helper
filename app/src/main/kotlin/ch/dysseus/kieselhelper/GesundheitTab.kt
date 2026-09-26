@@ -110,8 +110,12 @@ object GesundheitTab {
                 )
             ))
         }
+        // DER VERLAUF DER NACHT, nicht nur ihre Summen: vier Bahnen ueber die
+        // Zeit. Darunter die Zeiten je Phase ohne den Balken - das Bild
+        // zeigt die Anteile schon.
+        stand.hypnogramm?.let { schlaf.addView(ctx.hypnogrammbild(it)) }
         if (stand.phasen != null) {
-            schlaf.addView(ctx.phasenbild(stand.phasen))
+            schlaf.addView(ctx.phasenbild(stand.phasen, mitBalken = stand.hypnogramm == null))
         } else {
             // KEIN GEVIERTELTER BALKEN, wenn niemand Phasen eingetragen hat.
             // Ein Bild, das die Nacht gleichmaessig aufteilt, waere huebsch
@@ -128,6 +132,19 @@ object GesundheitTab {
         schlaf.addView(ctx.wochenbild(
             stand.wocheSchlaf.dropLast(1), ziel = ideal, marke = ideal
         ) { Zahlen.dauer(it) ?: "" })
+        // Zur Seite der Nacht - ein eigenes Ziel, die Karte selbst fuehrt
+        // weiter zum Trend.
+        if (stand.hypnogramm != null) {
+            schlaf.addView(TextView(ctx).apply {
+                text = ctx.getString(R.string.n_verlauf)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+                setTypeface(typeface, Typeface.BOLD)
+                setTextColor(ctx.akzentfarbe())
+                gravity = android.view.Gravity.END
+                setPadding(0, ctx.dp(12f), 0, ctx.dp(2f))
+                setOnClickListener { NachtActivity.zeige(ctx) }
+            })
+        }
         s.addView(schlaf)
 
         // --- Herz ---

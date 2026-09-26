@@ -170,6 +170,30 @@ class Gesundheit(private val context: Context) {
         val koffeinDosen: List<Dosis> = emptyList(),
         /** SpO2 der letzten 24 Stunden - null, solange keiner in der Akte steht. */
         val sauerstoff: Sauerstoff? = null,
+        /** Der Verlauf der letzten Nacht - null ohne Schlafsitzung. */
+        val hypnogramm: Hypnogramm? = null,
+    )
+
+    /**
+     * Eine Nacht mit allem, was die Seite "Nacht" zeigt.
+     *
+     * Das Hypnogramm und die Summen kommen aus der Akte; Bewegung und die
+     * HRV-Fenster nur aus den eigenen Rohdaten (30 Tage), der Puls und SpO2
+     * wieder aus der Akte. Was fehlt, ist leer - die Seite laesst die Spur
+     * dann weg.
+     */
+    data class NachtBild(
+        val tag: LocalDate,
+        val hypnogramm: Hypnogramm,
+        val phasen: Phasen?,
+        val schlafMinuten: Double?,
+        val ruhepuls: Double?,
+        val hrv: Double?,
+        val puls: List<Pair<Instant, Int>>,
+        /** vmc je Minute; -1: die Uhr hatte fuer diese Minute keine Daten. */
+        val bewegung: List<Pair<Instant, Int>>,
+        val hrvFenster: List<Pair<Instant, Int>>,
+        val spo2: List<Pair<Instant, Double>>,
     )
 
     /**
@@ -480,6 +504,7 @@ class Gesundheit(private val context: Context) {
             glaeser = glaeser.await(),
             koffeinDosen = tassen.await(),
             sauerstoff = spo2.await(),
+            hypnogramm = Hypnogramm.aus(schlafsitzungen),
         )
 
         // JEDES LESEN IST EIN EINTRAG. Die Akte selbst vergisst; was hier
@@ -488,6 +513,91 @@ class Gesundheit(private val context: Context) {
         merke(stand, heute)
         stand
     }
+
+    /**
+     * Die Nacht, die am Morgen von [tag] endet - fuer die Seite "Nacht".
+     *
+     * Dasselbe Fenster wie der Tagesstand (18 bis 18 Uhr) und dieselbe Wahl
+     * der Sitzungen: die eigenen, wenn es welche gibt. So zeigt die Seite
+     * dieselbe Nacht wie die Karte, von der aus man sie oeffnet.
+     */
+    suspend fun nacht(tag: LocalDate): NachtBild? = coroutineScope {
+        val klient = Akte(context).bereit() ?: return@coroutineScope null
+        val fenster = nachtfenster(tag)
+        val sitzungen = fange("Nacht: Sitzungen") {
+            gewaehlt(klient.readRecords(ReadRecordsRequest(SleepSessionRecord::class, fenster)).records)
+        }.orEmpty()
+        val h = Hypnogramm.aus(sitzungen) ?: return@coroutineScope null
+        val schlafzeit = TimeRangeFilter.between(h.von, h.bis)
+
+        val puls = async {
+            fange("Nacht: Puls") {
+                klient.readRecords(ReadRecordsRequest(HeartRateRecord::class, schlafzeit)).records
+                    .flatMap { r -> r.samples.map { it.time to it.beatsPerMinute.toInt() } }
+                    .filter { !it.first.isBefore(h.von) && it.first.isBefore(h.bis) }
+                    .sortedBy { it.first }
+            }.orEmpty()
+        }
+        val sauer = async {
+            fange("Nacht: SpO2") {
+                klient.readRecords(ReadRecordsRequest(OxygenSaturationRecord::class, schlafzeit)).records
+                    .filter { it.percentage.value in 50.0..100.0 }
+                    .map { it.time to it.percentage.value }
+                    .sortedBy { it.first }
+            }.orEmpty()
+        }
+        val ruhe = async {
+            fange("Nacht: Ruhepuls") {
+                klient.readRecords(ReadRecordsRequest(RestingHeartRateRecord::class, fenster)).records
+                    .maxByOrNull { it.time }?.beatsPerMinute?.toDouble()
+            }
+        }
+        val hrvWert = async {
+            fange("Nacht: HRV") {
+                klient.readRecords(ReadRecordsRequest(HeartRateVariabilityRmssdRecord::class, schlafzeit)).records
+                    .maxByOrNull { it.time }?.heartRateVariabilityMillis
+            }
+        }
+
+        // DIE ROHDATEN DIESER NACHT, falls es sie noch gibt: die Nacht, deren
+        // Beginn im Fenster liegt. Nur sie kennen die Bewegung je Minute.
+        val roh = withContext(Dispatchers.IO) {
+            val (a, b) = nachtgrenzen(tag)
+            (Nachtdaten.vollstaendige(context) + Nachtdaten.archiv(context)).distinct()
+                .filter { it in a.epochSecond until b.epochSecond }
+                .maxOrNull()
+                ?.let { beginn -> Nachtdaten.lies(context, beginn)?.let { beginn to it } }
+        }
+        val bewegung = mutableListOf<Pair<Instant, Int>>()
+        val fensterHrv = mutableListOf<Pair<Instant, Int>>()
+        roh?.let { (beginn, daten) ->
+            val (bew, _, hrvBytes) = daten
+            bew.forEachIndexed { i, b ->
+                val vmc = if (b == Schlafanalyse.UNGUELTIG) -1 else b * b / 16
+                bewegung += Instant.ofEpochSecond(beginn + 60L * i) to vmc
+            }
+            Schlafanalyse.hrvAus(hrvBytes).filter { it.rmssd > 0 }.forEach {
+                // Die Mitte des Fensters, wie in der Auswertung.
+                fensterHrv += Instant.ofEpochSecond(beginn + 60L * (it.minute + 2)) to it.rmssd
+            }
+        }
+
+        NachtBild(
+            tag = tag,
+            hypnogramm = h,
+            phasen = phasenAus(sitzungen),
+            schlafMinuten = geschlafen(sitzungen, nachtgrenzen(tag)),
+            ruhepuls = ruhe.await(),
+            hrv = hrvWert.await(),
+            puls = puls.await(),
+            bewegung = bewegung,
+            hrvFenster = fensterHrv,
+            spo2 = sauer.await(),
+        )
+    }
+
+    /** Der Tag, dessen Morgen die letzte Nacht beendet - der Tag der Karte. */
+    fun heutigeNacht(): LocalDate = heute()
 
     /** Den Tagesstand in die eigene Tabelle schreiben. */
     private suspend fun merke(stand: Stand, tag: LocalDate) = withContext(Dispatchers.IO) {
