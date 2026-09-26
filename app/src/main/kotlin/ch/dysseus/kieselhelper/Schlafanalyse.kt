@@ -2,7 +2,6 @@ package ch.dysseus.kieselhelper
 
 import kotlin.math.abs
 import kotlin.math.roundToInt
-import kotlin.math.sqrt
 
 /**
  * Die Nacht aus den Minutendaten der Uhr: wann eingeschlafen, wann
@@ -35,20 +34,26 @@ object Schlafanalyse {
     /**
      * Ab welcher gewichteten Aktivitaet eine Minute als wach zaehlt.
      *
-     * DIESE ZAHL IST GESCHAETZT, NICHT GEMESSEN. Cole und Kripke haben ihre
-     * Gewichte fuer einen Aktigraphen am Handgelenk mit eigener Zaehlweise
-     * bestimmt; die Pebble liefert ihre "vmc" (vector magnitude count) in
-     * einer anderen Einheit. 60 ist ein Anfang, der auf einer ruhig
-     * liegenden Uhr (vmc um 0..20) sicher schlafend und bei Umhergehen
-     * (vmc in den Hunderten) sicher wach ergibt. Wer echte Naechte neben
-     * einem anderen Schlaftracker hat, sollte sie daran anpassen: zu hoch,
-     * und unruhiges Liegen gilt als Schlaf; zu tief, und jedes Umdrehen
-     * weckt einen auf.
+     * AN EINER ECHTEN NACHT EINGESTELLT (25./26.9., neben einem Fitbit
+     * Air): Die Pebble zaehlt ihre "vmc" in viel groesseren Schritten als
+     * die Aktigraphen, fuer die Cole und Kripke ihre Gewichte bestimmt
+     * haben. Ein Umdrehen im Schlaf bringt hier vmc 300..1000, echtes
+     * Aufstehen 2000..4000. Mit 60 galt jedes Umdrehen als wach - 2 h 38
+     * Schlaf, wo der Fitbit 7 h 37 sah. Mit 800 liegen Schlaf (7 h 35) und
+     * Wachzeit (51 gegen 49 Minuten) beim Fitbit, und die lange Wachphase
+     * um halb zwei steht an derselben Stelle.
+     *
+     * Eine Nacht ist eine Nacht. Kommen weitere dazu, gehoert die Zahl
+     * nachgeprueft; der Export (Einstellungen -> Gesundheit -> Rohdaten)
+     * ist dafuer da.
      */
-    const val SCHWELLE = 60.0
+    const val SCHWELLE = 800.0
 
     /** Ein Bewegungsbyte 255 heisst: keine gueltigen Daten (Uhr nicht getragen). */
     const val UNGUELTIG = 255
+
+    /** Wie weit der Puls fuer die Phasen mit seiner Umgebung verglichen wird, in Minuten. */
+    private const val UMGEBUNG = 60
 
     /** Um so viel ueber dem Ruhepuls der Nacht gilt man als wach, auch ohne Bewegung. */
     private const val PULS_WACH_UEBER = 20
@@ -141,7 +146,9 @@ object Schlafanalyse {
             b.append(if (gueltig[i]) bewegung[i].toString() else "").append(',')
             b.append(if (gueltig[i]) a[i].roundToInt().toString() else "").append(',')
             b.append(if (puls[i] > 0) puls[i].toString() else "").append(',')
-            b.append("%.1f".format(java.util.Locale.ROOT, w[i])).append(',')
+            // Ohne einen gueltigen Nachbarn gibt es keinen Wert - leer statt
+            // der groessten Zahl, die ein Double kennt.
+            b.append(if (w[i] == Double.MAX_VALUE) "" else "%.1f".format(java.util.Locale.ROOT, w[i])).append(',')
             b.append(SCHWELLE.roundToInt()).append(',')
             b.append(phase[i]?.name?.lowercase() ?: "").append('\n')
         }
@@ -261,14 +268,20 @@ object Schlafanalyse {
     /**
      * Die Phasen Minute fuer Minute.
      *
-     * TIEF: der geglaettete Puls im unteren Drittel der Nacht, ringsum drei
+     * TIEF: der geglaettete Puls im unteren Drittel - gemessen an seiner
+     * Umgebung, nicht an der ganzen Nacht (siehe unten) -, ringsum drei
      * Minuten Ruhe - und, wo in der Naehe eine HRV gemessen wurde, eine
      * mindestens mittlere HRV. Im Tiefschlaf ueberwiegt der Parasympathikus;
      * eine niedrige HRV dort spricht gegen ihn.
      *
      * REM: fruehestens eine Stunde nach dem Einschlafen (der erste REM kommt
-     * so gut wie nie frueher), und der Puls hoch oder unruhig. Im REM ist der
-     * Koerper still, das Herz aber nicht.
+     * so gut wie nie frueher), und der Puls im oberen Drittel seiner
+     * Umgebung. Im REM ist der Koerper still, das Herz aber nicht.
+     *
+     * DIE SCHWAECHSTE STUFE. Die Uhr misst nachts nur etwa jede vierte
+     * Minute einen Puls; am 25./26.9. traf die Rechnung die Phasen des
+     * Fitbit nur in gut vier von zehn Minuten. Schlaf und Wach sind belastbar,
+     * die Phasen eine Naeherung.
      *
      * Der Rest ist leicht - wie in jeder echten Nacht der groesste Teil.
      */
@@ -286,16 +299,25 @@ object Schlafanalyse {
         // Geglaettet ueber fuenf Minuten: ein einzelner Ausreisser des
         // Sensors macht noch keinen Tiefschlaf.
         val glatt = arrayOfNulls<Double>(n)
-        val schwankung = arrayOfNulls<Double>(n)
+        for (i in ein until auf) glatt[i] = median(pulseUm(i, 2))
+
+        // GEGEN DIE EIGENE UMGEBUNG, NICHT GEGEN DIE GANZE NACHT. Der Puls
+        // faellt ueber eine Nacht (am 25./26.9. von 78 auf 50). Mit Grenzen
+        // fuer die ganze Nacht lag der Tiefschlaf deshalb nur am Morgen und
+        // der REM nur am Abend - der Fitbit sah beides ueber die Nacht
+        // verteilt. Verglichen wird darum mit dem Median der ruhigen Pulse
+        // eine Stunde davor und danach.
+        val relativ = arrayOfNulls<Double>(n)
         for (i in ein until auf) {
-            glatt[i] = median(pulseUm(i, 2))
-            schwankung[i] = pulseUm(i, 5).takeIf { it.size >= 3 }?.let(::standardabweichung)
+            val g = glatt[i] ?: continue
+            val umgebung = (maxOf(ein, i - UMGEBUNG)..minOf(auf - 1, i + UMGEBUNG))
+                .filter { !wach[it] && puls[it] > 0 }.map { puls[it].toDouble() }
+            if (umgebung.size >= 5) relativ[i] = g - median(umgebung)!!
         }
         val schlaf = (ein until auf).filter { !wach[it] }
-        val glattImSchlaf = schlaf.mapNotNull { glatt[it] }.sorted()
-        val p30 = perzentil(glattImSchlaf, 0.30)
-        val p60 = perzentil(glattImSchlaf, 0.60)
-        val schwankungMedian = median(schlaf.mapNotNull { schwankung[it] })
+        val relativImSchlaf = schlaf.mapNotNull { relativ[it] }.sorted()
+        val p30 = perzentil(relativImSchlaf, 0.30)
+        val p70 = perzentil(relativImSchlaf, 0.70)
 
         val fenster = hrvImSchlaf(hrv, ein, auf)
         val hrvMedian = median(fenster.map { it.rmssd.toDouble() })
@@ -314,14 +336,12 @@ object Schlafanalyse {
 
         return Array(auf - ein) { k ->
             val i = ein + k
-            val g = glatt[i]
+            val r = relativ[i]
             when {
                 wach[i] -> Phase.WACH
-                g == null || p30 == null || p60 == null -> Phase.LEICHT
-                g <= p30 && (i - 3..i + 3).all(::ruhig) && hrvPasst(i) -> Phase.TIEF
-                ruhig(i) && i >= ein + 60 && (g >= p60 ||
-                    (schwankung[i] != null && schwankungMedian != null &&
-                        schwankung[i]!! > 1.3 * schwankungMedian)) -> Phase.REM
+                r == null || p30 == null || p70 == null -> Phase.LEICHT
+                r <= p30 && (i - 3..i + 3).all(::ruhig) && hrvPasst(i) -> Phase.TIEF
+                ruhig(i) && i >= ein + 60 && r >= p70 -> Phase.REM
                 else -> Phase.LEICHT
             }
         }
@@ -338,14 +358,17 @@ object Schlafanalyse {
      *
      * NICHT DER TIEFSTE EINZELWERT - der ist oft ein Messfehler. Und nicht
      * das Mittel der ganzen Nacht - das zieht jeder Traum nach oben. Eine
-     * halbe Stunde, in der mindestens zwei Drittel der Minuten einen Puls
-     * haben, ist beides nicht.
+     * halbe Stunde mit mindestens sechs Pulswerten ist beides nicht.
+     *
+     * SECHS, NICHT ZWANZIG. Die Uhr misst nachts nur etwa jede vierte
+     * Minute einen Puls (25./26.9.: 127 von 540 Minuten); mit zwanzig kam
+     * nie ein Ruhepuls heraus.
      */
     private fun ruhepuls(ein: Int, auf: Int, wach: BooleanArray, puls: IntArray): Int? {
         var bester: Double? = null
         for (s in ein..auf - 30) {
             val werte = (s until s + 30).filter { !wach[it] && puls[it] > 0 }.map { puls[it] }
-            if (werte.size < 20) continue
+            if (werte.size < 6) continue
             val m = werte.average()
             if (bester == null || m < bester) bester = m
         }
@@ -436,10 +459,5 @@ object Schlafanalyse {
         val u = pos.toInt()
         val o = minOf(u + 1, sortiert.lastIndex)
         return sortiert[u] + (sortiert[o] - sortiert[u]) * (pos - u)
-    }
-
-    private fun standardabweichung(werte: List<Double>): Double {
-        val m = werte.average()
-        return sqrt(werte.sumOf { (it - m) * (it - m) } / werte.size)
     }
 }

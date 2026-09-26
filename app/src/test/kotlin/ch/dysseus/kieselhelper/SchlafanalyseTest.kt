@@ -12,14 +12,15 @@ import org.junit.Test
 /**
  * Erfundene Naechte, deren Antwort man kennt.
  *
- * DIE ZAHLEN SIND GROB GEWAEHLT: wach heisst Bewegung 60 (vmc 225, weit ueber
- * der Schwelle), Schlaf heisst 4 (vmc 1). Geprueft wird, ob die Rechnung
+ * DIE ZAHLEN SIND GROB GEWAEHLT: wach heisst Bewegung 160 (vmc 1600, wie
+ * Aufstehen in der echten Nacht vom 25./26.9. - weit ueber der Schwelle),
+ * Schlaf heisst 4 (vmc 1). Geprueft wird, ob die Rechnung
  * das Offensichtliche findet - nicht, ob sie auf die Minute mit einem
  * Schlaflabor uebereinstimmt; das kann sie nicht.
  */
 class SchlafanalyseTest {
 
-    private val WACH = 60
+    private val WACH = 160
     private val RUHIG = 4
 
     /** Eine Nacht aus Bloecken: (Minuten, Bewegung, Puls). */
@@ -87,8 +88,9 @@ class SchlafanalyseTest {
 
     @Test
     fun einschlaflatenz() {
-        // Eine Stunde unruhig im Bett (vmc 100), dann sechs Stunden Schlaf.
-        val (b, p) = nacht(Triple(60, 40, 70), Triple(360, RUHIG, 55), Triple(20, WACH, 80))
+        // Eine Stunde unruhig im Bett (vmc 900 - mehr als ein Umdrehen im
+        // Schlaf), dann sechs Stunden Schlaf.
+        val (b, p) = nacht(Triple(60, 120, 70), Triple(360, RUHIG, 55), Triple(20, WACH, 80))
         val n = Schlafanalyse.werte(b, p)!!
         assertTrue("eingeschlafen ${n.einschlafen}", n.einschlafen in 60..66)
         assertTrue(n.schlafMinuten in 340..360)
