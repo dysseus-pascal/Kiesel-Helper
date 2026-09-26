@@ -93,7 +93,13 @@ object GesundheitTab {
             TrendActivity.zeige(ctx, TrendActivity.SCHLAF)
         })
         val schlaf = ctx.karte()
-        schlaf.setOnClickListener { TrendActivity.zeige(ctx, TrendActivity.SCHLAF) }
+        // DIE KARTE FUEHRT ZUR NACHT, wie die Trainingskarte zum Training: die
+        // naechste Frage nach "7 h 49" ist "und wie verlief sie?". Der Trend
+        // bleibt eine Beruehrung entfernt - ueber die Ueberschrift.
+        schlaf.setOnClickListener {
+            if (stand.hypnogramm != null) NachtActivity.zeige(ctx)
+            else TrendActivity.zeige(ctx, TrendActivity.SCHLAF)
+        }
         schlaf.addView(ctx.messreihe(
             ctx.wert(stand.schlaf, Zahlen.dauer(stand.schlaf.zahl), ""),
             ctx.messwert(ctx.getString(R.string.tiefschlaf), Zahlen.dauer(stand.phasen?.tief), "", 0f, false),
