@@ -480,7 +480,6 @@
     <string name="a_begonnen">%1$s commencé</string>
     <string name="a_pausiert">%1$s en pause</string>
     <string name="a_fortgesetzt">%1$s repris</string>
-    <string name="a_uebersprungen_training">Ignoré — %1$s a déjà enregistré l\'entraînement</string>
     <string name="a_puls_schnitt">Pouls ⌀ %1$d</string>
     <string name="a_max">max %1$d</string>
     <string name="a_eingetragen">%1$s, %2$d min%3$s enregistré</string>
@@ -684,4 +683,10 @@
     <string name="n_wachphasen">PÉRIODES D’ÉVEIL</string>
     <string name="n_keine_wachphasen">Aucune période d’éveil de plus de 5 minutes.</string>
     <string name="n_wach_zeile">%1$s–%2$s · %3$d min</string>
+    <string name="a_nachgetragen">%1$s, %2$d min%3$s ajouté après coup</string>
+    <string name="t_offen">NON ENREGISTRÉ</string>
+    <string name="t_offen_text">Kieselsport a enregistré ces parcours, mais Health Connect ne contient aucun entraînement correspondant. L\u2019ajout reprend la durée et le parcours de la trace GPS et le pouls de Health Connect ; calories et pas manquent.</string>
+    <string name="t_eintragen">Enregistrer</string>
+    <string name="t_ausblenden">Masquer</string>
+    <string name="t_welche_art">Quelle activité ?</string>
 </resources>

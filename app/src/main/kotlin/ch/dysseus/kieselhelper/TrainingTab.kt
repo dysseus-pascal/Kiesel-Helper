@@ -12,7 +12,9 @@ import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.lifecycle.lifecycleScope
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -110,7 +112,8 @@ object TrainingTab {
             ).records.sortedByDescending { it.startTime }
         } catch (e: Exception) {
             emptyList()
-        }
+        }.let { gewaehlt(ctx, it) }
+        offen = offeneSpuren(ctx, sitzungen)
         // ALLE FUER DIE BILDER, ZWANZIG FUER DIE LISTE. Kalender und Wochen
         // brauchen jedes Training des Vierteljahres, aber nur Dauer und Art;
         // die Spurdateien werden nur fuer die gelesen, die als Karte dastehen.
@@ -124,6 +127,141 @@ object TrainingTab {
                 if (i == 0) puls(klient, sitzung) else emptyList(),
                 if (i == 0) spo2(klient, sitzung) else emptyList(),
             )
+        }
+    }
+
+    /**
+     * ZWEI APPS, EIN TRAINING. Die Pebble-App traegt eine Wanderung womoeglich
+     * selbst als Gehen ein, und Kieselsport dieselbe Wanderung als Wandern.
+     * Beide nebeneinander zeigten jede Stunde doppelt. Das eigene gewinnt -
+     * es hat Art, Route, Puls und Kalorien; eine fremde Sitzung, die sich
+     * damit ueberschneidet, faellt hier heraus. In der Akte bleibt sie.
+     */
+    private fun gewaehlt(ctx: Context, sitzungen: List<ExerciseSessionRecord>): List<ExerciseSessionRecord> {
+        val eigene = sitzungen.filter { it.metadata.dataOrigin.packageName == ctx.packageName }
+        return sitzungen.filter { s ->
+            s.metadata.dataOrigin.packageName == ctx.packageName ||
+                eigene.none { e -> s.startTime < e.endTime && e.startTime < s.endTime }
+        }
+    }
+
+    /**
+     * Spuren, zu denen kein eigenes Training in der Akte steht - zum
+     * Nachtragen (Aufgaben.nachtragen).
+     *
+     * SO ENTSTANDEN SIE: vor 0.59.0 wurde ein Training uebersprungen, wenn
+     * eine andere App zur selben Zeit schon eine Sitzung hatte. Die Spur
+     * blieb liegen, das Training nicht. NICHT DIE JUENGSTE HALBE STUNDE: eine
+     * Spur, die gerade waechst, gehoert zu einem laufenden Training.
+     */
+    private fun offeneSpuren(ctx: Context, sitzungen: List<ExerciseSessionRecord>): List<OffeneSpur> {
+        val grenze = Instant.now().minus(Duration.ofDays(TAGE)).epochSecond
+        val eigene = sitzungen.filter { it.metadata.dataOrigin.packageName == ctx.packageName }
+            .map { it.startTime.epochSecond }.toSet()
+        val aus = ausgeblendet(ctx)
+        val jetzt = Instant.now().epochSecond
+        return Spur.alle(ctx)
+            .filter { it >= grenze && it !in eigene && it.toString() !in aus }
+            .mapNotNull { b ->
+                val punkte = Spur.lies(ctx, b)
+                if (punkte.size < 2 || jetzt - punkte.last().zeit <= 30 * 60) return@mapNotNull null
+                OffeneSpur(b, (punkte.last().zeit - b) / 60, Spur.laenge(punkte))
+            }
+    }
+
+    data class OffeneSpur(val beginn: Long, val minuten: Long, val meter: Double)
+
+    /** Die Spuren von [offeneSpuren], die jemand bewusst nicht nachtragen will. */
+    private fun ausgeblendet(ctx: Context): Set<String> =
+        ctx.getSharedPreferences(AUSGEBLENDET, Context.MODE_PRIVATE).getStringSet("spuren", null).orEmpty()
+
+    private fun blendeAus(ctx: Context, beginn: Long) {
+        val p = ctx.getSharedPreferences(AUSGEBLENDET, Context.MODE_PRIVATE)
+        p.edit().putStringSet("spuren", ausgeblendet(ctx) + beginn.toString()).apply()
+    }
+
+    private const val AUSGEBLENDET = "kiesel-spuren"
+
+    /** Was [offeneSpuren] zuletzt fand - die Karte oben baut daraus. */
+    var offen: List<OffeneSpur> = emptyList()
+        private set
+
+    /**
+     * Die Karte "Nicht eingetragen": je Spur Tag, Uhrzeit, Dauer und Strecke,
+     * dazu Eintragen und Ausblenden.
+     */
+    private fun offeneKarte(ctx: Context): LinearLayout {
+        val k = ctx.karte()
+        k.addView(ctx.zart(ctx.getString(R.string.t_offen_text)))
+        offen.forEach { o ->
+            val beginn = o.beginn
+            val wann = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
+                .format(Date(beginn * 1000))
+            k.addView(ctx.strich())
+            k.addView(ctx.fliesstext(
+                wann + "  ·  " + (Zahlen.dauer(o.minuten.toDouble()) ?: "") +
+                    "  ·  " + (Zahlen.eine(o.meter / 1000) ?: "") + " km"
+            ))
+            k.addView(ctx.reihe().apply {
+                addView(ctx.knopfLeise(ctx.getString(R.string.t_ausblenden)) {
+                    blendeAus(ctx, beginn)
+                    (ctx as? HauptActivity)?.auffrischen()
+                }.apply {
+                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                        .apply { marginEnd = ctx.dp(6f) }
+                })
+                addView(ctx.knopfHaupt(ctx.getString(R.string.t_eintragen)) {
+                    waehleArt(ctx) { art -> trageNach(ctx, beginn, art) }
+                }.apply {
+                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                })
+            })
+        }
+        return k
+    }
+
+    /**
+     * Welche Art war es? Nur die mit Strecke - nur zu ihnen gibt es Spuren.
+     *
+     * DERSELBE KASTEN WIE [bestaetige], nicht ein AlertDialog: der naehme
+     * das Thema des Systems an.
+     */
+    private fun waehleArt(ctx: Context, tue: (Long) -> Unit) {
+        val inhalt = ctx.karte().apply { setPadding(ctx.dp(18f), ctx.dp(16f), ctx.dp(18f), ctx.dp(12f)) }
+        inhalt.addView(ctx.kartentitel(ctx.getString(R.string.t_welche_art)))
+        val fenster = android.widget.PopupWindow(
+            inhalt,
+            (ctx.resources.displayMetrics.widthPixels - ctx.dp(48f)).coerceAtMost(ctx.dp(360f)),
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            true,
+        )
+        fenster.elevation = ctx.dp(10f).toFloat()
+        fenster.isOutsideTouchable = true
+        listOf(2L, 0L, 1L, 4L).forEach { art ->
+            inhalt.addView(ctx.knopfLeise(Aufgaben.artAlsSatzart(ctx, art).second) {
+                fenster.dismiss()
+                tue(art)
+            }.apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply { topMargin = ctx.dp(6f) }
+            })
+        }
+        inhalt.addView(ctx.knopfLeise(ctx.getString(R.string.abbrechen)) { fenster.dismiss() }.apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = ctx.dp(12f) }
+        })
+        val wurzel = (ctx as? android.app.Activity)?.window?.decorView ?: return
+        fenster.showAtLocation(wurzel, android.view.Gravity.CENTER, 0, 0)
+    }
+
+    private fun trageNach(ctx: Context, beginn: Long, art: Long) {
+        val aktivitaet = ctx as? HauptActivity ?: return
+        aktivitaet.lifecycleScope.launch {
+            val meldung = Aufgaben.nachtragen(ctx, beginn, art)
+            android.widget.Toast.makeText(ctx, meldung, android.widget.Toast.LENGTH_LONG).show()
+            aktivitaet.auffrischen()
         }
     }
 
@@ -192,6 +330,13 @@ object TrainingTab {
         karten.clear()
         zuletzt = eintraege
         val s = ctx.spalte()
+
+        // WAS NICHT IN DER AKTE STEHT, ZUERST: es ist das Einzige hier, das
+        // auf eine Handlung wartet.
+        if (offen.isNotEmpty()) {
+            s.addView(ctx.abschnitt(ctx.getString(R.string.t_offen)))
+            s.addView(offeneKarte(ctx))
+        }
 
         if (eintraege.isEmpty()) {
             val k = ctx.karte()

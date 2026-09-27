@@ -474,7 +474,6 @@
     <string name="a_begonnen">%1$s started</string>
     <string name="a_pausiert">%1$s paused</string>
     <string name="a_fortgesetzt">%1$s resumed</string>
-    <string name="a_uebersprungen_training">Skipped — %1$s already logged the workout</string>
     <string name="a_puls_schnitt">HR ⌀ %1$d</string>
     <string name="a_max">max %1$d</string>
     <string name="a_eingetragen">%1$s, %2$d min%3$s logged</string>
@@ -678,4 +677,10 @@
     <string name="n_wachphasen">AWAKE PERIODS</string>
     <string name="n_keine_wachphasen">No awake period longer than 5 minutes.</string>
     <string name="n_wach_zeile">%1$s–%2$s · %3$d min</string>
+    <string name="a_nachgetragen">%1$s, %2$d min%3$s logged afterwards</string>
+    <string name="t_offen">NOT LOGGED</string>
+    <string name="t_offen_text">Kieselsport recorded these routes, but Health Connect has no workout for them. Logging takes time and route from the GPS track and heart rate from Health Connect; calories and steps are missing.</string>
+    <string name="t_eintragen">Log</string>
+    <string name="t_ausblenden">Hide</string>
+    <string name="t_welche_art">What was it?</string>
 </resources>

@@ -471,7 +471,6 @@
     <string name="a_begonnen">%1$s begonnen</string>
     <string name="a_pausiert">%1$s pausiert</string>
     <string name="a_fortgesetzt">%1$s fortgesetzt</string>
-    <string name="a_uebersprungen_training">Übersprungen — %1$s hat das Training schon eingetragen</string>
     <string name="a_puls_schnitt">Puls ⌀ %1$d</string>
     <string name="a_max">max %1$d</string>
     <string name="a_eingetragen">%1$s, %2$d min%3$s eingetragen</string>
@@ -675,4 +674,10 @@
     <string name="n_wachphasen">WACHPHASEN</string>
     <string name="n_keine_wachphasen">Keine Wachphase über 5 Minuten.</string>
     <string name="n_wach_zeile">%1$s–%2$s · %3$d min</string>
+    <string name="a_nachgetragen">%1$s, %2$d min%3$s nachgetragen</string>
+    <string name="t_offen">NICHT EINGETRAGEN</string>
+    <string name="t_offen_text">Für diese Strecken hat Kieselsport aufgezeichnet, in Health Connect steht aber kein Training dazu. Nachtragen übernimmt Zeit und Route aus der GPS-Spur und den Puls aus Health Connect; Kalorien und Schritte fehlen.</string>
+    <string name="t_eintragen">Eintragen</string>
+    <string name="t_ausblenden">Ausblenden</string>
+    <string name="t_welche_art">Was war es?</string>
 </resources>

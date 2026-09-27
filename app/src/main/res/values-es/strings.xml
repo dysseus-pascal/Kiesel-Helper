@@ -480,7 +480,6 @@
     <string name="a_begonnen">%1$s iniciado</string>
     <string name="a_pausiert">%1$s en pausa</string>
     <string name="a_fortgesetzt">%1$s reanudado</string>
-    <string name="a_uebersprungen_training">Omitido — %1$s ya registró el entrenamiento</string>
     <string name="a_puls_schnitt">Pulso ⌀ %1$d</string>
     <string name="a_max">máx %1$d</string>
     <string name="a_eingetragen">%1$s, %2$d min%3$s registrado</string>
@@ -684,4 +683,10 @@
     <string name="n_wachphasen">DESPERTARES</string>
     <string name="n_keine_wachphasen">Ningún despertar de más de 5 minutos.</string>
     <string name="n_wach_zeile">%1$s–%2$s · %3$d min</string>
+    <string name="a_nachgetragen">%1$s, %2$d min%3$s añadido después</string>
+    <string name="t_offen">NO REGISTRADO</string>
+    <string name="t_offen_text">Kieselsport grabó estas rutas, pero Health Connect no tiene ningún entrenamiento para ellas. Al registrarlas, la duración y la ruta salen del GPS y el pulso de Health Connect; faltan calorías y pasos.</string>
+    <string name="t_eintragen">Registrar</string>
+    <string name="t_ausblenden">Ocultar</string>
+    <string name="t_welche_art">¿Qué fue?</string>
 </resources>

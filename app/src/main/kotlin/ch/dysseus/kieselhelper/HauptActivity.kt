@@ -174,7 +174,7 @@ class HauptActivity : KieselActivity(), Eingaben {
      * hiesse, die Wartezeiten zu addieren; der Schirm stuende so lange leer
      * wie beide zusammen.
      */
-    private fun auffrischen() {
+    internal fun auffrischen() {
         // Beim allerersten Laden steht noch nichts da. Dann dreht der
         // Kreisel, damit der leere Schirm als "kommt gleich" zu lesen ist und
         // nicht als "hier ist nichts".

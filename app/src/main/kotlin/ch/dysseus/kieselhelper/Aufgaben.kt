@@ -114,7 +114,7 @@ object Aufgaben {
      * Der Titel geht in der Sprache des Telefons in die Akte - er ist das,
      * was man dort liest. Was schon drinsteht, bleibt, wie es war.
      */
-    private fun artAlsSatzart(context: Context, art: Long): Pair<Int, String> = when (art.toInt()) {
+    internal fun artAlsSatzart(context: Context, art: Long): Pair<Int, String> = when (art.toInt()) {
         0 -> ExerciseSessionRecord.EXERCISE_TYPE_RUNNING to context.getString(R.string.a_titel_laufen)
         // ZWEIMAL DIESELBE SATZART, ZWEI NAMEN. Die Gesundheitsakte kennt
         // nur ein Radfahren und kein Mountainbike; die Unterscheidung traegt
@@ -416,11 +416,12 @@ object Aufgaben {
         val anfang = Instant.ofEpochSecond(beginn)
         val ende = anfang.plusSeconds(dauer)
 
-        // Traegt schon jemand anders eine Sitzung ueber dieselbe Zeit ein?
-        schonDa(context, klient, ExerciseSessionRecord::class, anfang, FENSTER_TRAINING)?.let {
-            Log.i(TAG, "Training steht schon da, von " + it)
-            return context.getString(R.string.a_uebersprungen_training, it)
-        }
+        // KEIN NACHSEHEN, OB EINE ANDERE APP SCHON EINE SITZUNG HAT. Frueher
+        // wurde dann uebersprungen - und nach einer Wanderung, die die
+        // Pebble-App selbst als Gehen eingetragen hatte, fehlte das eigene
+        // Training ganz: Art, Route, Puls, Kalorien. Es geht immer in die
+        // Akte; in der Liste gewinnt es ueber eine fremde Sitzung zur selben
+        // Zeit (TrainingTab.hole), wie beim Schlaf.
 
         val (satzart, name) = artAlsSatzart(context, felder[SP_ART] ?: -1)
         val puls = felder[SP_PULS_MITTEL] ?: 0
@@ -550,6 +551,70 @@ object Aufgaben {
         // spaeter, traegt der Datenlog-Empfaenger sie selbst ein.
         if (Pulskurve.eintragen(context, beginn)) meldung += ", " + context.getString(R.string.a_pulskurve)
         return meldung
+    }
+
+    /**
+     * Ein Training nachtragen, von dem nur die Spur blieb.
+     *
+     * WAS BLEIBT, WENN DIE ZUSAMMENFASSUNG FEHLT: die GPS-Spur auf dem
+     * Telefon und die Pulskurve in der Akte. Daraus lassen sich Zeit, Route,
+     * Strecke und Puls wiederherstellen; die Art weiss nur, wer dabei war -
+     * sie kommt deshalb vom Aufrufer. Kalorien und Schritte zaehlte die Uhr,
+     * die sind weg.
+     *
+     * DIESELBE KENNUNG WIE BEIM NORMALEN WEG: kommt die Zusammenfassung doch
+     * noch, ersetzt sie diesen Eintrag, statt einen zweiten daneben zu legen.
+     *
+     * @return die Meldung, wie beim Eintragen von der Uhr
+     */
+    suspend fun nachtragen(context: Context, beginn: Long, art: Long): String {
+        val punkte = withContext(Dispatchers.IO) { Spur.lies(context, beginn) }
+        if (punkte.size < 2) return context.getString(R.string.a_nicht_eingetragen)
+        val klient = Akte(context).bereit() ?: return context.getString(R.string.g_akte_fehlt)
+        val anfang = Instant.ofEpochSecond(beginn)
+        val ende = Instant.ofEpochSecond(maxOf(punkte.last().zeit, beginn + 60))
+        val (satzart, name) = artAlsSatzart(context, art)
+        val strecke = Spur.laenge(punkte)
+
+        // Der Puls aus der Akte - nur der eigene, den Kieselsport geschickt hat.
+        val pulse = try {
+            klient.readRecords(ReadRecordsRequest(HeartRateRecord::class, TimeRangeFilter.between(anfang, ende)))
+                .records.filter { it.metadata.dataOrigin.packageName == context.packageName }
+                .flatMap { it.samples }.map { it.beatsPerMinute }
+        } catch (e: Exception) {
+            emptyList()
+        }
+        val notiz = buildString {
+            if (pulse.isNotEmpty()) {
+                append(context.getString(R.string.a_puls_schnitt, pulse.average().toInt()))
+                append(", " + context.getString(R.string.a_max, pulse.max().toInt()))
+                append(", ")
+            }
+            append((Zahlen.eine(strecke / 1000) ?: "") + " km (GPS)")
+        }
+        val satz = ExerciseSessionRecord(
+            startTime = anfang,
+            startZoneOffset = null,
+            endTime = ende,
+            endZoneOffset = null,
+            exerciseType = satzart,
+            title = name,
+            notes = notiz,
+            metadata = vonDerUhr("kieselsport-" + beginn),
+            exerciseRoute = ExerciseRoute(punkte.map { p ->
+                ExerciseRoute.Location(
+                    time = Instant.ofEpochSecond(p.zeit),
+                    latitude = p.lat,
+                    longitude = p.lon,
+                    horizontalAccuracy = Length.meters(p.genauigkeit.toDouble()),
+                    altitude = p.hoehe?.let { Length.meters(it) },
+                )
+            }),
+        )
+        val minuten = Duration.between(anfang, ende).toMinutes().toInt()
+        val kurz = context.getString(R.string.a_nachgetragen, name, minuten,
+            ", " + (Zahlen.eine(strecke / 1000) ?: "") + " km")
+        return schreibe(context, satz, kurz).also { Verlauf(context).merkeMeldung(it) }
     }
 
     /**
@@ -1060,8 +1125,6 @@ object Aufgaben {
      * Eintraege in derselben Minute nicht.
      */
     private val FENSTER_WASSER: Duration = Duration.ofMinutes(1)
-    // Ein Training beginnt man nicht zweimal in derselben Viertelstunde.
-    private val FENSTER_TRAINING: Duration = Duration.ofMinutes(15)
 
     /**
      * In die Akte schreiben - und bei einem Fehlschlag den Riegel wieder
